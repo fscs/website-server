@@ -30,8 +30,18 @@
           inherit system overlays;
         };
         craneLib = crane.lib.${system};
+
+        inherit (pkgs) lib;
+
         my-crate = craneLib.buildPackage {
-          src = craneLib.cleanCargoSource (craneLib.path ./.);
+          src = lib.cleanSourceWith {
+            src = ./.; # The original, unfiltered source
+            filter = path: type:
+            (lib.hasSuffix "\.html" path) ||
+            # Default filter from crane (allow .rs files)
+            (craneLib.filterCargoSources path type)
+          ;
+        };
           strictDeps = true;
 
           nativeBuildInputs = with pkgs; [ pkg-config ];
