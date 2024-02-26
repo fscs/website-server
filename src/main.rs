@@ -1,7 +1,6 @@
 mod web;
-use std::future::Future;
 use actix_files as fs;
-use actix_web::{App, HttpServer, Responder, get, FromRequest, HttpRequest, put};
+use actix_web::{App, HttpServer};
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
