@@ -1,0 +1,26 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sqlx = {version = "0", features = ["runtime-tokio-rustls", "postgres", "uuid", "json"]}
+actix-web = {  version = "4", features = ["secure-cookies"] }
+uuid = { version = "1.7.0", features = ["v4", "serde"] }
+anyhow = "1.0.79"
+actix-utils = "3.0.1"
+actix-files = "0.6.5"
+icalendar = "0.16.0"
+reqwest = "0.11.24"
+log = "0.4.20"
+serde_json = { version = "1", features = ["raw_value"]}
+serde = { version = "1", features = ["derive"] }
+
+[env]
+DATABASE_URL="postgres://postgres:postgres@localhost/postgres"
+
+[dev-dependencies]
+mockall = "0"
