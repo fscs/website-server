@@ -1,0 +1,40 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/bs-theme-overrides.css">
+    <link rel="stylesheet" href="/css/Navbar-Right-Links-icons.css">
+    <link rel="stylesheet" href="/css/main.css">
+
+    <script src="/bootstrap/js/bootstrap.min.js"></script>
+    <script src="/js/darkmode.js"></script>
+
+</head>
+
+<body>
+    <div class="m-2 overflow-auto">
+        <div class="hstack gap-4 d-inline-flex pb-3">
+            {% for event in events %}
+            <a class="text-decoration-none" href="#">
+                <div class="card shadow overflow-visible calendar"
+                    style="background: transparent;border-color: #6c7d47;">
+                    <div class="card-body">
+                        <h1 class="text-truncate fs-4">{{ event.summary }}</h1>
+                        <span class="text-secondary d-flex align-items-center">
+                            {{ event.start | date(format = "%d.%m %H:%M") }}
+                        </span>
+
+                        <span class="text-secondary d-flex align-items-center">
+                            {{ event.location }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+
+</html>
