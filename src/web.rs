@@ -14,7 +14,8 @@ pub(crate) mod calendar {
 
     #[get("/calendar")]
     pub(crate) async fn get_events() -> impl Responder {
-        let tera = tera::Tera::new("./templates/**/*").unwrap();
+        let current_dir = std::env::current_exe().unwrap().as_path().parent().unwrap().to_str().unwrap().to_string();
+        let tera = tera::Tera::new(&(current_dir + "/templates/**/*")).unwrap();
         let calendar = reqwest::get(
             "https://nextcloud.inphima.de/remote.php/dav/public-calendars/CAx5MEp7cGrQ6cEe?export",
         )
