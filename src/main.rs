@@ -1,4 +1,6 @@
 mod web;
+mod cache;
+
 use actix_files as fs;
 use actix_web::{App, HttpServer};
 
