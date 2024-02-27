@@ -2,7 +2,7 @@
 FROM rust:1.76.0 as builder
 # Copy website server files
 WORKDIR /home/website/server
-COPY ./website-server/ .
+COPY . .
 RUN cargo build --release
 RUN echo $PWD
 
