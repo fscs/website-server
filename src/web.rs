@@ -4,7 +4,8 @@ use lazy_static::lazy_static;
 use tera::Context;
 
 pub(crate) mod calendar {
-    use actix_web::{get, Responder, Scope};
+    use actix_web::{get, Responder, Scope, web};
+    use actix_web::dev::HttpServiceFactory;
     use actix_web::web::Json;
     use chrono::{DateTime, NaiveTime, Utc};
     use icalendar::{Component, Event, EventLike};
@@ -21,8 +22,8 @@ pub(crate) mod calendar {
         end: Option<DateTime<Utc>>,
     }
 
-    pub(crate) async fn service(path: &str) -> Scope {
-        Scope::new(path)
+    pub(crate) fn service(path: &'static str) -> Scope  {
+        web::scope(path)
             .service(get_events)
             .service(get_branchen_events)
     }
