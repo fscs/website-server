@@ -32,6 +32,18 @@ pub(crate) mod calendar {
         Json(x)
     }
 
+
+    #[get("/calendar/branchen")]
+    pub(crate) async fn get_branchen_events() -> impl Responder {
+        lazy_static! {
+            static ref CACHE: TimedCache<Vec<CalendarEvent>>  = TimedCache::with_generator( || {
+               request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CKpykNdtKHkA6Z9B?export")
+            }, std::time::Duration::from_secs(60 * 60 * 4));
+        }
+        let x = (*CACHE.get().await).clone();
+        Json(x)
+    }
+
     fn request_calendar(url: &str) -> Vec<CalendarEvent> {
         let calendar = reqwest::blocking::get(
             url,
