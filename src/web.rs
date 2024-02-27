@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use tera::Context;
 
 pub(crate) mod calendar {
-    use actix_web::{get, Responder};
+    use actix_web::{get, Responder, Scope};
     use actix_web::web::Json;
     use chrono::{DateTime, NaiveTime, Utc};
     use icalendar::{Component, Event, EventLike};
@@ -21,8 +21,14 @@ pub(crate) mod calendar {
         end: Option<DateTime<Utc>>,
     }
 
-    #[get("/calendar")]
-    pub(crate) async fn get_events() -> impl Responder {
+    pub(crate) async fn service(path: &str) -> Scope {
+        Scope::new(path)
+            .service(get_events)
+            .service(get_branchen_events)
+    }
+
+    #[get("/")]
+    async fn get_events() -> impl Responder {
         lazy_static! {
             static ref CACHE: TimedCache<Vec<CalendarEvent>>  = TimedCache::with_generator( || {
                request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CAx5MEp7cGrQ6cEe?export")
@@ -33,8 +39,8 @@ pub(crate) mod calendar {
     }
 
 
-    #[get("/calendar/branchen")]
-    pub(crate) async fn get_branchen_events() -> impl Responder {
+    #[get("/branchen")]
+    async fn get_branchen_events() -> impl Responder {
         lazy_static! {
             static ref CACHE: TimedCache<Vec<CalendarEvent>>  = TimedCache::with_generator( || {
                request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CKpykNdtKHkA6Z9B?export")

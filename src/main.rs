@@ -17,8 +17,8 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(HttpServer::new(move || {
         App::new()
-            .service(web::calendar::get_branchen_events)
-            .service(web::calendar::get_events).service(
+            .service(web::calendar::service("/calendar"))
+            .service(
             fs::Files::new("/", &(current_dir.clone() + "/static/")).index_file("index.html"),
         )
     })
