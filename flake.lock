@@ -231,11 +231,11 @@
         "rev": "7593666f04926ac80d61bebc78dab763b424a67e",
         "revCount": 12,
         "type": "git",
-        "url": "ssh://git.hhu.de/fscs/website.git"
+        "url": "ssh://git@git.hhu.de/fscs/website.git"
       },
       "original": {
         "type": "git",
-        "url": "ssh://git.hhu.de/fscs/website.git"
+        "url": "ssh://git@git.hhu.de/fscs/website.git"
       }
     }
   },
