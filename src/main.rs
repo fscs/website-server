@@ -3,9 +3,23 @@ mod cache;
 
 use actix_files as fs;
 use actix_web::{App, HttpServer};
+use clap::Parser;
+
+#[derive(Parser)]
+struct Args {
+
+    // Port of the Application
+    #[arg(short, long, default_value_t = 8080)]
+    port: u16,
+    // The Host Interface
+    #[arg(short, long, default_value_t = ("127.0.0.1".to_string()))]
+    host: String
+}
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
+    let args: Args = Args::parse();
+
     let current_dir = std::env::current_exe()
         .unwrap()
         .as_path()
@@ -20,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
             fs::Files::new("/", &(current_dir.clone() + "/static/")).index_file("index.html"),
         )
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind((args.host, args.port))?
     .run()
     .await?)
 }
