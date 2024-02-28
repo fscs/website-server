@@ -36,6 +36,4 @@ RUN cp -r /home/website/website-theme/demo/public/ static
 # Set the entrypoint to run the server
 EXPOSE 8080
 
-CMD ["./backend"]
-
-
+CMD ["./backend --host 0.0.0.0"]
