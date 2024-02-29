@@ -15,9 +15,23 @@
         flake-utils.follows = "flake-utils";
       };
     };
+
+    theme = {
+      url = "github:fscs/website-theme";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+      };
+    };
+
     website = {
       type = "git";
       url = "ssh://git@git.hhu.de/fscs/website.git";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+        theme.follows = "theme";
+      };
     };
   };
 
@@ -28,6 +42,7 @@
     crane,
     nixpkgs,
     rust-overlay,
+    theme
   }:
     flake-utils.lib.eachDefaultSystem (
       system: let
@@ -84,14 +99,14 @@
             mkdir -p $out/bin
             ln -s ${website.defaultPackage.${system}} $out/bin/static
             ln -s ${defaultPackage}/bin/templates $out/bin/templates
-            ln -s ${defaultPackage}/bin/backed $out/bin/backend
+            ln -s ${defaultPackage}/bin/backend $out/bin/backend
           '';
           
         };
 
         apps.default = flake-utils.lib.mkApp {
           drv = packages.fullWebsite;
-          exePath = "${packages.fullWebsite}/bin/backend";
+          exePath = "/bin/backend";
         };
 
         # For `nix develop`:
