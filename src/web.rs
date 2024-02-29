@@ -4,65 +4,81 @@ use lazy_static::lazy_static;
 use tera::Context;
 
 pub(crate) mod calendar {
-    use actix_web::{get, Responder};
+    use actix_web::{get, Responder, Scope, web};
+    use actix_web::dev::HttpServiceFactory;
+    use actix_web::web::Json;
     use chrono::{DateTime, NaiveTime, Utc};
     use icalendar::{Component, Event, EventLike};
     use lazy_static::lazy_static;
     use crate::cache::TimedCache;
     use crate::web::TerraResponse;
 
-    #[derive(serde::Serialize)]
+    #[derive(serde::Serialize, Clone)]
     struct CalendarEvent {
-        summary: String,
-        location: String,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        summary: Option<String>,
+        location: Option<String>,
+        description: Option<String>,
+        start: Option<DateTime<Utc>>,
+        end: Option<DateTime<Utc>>,
     }
 
-    #[get("/calendar")]
-    pub(crate) async fn get_events() -> TerraResponse {
+    pub(crate) fn service(path: &'static str) -> Scope  {
+        web::scope(path)
+            .service(get_events)
+            .service(get_branchen_events)
+    }
+
+    #[get("/")]
+    async fn get_events() -> impl Responder {
         lazy_static! {
-            static ref CACHE: TimedCache<TerraResponse>  = TimedCache::with_generator( || {
-
-                println!("reqwest calendar");
-                let calendar = reqwest::blocking::get(
-                    "https://nextcloud.inphima.de/remote.php/dav/public-calendars/CAx5MEp7cGrQ6cEe?export",
-                ).unwrap()
-                .text()
-                .unwrap();
-
-                let calendar = icalendar::parser::unfold(&calendar);
-                let calendar = icalendar::parser::read_calendar(&calendar).unwrap();
-                let mut context = tera::Context::new();
-
-                let events = icalendar::Calendar::from(calendar)
-                    .components
-                    .iter()
-                    .filter_map(|component| match component {
-                        icalendar::CalendarComponent::Event(event) => Some(event),
-                        _ => None,
-                    })
-                    .filter_map(|event| is_after(event, Utc::now()))
-                    .filter_map(|event| {
-                        Some(CalendarEvent {
-                            summary: event.get_summary()?.to_string(),
-                            location: event.get_location()?.to_string(),
-                            start: dpt_to_date_time(event.get_start()?)?,
-                            end: dpt_to_date_time(event.get_end()?)?,
-                        })
-                    })
-                    .collect::<Vec<_>>();
-
-                context.insert("events", &events);
-                TerraResponse {
-                    template: "calendar.html",
-                    context,
-                }
+            static ref CACHE: TimedCache<Vec<CalendarEvent>>  = TimedCache::with_generator( || {
+               request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CAx5MEp7cGrQ6cEe?export")
             }, std::time::Duration::from_secs(60 * 60 * 4));
         }
-
         let x = (*CACHE.get().await).clone();
-        x
+        Json(x)
+    }
+
+
+    #[get("/branchen")]
+    async fn get_branchen_events() -> impl Responder {
+        lazy_static! {
+            static ref CACHE: TimedCache<Vec<CalendarEvent>>  = TimedCache::with_generator( || {
+               request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CKpykNdtKHkA6Z9B?export")
+            }, std::time::Duration::from_secs(60 * 60 * 4));
+        }
+        let x = (*CACHE.get().await).clone();
+        Json(x)
+    }
+
+    fn request_calendar(url: &str) -> Vec<CalendarEvent> {
+        let calendar = reqwest::blocking::get(
+            url,
+        ).unwrap()
+            .text()
+            .unwrap();
+
+        let calendar = icalendar::parser::unfold(&calendar);
+        let calendar = icalendar::parser::read_calendar(&calendar).unwrap();
+
+        icalendar::Calendar::from(calendar)
+            .components
+            .iter()
+            .filter_map(|component| match component {
+                icalendar::CalendarComponent::Event(event) => Some(event),
+                _ => None,
+            })
+            .filter_map(|event| is_after(event, Utc::now()))
+            .filter_map(|event| {
+                Some(CalendarEvent {
+                    summary: event.get_summary().map(|m| m.to_string()),
+                    location: event.get_location().map(|m| m.to_string()),
+                    description: event.get_description().map(|m| m.to_string()),
+                    start: event.get_start().map(|d| dpt_to_date_time(d)).flatten(),
+                    end: event.get_start().map(|d| dpt_to_date_time(d)).flatten(),
+                })
+            })
+            .collect::<Vec<_>>()
     }
 
     fn dpt_to_date_time(date_perhaps_time: icalendar::DatePerhapsTime) -> Option<DateTime<Utc>> {

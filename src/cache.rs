@@ -1,5 +1,5 @@
 use std::ops::Deref;
-use async_std::sync::RwLockReadGuard;
+use async_std::sync::{RwLockReadGuard, RwLockWriteGuard};
 use std::time::{Duration, SystemTime};
 use async_std::sync::RwLock;
 
@@ -40,14 +40,15 @@ impl<T: Sync> TimedCache<T> {
             ReadWrapper(data)
         } else {
             drop(data);
-            {
+            let mut write = self.data_last_updated.write().await;
+            // Write only needed if not already updated
+            if (*write).last_updated + self.duration < SystemTime::now() {
                 let data = (*self.generator)(); //Blocks for now
 
-                let mut write = self.data_last_updated.write().await;
                 write.data = data;
                 write.last_updated = SystemTime::now();
             }
-            let data = self.data_last_updated.read().await;
+            let data = RwLockWriteGuard::downgrade(write);
             ReadWrapper(data)
         }
     }

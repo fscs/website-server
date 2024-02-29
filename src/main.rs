@@ -30,7 +30,9 @@ async fn main() -> anyhow::Result<()> {
         .to_string();
 
     Ok(HttpServer::new(move || {
-        App::new().service(web::calendar::get_events).service(
+        App::new()
+            .service(web::calendar::service("/calendar"))
+            .service(
             fs::Files::new("/", &(current_dir.clone() + "/static/")).index_file("index.html"),
         )
     })
