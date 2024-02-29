@@ -99,7 +99,7 @@
             postInstall = ''
               mkdir -p $out/bin
               ln -s ${website.defaultPackage.${system}} $out/bin/static
-              cp ${defaultPackage}/bin/templates $out/bin/templates
+              cp -r ${defaultPackage}/bin/templates $out/bin/templates
               cp ${defaultPackage}/bin/backend $out/bin/backend
             '';
           };

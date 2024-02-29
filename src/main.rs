@@ -15,9 +15,9 @@ struct Args {
     // The Host Interface
     #[arg(short, long, default_value_t = {"127.0.0.1".to_string()})]
     host: String,
-    //Use the Working Directory as Base Directory instead of the one in which the executable resides in.
-    #[arg(long, default_value_t = true)]
-    use_working_dir: bool
+    //Use the Directory of the executable as Base Directory instead of the working Directory
+    #[arg(long, default_value_t = false)]
+    use_executable_dir: bool
 }
 
 lazy_static!{
@@ -27,7 +27,7 @@ lazy_static!{
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
 
-    let dir = if ARGS.use_working_dir {
+    let dir = if !ARGS.use_executable_dir {
         std::env::current_dir().unwrap().to_str().unwrap().to_string()
     } else {
         std::env::current_exe()
