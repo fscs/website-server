@@ -54,7 +54,6 @@
           ];
 
           postInstall = ''
-            ln -s ${website.defaultPackage.${system}} $out/bin/static
             cp -r templates $out/bin/templates
           '';
           
@@ -69,8 +68,23 @@
         # For `nix build` & `nix run`:
         defaultPackage = my-crate;
 
+        packages.fullWebsite = pkgs.stdenv.mkDerivation {
+          name = "with-files";
+          src = ./.;
+          buildInputs = [ my-crate ];
+
+          postInstall = ''
+            mkdir -p $out/bin
+            ln -s ${website.defaultPackage.${system}} $out/bin/static
+            ln -s ${defaultPackage}/bin/templates $out/bin/templates
+            ln -s ${defaultPackage}/bin/backed $out/bin/backend
+          '';
+          
+        };
+
         apps.default = flake-utils.lib.mkApp {
-          drv = my-crate;
+          drv = packages.fullWebsite;
+          exePath = "${packages.fullWebsite}/bin/backend";
         };
 
         # For `nix develop`:
