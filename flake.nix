@@ -90,18 +90,31 @@
         # For `nix build` & `nix run`:
         defaultPackage = my-crate;
 
-        packages.fullWebsite = pkgs.stdenv.mkDerivation {
-          name = "with-files";
-          src = ./.;
-          buildInputs = [ my-crate ];
+        packages = {
+          fullWebsite = pkgs.stdenv.mkDerivation {
+            name = "with-files";
+            src = ./.;
+            buildInputs = [ my-crate ];
 
-          postInstall = ''
-            mkdir -p $out/bin
-            ln -s ${website.defaultPackage.${system}} $out/bin/static
-            ln -s ${defaultPackage}/bin/templates $out/bin/templates
-            ln -s ${defaultPackage}/bin/backend $out/bin/backend
-          '';
-          
+            postInstall = ''
+              mkdir -p $out/bin
+              ln -s ${website.defaultPackage.${system}} $out/bin/static
+              ln -s ${defaultPackage}/bin/templates $out/bin/templates
+              cp ${defaultPackage}/bin/backend $out/bin/backend
+            '';
+          };
+
+          docker = pkgs.dockerTools.buildImage {
+            name = "fscs-website";
+            tag = "latest";
+
+            config = {
+              Cmd = [ "${packages.fullWebsite}/bin/backend" "--host" "0.0.0.0"];
+              ExposedPorts = {
+                "8080/tcp" = {};
+              };
+            };
+          };
         };
 
         apps.default = flake-utils.lib.mkApp {
