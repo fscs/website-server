@@ -4,6 +4,7 @@ mod cache;
 use actix_files as fs;
 use actix_web::{App, HttpServer};
 use clap::Parser;
+use lazy_static::lazy_static;
 
 #[derive(Parser)]
 struct Args {
@@ -13,30 +14,40 @@ struct Args {
     port: u16,
     // The Host Interface
     #[arg(short, long, default_value_t = ("127.0.0.1".to_string()))]
-    host: String
+    host: String,
+    //Use the Working Directory as Base Directory instead of the one in which the executable resides in.
+    #[arg(long, default_value_t = true)]
+    use_working_dir: bool
+}
+
+lazy_static!{
+    static ref ARGS: Args = Args::parse();
 }
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
-    let args: Args = Args::parse();
 
-    let current_dir = std::env::current_exe()
-        .unwrap()
-        .as_path()
-        .parent()
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_string();
+    let dir = if ARGS.use_working_dir {
+        std::env::current_dir().unwrap().to_str().unwrap().to_string()
+    } else {
+        std::env::current_exe()
+            .unwrap()
+            .as_path()
+            .parent()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+    };
 
     Ok(HttpServer::new(move || {
         App::new()
             .service(web::calendar::service("/calendar"))
             .service(
-            fs::Files::new("/", &(current_dir.clone() + "/static/")).index_file("index.html"),
+            fs::Files::new("/", &(dir.clone() + "/static/")).index_file("index.html"),
         )
     })
-    .bind((args.host, args.port))?
+    .bind((&ARGS.host, ARGS.port))?
     .run()
     .await?)
 }
