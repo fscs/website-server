@@ -13,7 +13,7 @@ struct Args {
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
     // The Host Interface
-    #[arg(short, long, default_value_t = ("127.0.0.1".to_string()))]
+    #[arg(short, long, default_value_t = {"127.0.0.1".to_string()})]
     host: String,
     //Use the Working Directory as Base Directory instead of the one in which the executable resides in.
     #[arg(long, default_value_t = true)]
@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
             .unwrap()
             .to_str()
             .unwrap()
-            .to_string();
+            .to_string()
     };
 
     Ok(HttpServer::new(move || {
@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
             fs::Files::new("/", &(dir.clone() + "/static/")).index_file("index.html"),
         )
     })
-    .bind((&ARGS.host, ARGS.port))?
+    .bind((ARGS.host.as_str(), ARGS.port))?
     .run()
     .await?)
 }

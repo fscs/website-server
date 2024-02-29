@@ -4,14 +4,14 @@ use lazy_static::lazy_static;
 use tera::Context;
 
 pub(crate) mod calendar {
+    use std::future::Future;
+    use std::pin::Pin;
     use actix_web::{get, Responder, Scope, web};
-    use actix_web::dev::HttpServiceFactory;
     use actix_web::web::Json;
     use chrono::{DateTime, NaiveTime, Utc};
     use icalendar::{Component, Event, EventLike};
     use lazy_static::lazy_static;
     use crate::cache::TimedCache;
-    use crate::web::TerraResponse;
 
     #[derive(serde::Serialize, Clone)]
     struct CalendarEvent {
@@ -51,11 +51,20 @@ pub(crate) mod calendar {
         Json(x)
     }
 
-    fn request_calendar(url: &str) -> Vec<CalendarEvent> {
-        let calendar = reqwest::blocking::get(
-            url,
-        ).unwrap()
+    fn request_calendar<'a>(url: &str) -> Pin<Box<dyn Future<Output=Vec<CalendarEvent>> + 'a>> {
+        let url = url.to_owned();
+        Box::pin((move || async {
+            request_cal(url).await
+        })()
+        )
+    }
+
+    async fn request_cal(url: String) -> Vec<CalendarEvent> {
+        let calendar = reqwest::get(
+            &url,
+        ).await.unwrap()
             .text()
+            .await
             .unwrap();
 
         let calendar = icalendar::parser::unfold(&calendar);
@@ -105,7 +114,7 @@ struct TerraResponse {
 
 impl Responder for TerraResponse {
     type Body = BoxBody;
-    fn respond_to(self, req: &HttpRequest) -> HttpResponse<Self::Body> {
+    fn respond_to(self, _: &HttpRequest) -> HttpResponse<Self::Body> {
         lazy_static! {
             static ref TERA: tera::Tera = {
                 let current_dir = std::env::current_exe()
