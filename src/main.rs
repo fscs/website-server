@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
 
     let server = HttpServer::new(move || {
         App::new()
-            .service(web::calendar::service("/calendar"))
+            .service(web::calendar::service("/api/calendar"))
             .service(fs::Files::new("/", &(dir.clone() + "/static/")).index_file("index.html"))
     }).bind((ARGS.host.as_str(), ARGS.port))?;
 
