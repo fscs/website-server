@@ -75,13 +75,6 @@
               # Additional darwin specific inputs can be set here
               pkgs.libiconv
             ];
-
-          postInstall = ''
-            cp -r templates $out/bin/templates
-          '';
-
-          # Additional environment variables can be set directly
-          # MY_CUSTOM_VAR = "some value";
         };
       in rec {
         checks = {
@@ -99,7 +92,6 @@
             postInstall = ''
               mkdir -p $out/bin
               ln -s ${website.defaultPackage.${system}} $out/bin/static
-              cp -r ${defaultPackage}/bin/templates $out/bin/templates
               cp ${defaultPackage}/bin/fscs-website-backend $out/bin/fscs-website-backend
             '';
           };
