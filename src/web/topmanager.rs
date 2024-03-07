@@ -27,7 +27,7 @@ pub struct Antrag {
     pub begründung: String,
 }
 
-#[post("/create_Antrag")]
+#[post("/create_antrag")]
 async fn create_antrag(
     db: Data<DatabasePool>,
     params: web::Query<CreateAntragParams>,
@@ -48,7 +48,7 @@ async fn create_antrag(
     }
 }
 
-#[get("/get_Anträge")]
+#[get("/get_anträge")]
 async fn get_anträge(db: Data<DatabasePool>) -> impl Responder {
     match sqlx::query_as::<_, Antrag>("SELECT * FROM anträge")
         .fetch_all(db.pool())
