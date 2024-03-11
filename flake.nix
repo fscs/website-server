@@ -42,7 +42,7 @@
     crane,
     nixpkgs,
     rust-overlay,
-    theme
+    theme,
   }:
     flake-utils.lib.eachDefaultSystem (
       system: let
@@ -58,7 +58,8 @@
           src = lib.cleanSourceWith {
             src = ./.; # The original, unfiltered source
             filter = path: type:
-              (lib.hasSuffix "\.html" path)
+              (lib.hasSuffix "\.sql" path)
+              || (lib.hasSuffix "\.gitkeep" path)
               ||
               # Default filter from crane (allow .rs files)
               (craneLib.filterCargoSources path type);
@@ -75,9 +76,8 @@
               # Additional darwin specific inputs can be set here
               pkgs.libiconv
             ];
-
           postInstall = ''
-            cp -r templates $out/bin/templates
+            cp -r migrations $out/bin/migrations
           '';
 
           # Additional environment variables can be set directly
@@ -94,13 +94,13 @@
           fullWebsite = pkgs.stdenv.mkDerivation {
             name = "with-files";
             src = ./.;
-            buildInputs = [ my-crate ];
+            buildInputs = [my-crate];
 
             postInstall = ''
               mkdir -p $out/bin
               ln -s ${website.defaultPackage.${system}} $out/bin/static
-              cp -r ${defaultPackage}/bin/templates $out/bin/templates
-              cp ${defaultPackage}/bin/backend $out/bin/backend
+              cp ${defaultPackage}/bin/fscs-website-backend $out/bin/fscs-website-backend
+              cp -r ${defaultPackage}/bin/migrations $out/bin/migrations
             '';
           };
 
@@ -109,7 +109,7 @@
             tag = "latest";
 
             config = {
-              Cmd = [ "${packages.fullWebsite}/bin/backend" "--host" "0.0.0.0"];
+              Cmd = ["${packages.fullWebsite}/bin/fscs-website-backend" "--host" "0.0.0.0"];
               ExposedPorts = {
                 "8080/tcp" = {};
               };
@@ -119,7 +119,7 @@
 
         apps.default = flake-utils.lib.mkApp {
           drv = packages.fullWebsite;
-          exePath = "/bin/backend";
+          exePath = "/bin/fscs-website-backend";
         };
 
         # For `nix develop`:
