@@ -8,7 +8,7 @@ description = "Backend für Knuts neue Webseite"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlx = {version = "0", features = ["runtime-tokio-rustls", "postgres", "uuid", "json"]}
+sqlx = {version = "0", features = ["runtime-tokio-rustls", "postgres", "uuid", "json", "chrono"]}
 actix-web = {  version = "=4.4.0", features = ["secure-cookies"] }
 uuid = { version = "1.7.0", features = ["v4", "serde"] }
 anyhow = "1.0.79"

@@ -20,7 +20,7 @@ struct Args {
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
     //The Host Interface
-    #[arg(short, long, default_value_t = {"127.0.0.1".to_string()})]
+    #[arg(long, default_value_t = {"127.0.0.1".to_string()})]
     host: String,
     //Use the Directory of the executable as Base Directory instead of the working Directory
     #[arg(long, default_value_t = false)]
@@ -37,7 +37,9 @@ lazy_static! {
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
-    pretty_env_logger::formatted_timed_builder().filter_level(LevelFilter::from_str(&ARGS.log_level)?).init();
+    pretty_env_logger::formatted_timed_builder()
+        .filter_level(LevelFilter::from_str(&ARGS.log_level)?)
+        .init();
 
     let dir = get_base_dir()?;
 
