@@ -5,12 +5,14 @@ mod web;
 
 use crate::database::DatabasePool;
 use actix_files as fs;
+use actix_web::web::Data;
 use actix_web::{App, HttpServer};
 use anyhow::anyhow;
 use clap::Parser;
 use lazy_static::lazy_static;
 use log::{info, LevelFilter};
 use web::calendar;
+use web::topmanager;
 
 #[derive(Parser)]
 struct Args {
@@ -45,8 +47,9 @@ async fn main() -> anyhow::Result<()> {
     Ok(HttpServer::new(move || {
         App::new()
             .service(web::calendar::service("/api/calendar"))
+            .service(topmanager::service("/topmanager"))
             .service(fs::Files::new("/", &(dir.clone() + "/static/")).index_file("index.html"))
-            .app_data(database.clone())
+            .app_data(Data::new(database.clone()))
     })
     .bind((ARGS.host.as_str(), ARGS.port))?
     .run()
@@ -65,7 +68,9 @@ fn get_base_dir() -> anyhow::Result<String> {
             .parent()
             .ok_or(anyhow!("Executable has no Parent Directory"))?
             .to_str()
-            .ok_or(anyhow!("Directory of the Executable Contains non UTF-8 Characters"))?
+            .ok_or(anyhow!(
+                "Directory of the Executable Contains non UTF-8 Characters"
+            ))?
             .to_string()
     })
 }
