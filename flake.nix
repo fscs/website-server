@@ -58,7 +58,8 @@
           src = lib.cleanSourceWith {
             src = ./.; # The original, unfiltered source
             filter = path: type:
-              (lib.hasSuffix "\.html" path)
+              (lib.hasSuffix "\.sql" path)
+              || (lib.hasSuffix "\.gitkeep" path)
               ||
               # Default filter from crane (allow .rs files)
               (craneLib.filterCargoSources path type);
@@ -75,6 +76,12 @@
               # Additional darwin specific inputs can be set here
               pkgs.libiconv
             ];
+          postInstall = ''
+            cp -r migrations $out/bin/migrations
+          '';
+
+          # Additional environment variables can be set directly
+          # MY_CUSTOM_VAR = "some value";
         };
       in rec {
         checks = {
@@ -93,6 +100,7 @@
               mkdir -p $out/bin
               ln -s ${website.defaultPackage.${system}} $out/bin/static
               cp ${defaultPackage}/bin/fscs-website-backend $out/bin/fscs-website-backend
+              cp -r ${defaultPackage}/bin/migrations $out/bin/migrations
             '';
           };
 

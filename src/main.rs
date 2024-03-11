@@ -1,10 +1,15 @@
 mod cache;
 mod web;
 
+
+use std::str::FromStr;
+
 use actix_files as fs;
 use actix_web::{App, HttpServer};
 use clap::Parser;
 use lazy_static::lazy_static;
+use log::{info, LevelFilter};
+use web::calendar;
 
 #[derive(Parser)]
 struct Args {
@@ -17,6 +22,8 @@ struct Args {
     //Use the Directory of the executable as Base Directory instead of the working Directory
     #[arg(long, default_value_t = false)]
     use_executable_dir: bool,
+    #[arg(long, default_value_t = {"Info".to_string()})]
+    log_level: String
 }
 
 lazy_static! {
@@ -25,6 +32,8 @@ lazy_static! {
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
+    pretty_env_logger::formatted_timed_builder().filter_level(LevelFilter::from_str(&ARGS.log_level)?).init();
+
     let dir = if !ARGS.use_executable_dir {
         std::env::current_dir()
             .unwrap()
