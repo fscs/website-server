@@ -1,6 +1,6 @@
 use crate::database::DatabasePool;
 use actix_web::{
-    delete, get, post, put,
+    delete, get, patch, post, put,
     web::{self, Data},
     HttpResponse, Responder, Scope,
 };
@@ -25,6 +25,7 @@ pub struct CreateAntragParams {
     pub titel: String,
     pub antragstext: String,
     pub begründung: String,
+    pub antragssteller: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -70,6 +71,11 @@ struct CreateSitzungParams {
     pub name: String,
 }
 
+#[derive(Debug, Serialize, FromRow)]
+struct Person {
+    pub id: Uuid,
+    pub name: String,
+}
 #[put("/antrag")]
 async fn create_antrag(
     db: Data<DatabasePool>,
@@ -89,6 +95,35 @@ async fn create_antrag(
         Err(e) => {
             log::error!("Failed to create Antrag: {:?}", e);
             return "Failed to create Antrag";
+        }
+    };
+
+    let result = sqlx::query_as::<_, Person>(
+        "INSERT INTO person (name) VALUES ($1) RETURNING * ON CONFLICT DO NOTHING/UPDATE",
+    )
+    .bind(&params.antragssteller)
+    .fetch_one(db.pool())
+    .await;
+
+    let person = match result {
+        Ok(person) => person,
+        Err(e) => {
+            log::error!("Failed to create Person: {:?}", e);
+            return "Failed to create Person";
+        }
+    };
+
+    let result = sqlx::query("INSERT INTO antragsstellende (antrag_id, person_id) VALUES ($1, $2)")
+        .bind(antrag.id)
+        .bind(person.id)
+        .execute(db.pool())
+        .await;
+
+    match result {
+        Ok(_) => "Antrag erstellt",
+        Err(e) => {
+            log::error!("Failed to create Antragsstellende: {:?}", e);
+            return "Failed to create Antragsstellende";
         }
     };
 
@@ -157,6 +192,26 @@ async fn create_antrag(
         Err(e) => {
             log::error!("Failed to create Antragmapping: {:?}", e);
             "Failed to create Antragmapping"
+        }
+    }
+}
+
+#[patch("/antrag")]
+async fn update_antrag(
+    db: Data<DatabasePool>,
+    params: web::Json<CreateAntragParams>,
+) -> impl Responder {
+    let result = sqlx::query("UPDATE anträge SET titel = $1, antragstext = $2, begründung = $3")
+        .bind(&params.titel)
+        .bind(&params.antragstext)
+        .bind(&params.begründung)
+        .execute(db.pool())
+        .await;
+    match result {
+        Ok(_) => "Antrag geändert",
+        Err(e) => {
+            log::error!("Failed to update Antrag: {:?}", e);
+            "Failed to update Antrag"
         }
     }
 }
