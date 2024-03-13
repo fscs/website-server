@@ -11,6 +11,7 @@ use uuid::Uuid;
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
         .service(create_antrag)
+        .service(update_antrag)
         .service(get_anträge)
         .service(delete_antrag)
         .service(get_sitzungen)
@@ -26,6 +27,14 @@ pub struct CreateAntragParams {
     pub antragstext: String,
     pub begründung: String,
     pub antragssteller: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateAntragParams {
+    pub uuid: Uuid,
+    pub titel: String,
+    pub antragstext: String,
+    pub begründung: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,7 +108,7 @@ async fn create_antrag(
     };
 
     let result = sqlx::query_as::<_, Person>(
-        "INSERT INTO person (name) VALUES ($1) RETURNING * ON CONFLICT DO NOTHING/UPDATE",
+        "Insert into person (name) VALUES ($1) ON CONFLICT (name) Do NOTHING RETURNING *",
     )
     .bind(&params.antragssteller)
     .fetch_one(db.pool())
@@ -113,11 +122,12 @@ async fn create_antrag(
         }
     };
 
-    let result = sqlx::query("INSERT INTO antragsstellende (antrag_id, person_id) VALUES ($1, $2)")
-        .bind(antrag.id)
-        .bind(person.id)
-        .execute(db.pool())
-        .await;
+    let result =
+        sqlx::query("INSERT INTO antragsstellende (antrags_id, person_id) VALUES ($1, $2)")
+            .bind(antrag.id)
+            .bind(person.id)
+            .execute(db.pool())
+            .await;
 
     match result {
         Ok(_) => "Antrag erstellt",
@@ -199,14 +209,17 @@ async fn create_antrag(
 #[patch("/antrag")]
 async fn update_antrag(
     db: Data<DatabasePool>,
-    params: web::Json<CreateAntragParams>,
+    params: web::Json<UpdateAntragParams>,
 ) -> impl Responder {
-    let result = sqlx::query("UPDATE anträge SET titel = $1, antragstext = $2, begründung = $3")
-        .bind(&params.titel)
-        .bind(&params.antragstext)
-        .bind(&params.begründung)
-        .execute(db.pool())
-        .await;
+    let result = sqlx::query(
+        "UPDATE anträge SET titel = $1, antragstext = $2, begründung = $3 WHERE id = $4",
+    )
+    .bind(&params.titel)
+    .bind(&params.antragstext)
+    .bind(&params.begründung)
+    .bind(params.uuid)
+    .execute(db.pool())
+    .await;
     match result {
         Ok(_) => "Antrag geändert",
         Err(e) => {
