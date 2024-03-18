@@ -19,6 +19,8 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(anträge_by_top)
         .service(anträge_by_sitzung)
         .service(create_sitzung)
+        .service(create_top)
+        .service(get_current_tops_wwith_anträge)
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,7 +33,7 @@ pub struct CreateAntragParams {
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateAntragParams {
-    pub uuid: Uuid,
+    pub id: Uuid,
     pub titel: String,
     pub antragstext: String,
     pub begründung: String,
@@ -85,6 +87,17 @@ struct Person {
     pub id: Uuid,
     pub name: String,
 }
+
+#[derive(Debug, Serialize)]
+struct TopWithAnträge {
+    pub id: Uuid,
+    pub position: i32,
+    pub sitzung_id: Uuid,
+    pub name: String,
+    pub anträge: Vec<Antrag>,
+    pub inhalt: Option<serde_json::Value>,
+}
+
 #[put("/antrag")]
 async fn create_antrag(
     db: Data<DatabasePool>,
@@ -103,13 +116,14 @@ async fn create_antrag(
         Ok(antrag) => antrag,
         Err(e) => {
             log::error!("Failed to create Antrag: {:?}", e);
-            return "Failed to create Antrag";
+            return "Failed to create Antrag".to_string();
         }
     };
 
     let result = sqlx::query_as::<_, Person>(
-        "Insert into person (name) VALUES ($1) ON CONFLICT (name) Do NOTHING RETURNING *",
+        "Insert into person (name) VALUES ($1) ON CONFLICT (name) Do Update set name=$2 RETURNING *",
     )
+    .bind(&params.antragssteller)
     .bind(&params.antragssteller)
     .fetch_one(db.pool())
     .await;
@@ -118,7 +132,7 @@ async fn create_antrag(
         Ok(person) => person,
         Err(e) => {
             log::error!("Failed to create Person: {:?}", e);
-            return "Failed to create Person";
+            return "Failed to create Person".to_string();
         }
     };
 
@@ -133,27 +147,29 @@ async fn create_antrag(
         Ok(_) => "Antrag erstellt",
         Err(e) => {
             log::error!("Failed to create Antragsstellende: {:?}", e);
-            return "Failed to create Antragsstellende";
+            return "Failed to create Antragsstellende".to_string();
         }
     };
 
     let now = chrono::Utc::now();
 
     //check if there is a sitzung in the future
-    let sitzungen = sqlx::query_as::<_, Sitzung>("SELECT * FROM sitzungen WHERE datum > $1")
-        .bind(now)
-        .fetch_all(db.pool())
-        .await;
+    let sitzungen = sqlx::query_as::<_, Sitzung>(
+        "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC LIMIT 1",
+    )
+    .bind(now)
+    .fetch_all(db.pool())
+    .await;
 
     match &sitzungen {
         Ok(sitzungen) => {
             if sitzungen.is_empty() {
-                return "Noch keine Sitzung geplant";
+                return "Antrag erstellt - Noch keine Sitzung geplant".to_string();
             }
         }
         Err(e) => {
             log::error!("Failed to get Sitzungen: {:?}", e);
-            return "Failed to get Sitzungen";
+            return "Failed to get Sitzungen".to_string();
         }
     }
 
@@ -168,7 +184,7 @@ async fn create_antrag(
         Ok(top) => top,
         Err(e) => {
             log::error!("Failed to get Top: {:?}", e);
-            return "Failed to get Top";
+            return "Failed to get Top".to_string();
         }
     };
 
@@ -186,7 +202,7 @@ async fn create_antrag(
         Ok(top) => top,
         Err(e) => {
             log::error!("Failed to create Top: {:?}", e);
-            return "Failed to create Top";
+            return "Failed to create Top".to_string();
         }
     };
 
@@ -198,10 +214,10 @@ async fn create_antrag(
         .await;
 
     match result {
-        Ok(_) => "Antrag erstellt",
+        Ok(_) => serde_json::to_string(&antrag).unwrap(),
         Err(e) => {
-            log::error!("Failed to create Antragmapping: {:?}", e);
-            "Failed to create Antragmapping"
+            log::error!("Failed to create Antragstop: {:?}", e);
+            "Failed to create Antragstop".to_string()
         }
     }
 }
@@ -217,7 +233,7 @@ async fn update_antrag(
     .bind(&params.titel)
     .bind(&params.antragstext)
     .bind(&params.begründung)
-    .bind(params.uuid)
+    .bind(params.id)
     .execute(db.pool())
     .await;
     match result {
@@ -359,4 +375,71 @@ async fn anträge_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> imp
         Ok(anträge) => HttpResponse::Ok().json(anträge),
         Err(e) => HttpResponse::NotFound().json(format!("Failed to get Anträge: {:?}", e)),
     }
+}
+
+#[get("/current_tops")]
+async fn get_current_tops_wwith_anträge(db: Data<DatabasePool>) -> impl Responder {
+    let now = chrono::Utc::now();
+    let next_sitzung = sqlx::query_as::<_, Sitzung>(
+        "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC LIMIT 1",
+    )
+    .bind(now)
+    .fetch_one(db.pool())
+    .await;
+
+    let next_sitzung = match next_sitzung {
+        Ok(sitzung) => sitzung,
+        Err(e) => {
+            log::error!("Failed to get Sitzung: {:?}", e);
+            return HttpResponse::NotFound().json("Failed to get Sitzung");
+        }
+    };
+
+    let tops =
+        sqlx::query_as::<_, Top>("SELECT * FROM tops WHERE sitzung_id = $1 ORDER BY position ASC")
+            .bind(next_sitzung.id)
+            .fetch_all(db.pool())
+            .await;
+
+    let tops = match tops {
+        Ok(tops) => tops,
+        Err(e) => {
+            log::error!("Failed to get Tops: {:?}", e);
+            return HttpResponse::NotFound().json("Failed to get Tops");
+        }
+    };
+
+    let mut tops_with_anträge = vec![];
+
+    for top in tops {
+        let anträge = sqlx::query_as::<_, Antrag>(
+            "SELECT * FROM anträge
+            JOIN antragstop ON anträge.id = antragstop.antrag_id
+            JOIN tops ON antragstop.top_id = tops.id
+            WHERE tops.id = $1",
+        )
+        .bind(top.id)
+        .fetch_all(db.pool())
+        .await;
+        let anträge = match anträge {
+            Ok(anträge) => anträge,
+            Err(e) => {
+                log::error!("Failed to get Anträge: {:?}", e);
+                return HttpResponse::NotFound().json("Failed to get Anträge");
+            }
+        };
+        let top_with_anträge = TopWithAnträge {
+            id: top.id,
+            position: top.position,
+            sitzung_id: top.sitzung_id,
+
+            name: top.name,
+            anträge,
+            inhalt: top.inhalt,
+        };
+
+        tops_with_anträge.push(top_with_anträge);
+    }
+
+    HttpResponse::Ok().json(tops_with_anträge)
 }

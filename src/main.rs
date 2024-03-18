@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(HttpServer::new(move || {
         App::new()
             .service(web::calendar::service("/api/calendar"))
-            .service(topmanager::service("/topmanager"))
+            .service(topmanager::service("/api/topmanager"))
             .service(fs::Files::new("/", &(dir.clone() + "/static/")).index_file("index.html"))
             .app_data(Data::new(database.clone()))
     })

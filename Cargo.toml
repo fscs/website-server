@@ -15,7 +15,7 @@ anyhow = "1.0.79"
 actix-utils = "3.0.1"
 actix-files = "0.6.5"
 icalendar = { version = "=0.16.0", features = ["chrono-tz"]}
-reqwest = {  version = "0.11.24", features = ["blocking"] }
+reqwest = {  version = "0.11.24", features = ["blocking", "json"] }
 log = "0.4.20"
 chrono = { version = "0", features = ["serde"]}
 serde_json = { version = "1", features = ["raw_value"]}

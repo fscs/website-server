@@ -7,7 +7,8 @@ create table if not exists anträge (
 
 create table if not exists person (
     id uuid primary key default gen_random_uuid(),
-    name text not null unique,
+    name text not null,
+    unique (name)
 );
 
 create table if not exists antragsstellende (
