@@ -4,6 +4,7 @@ use actix_web::{get, web, Responder, Scope};
 use chrono::{DateTime, NaiveTime, Utc};
 use icalendar::{Component, Event, EventLike};
 use lazy_static::lazy_static;
+use log::log;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -61,7 +62,7 @@ async fn request_cal(url: String) -> Vec<CalendarEvent> {
     let calendar = icalendar::parser::unfold(&calendar);
     let calendar = icalendar::parser::read_calendar(&calendar).unwrap();
 
-    icalendar::Calendar::from(calendar)
+    let mut events = icalendar::Calendar::from(calendar)
         .components
         .iter()
         .filter_map(|component| match component {
@@ -72,13 +73,18 @@ async fn request_cal(url: String) -> Vec<CalendarEvent> {
         .filter_map(|event| {
             Some(CalendarEvent {
                 summary: event.get_summary().map(|m| m.to_string()),
-                location: event.get_location().map(|m| m.to_string()),
+                location: event
+                    .get_location()
+                    .map(|m| m.to_string().replace("\\", "")),
                 description: event.get_description().map(|m| m.to_string()),
                 start: event.get_start().map(|d| dpt_to_date_time(d)).flatten(),
                 end: event.get_start().map(|d| dpt_to_date_time(d)).flatten(),
             })
         })
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>();
+
+    events.sort_by(|a, b| a.start.cmp(&b.start));
+    events
 }
 
 fn dpt_to_date_time(date_perhaps_time: icalendar::DatePerhapsTime) -> Option<DateTime<Utc>> {

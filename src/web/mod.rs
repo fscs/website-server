@@ -8,6 +8,7 @@ use std::pin::Pin;
 use tera::Context;
 
 pub(crate) mod calendar;
+pub(crate) mod topmanager;
 
 #[derive(Clone)]
 struct TerraResponse {
