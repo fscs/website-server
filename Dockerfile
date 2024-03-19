@@ -5,7 +5,6 @@ ARG DB_USER
 ARG DB_PASS
 ARG DB_NAME
 
-Run mkdir -p /usrsss
 RUN apt-get update && apt-get install -y ca-certificates tzdata
 WORKDIR /app
 COPY ./target/release/fscs-website-backend .
