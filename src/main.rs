@@ -1,7 +1,9 @@
+
 mod cache;
 use std::str::FromStr;
 mod database;
 mod web;
+mod domain;
 
 use crate::database::DatabasePool;
 use actix_files as fs;

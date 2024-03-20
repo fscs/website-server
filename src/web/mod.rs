@@ -24,7 +24,7 @@ impl FromRequest for DatabaseTransaction<'static> {
         let req = req.clone();
         Box::pin(async move {
             if let Some(pool) = req.app_data::<DatabasePool>() {
-                match pool.transaction().await {
+                match pool.start_transaction().await {
                     Ok(transaction) => Ok(transaction),
                     Err(err) => {
                         log::debug!("{:?}", err);
