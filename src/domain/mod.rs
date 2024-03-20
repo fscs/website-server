@@ -27,18 +27,29 @@ pub struct Antrag {
 }
 
 pub trait TopManagerRepo {
-
-    async fn create_sitzung(&mut self, date_time: NaiveDateTime, name: &str) -> anyhow::Result<Sitzung>;
+    async fn create_sitzung(
+        &mut self,
+        date_time: NaiveDateTime,
+        name: &str,
+    ) -> anyhow::Result<Sitzung>;
 
     async fn save_sitzung(&mut self, sitzung: Sitzung) -> anyhow::Result<Sitzung>;
 
     async fn find_sitzung_by_id(&mut self, uuid: Uuid) -> anyhow::Result<Option<Sitzung>>;
 
-    async fn find_sitzung_after(&mut self, date_time: NaiveDateTime) -> anyhow::Result<Option<Sitzung>>;
+    async fn find_sitzung_after(
+        &mut self,
+        date_time: NaiveDateTime,
+    ) -> anyhow::Result<Option<Sitzung>>;
 
     async fn get_sitzungen(&mut self) -> anyhow::Result<Vec<Sitzung>>;
 
-    async fn create_antrag(&mut self, titel: &str, antragstext: &str, begründung: &str) -> anyhow::Result<Antrag>;
+    async fn create_antrag(
+        &mut self,
+        titel: &str,
+        antragstext: &str,
+        begründung: &str,
+    ) -> anyhow::Result<Antrag>;
 
     async fn find_antrag_by_id(&mut self, uuid: Uuid) -> anyhow::Result<Antrag>;
 
@@ -48,11 +59,18 @@ pub trait TopManagerRepo {
 
     async fn anträge_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Antrag>>;
 
-    async fn create_top(&mut self, titel: &str, sitzung_id: Uuid, inhalt: Option<serde_json::Value>) -> anyhow::Result<Top>;
+    async fn create_top(
+        &mut self,
+        titel: &str,
+        sitzung_id: Uuid,
+        inhalt: Option<serde_json::Value>,
+    ) -> anyhow::Result<Top>;
 
     async fn add_antrag_to_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> anyhow::Result<()>;
 
     async fn anträge_by_top(&mut self, top_id: Uuid) -> anyhow::Result<Vec<Antrag>>;
 
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>>;
+
+    async fn get_next_sitzung(&mut self) -> anyhow::Result<Sitzung>;
 }
