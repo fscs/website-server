@@ -3,9 +3,9 @@ use actix_web::{delete, get, put, web::{self, Data}, HttpResponse, Responder, Sc
 use actix_web::body::BoxBody;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, Row};
+use sqlx::{prelude::FromRow};
 use uuid::Uuid;
-use crate::domain::SitzungRepo;
+use crate::domain::TopManagerRepo;
 use crate::domain::Antrag;
 
 pub(crate) fn service(path: &'static str) -> Scope {
@@ -32,21 +32,11 @@ pub struct DeleteAntragParams {
     pub id: Uuid,
 }
 
-#[derive(Debug, Serialize, FromRow)]
-pub struct Top {
-    pub id: Uuid,
-    pub position: i32,
-    pub sitzung_id: Uuid,
-    pub name: String,
-    pub inhalt: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CreateTopParams {
     pub titel: String,
-    pub sitzung_id: Uuid,
     pub inhalt: Option<serde_json::Value>,
-    pub position: i32,
+    pub position: i64,
 }
 
 #[derive(Debug, Serialize, FromRow)]
@@ -135,85 +125,69 @@ async fn create_antrag(
 }
 
 async fn save_antrag(params: &CreateAntragParams, now: DateTime<Utc>, transaction: &mut DatabaseTransaction<'_>) -> anyhow::Result<Antrag> {
-    let antrag = sqlx::query_as::<_, Antrag>(
-        "INSERT INTO anträge (titel, antragstext, begründung) VALUES ($1, $2, $3) RETURNING *",
-    )
-        .bind(&params.titel)
-        .bind(&params.antragstext)
-        .bind(&params.begründung)
-        .fetch_one(&mut **transaction)
-        .await?;
+    let antrag = transaction.create_antrag(&params.titel, &params.antragstext, &params.begründung).await?;
 
     //check if there is a sitzung in the future
-    let sitzung = transaction.find_sitzung_after(now.naive_utc()).await?;
-
-    let Some(sitzung) = sitzung else {
+    let Some(sitzung) = transaction.find_sitzung_after(now.naive_utc()).await? else {
         return Ok(antrag);
     };
 
-    //get the last created top
-    let top = sqlx::query_as::<_, Top>("SELECT * FROM tops WHERE sitzung_id = $1 ORDER BY id DESC LIMIT 1")
-        .bind(sitzung.id)
-        .fetch_optional(&mut **transaction)
-        .await?;
-
     //create new top
-    let top = sqlx::query_as::<_, Top>(
-        "INSERT INTO tops (name, sitzung_id, position) VALUES ($1, $2, $3) RETURNING *",
-    )
-        .bind(&params.titel)
-        .bind(sitzung.id)
-        .bind(top.map_or(0, |x| x.position + 1))
-        .fetch_one(&mut **transaction)
-        .await?;
+    let top = transaction.create_top(&antrag.titel, sitzung.id, None).await?;
 
     //create mapping between top and antrag
-    sqlx::query("INSERT INTO antragstop (antrag_id, top_id) VALUES ($1, $2)")
-        .bind(antrag.id)
-        .bind(top.id)
-        .execute(&mut **transaction)
-        .await?;
+    transaction.add_antrag_to_top(antrag.id, top.id).await?;
 
     Ok(antrag)
 }
 
-#[get("/get_anträge")]
+#[get("/antrag")]
 async fn get_anträge(db: Data<DatabasePool>) -> impl Responder {
-    match sqlx::query_as::<_, Antrag>("SELECT * FROM anträge")
-        .fetch_all(db.pool())
-        .await
-    {
-        Ok(anträge) => HttpResponse::Ok().json(anträge),
-        Err(e) => HttpResponse::NotFound().json(format!("Failed to get Anträge: {:?}", e)),
-    }
+    let anträge = db.transaction(move |mut transaction| {
+        async move {
+            Ok((transaction.get_anträge().await?, transaction))
+        }
+    }).await;
+
+    RestStatus::ok_from_result(anträge)
 }
 
-#[delete("/antrag")]
+#[get("/antrag/{id}")]
+async fn get_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
+    let antrag = db.transaction(move |mut transaction| {
+        let id = id.clone();
+        async move {
+            Ok((transaction.find_antrag_by_id(id.clone()).await?, transaction))
+        }}).await;
+
+    RestStatus::ok_from_result(antrag)
+}
+
+
+#[delete("/antrag/{id}")]
 async fn delete_antrag(
     db: Data<DatabasePool>,
-    params: web::Query<DeleteAntragParams>,
+    id: web::Path<Uuid>,
 ) -> impl Responder {
-    let result = sqlx::query("DELETE FROM anträge WHERE id = $1")
-        .bind(params.id)
-        .execute(db.pool());
-    match result.await {
-        Ok(_) => "Antrag gelöscht",
-        Err(e) => {
-            log::error!("Failed to delete Antrag: {:?}", e);
-            "Failed to delete Antrag"
+    let result = db.transaction(move |mut transaction| {
+        let id = id.clone();
+        async move {
+            Ok((transaction.delete_antrag(id).await?, transaction))
         }
-    }
+    }).await;
+
+    RestStatus::ok_from_result(result)
 }
 
-#[get("/sitzungen")]
+#[get("/sitzung")]
 async fn get_sitzungen(db: Data<DatabasePool>) -> impl Responder {
-    match sqlx::query_as::<_, Sitzung>("SELECT * FROM sitzungen")
-        .fetch_all(db.pool())
-        .await
-    {
-        Ok(sitzungen) => HttpResponse::Ok().json(sitzungen),
-        Err(e) => HttpResponse::NotFound().json(format!("Failed to get Sitzungen: {:?}", e)),
-    }
+    let result = db.transaction(move |mut transaction| {
+        async move {
+            Ok((transaction.get_sitzungen().await?, transaction))
+        }
+    }).await;
+
+    RestStatus::ok_from_result(result)
 }
 
 #[put("/sitzung")]
@@ -231,78 +205,52 @@ async fn create_sitzung(
     RestStatus::ok_from_result({|| Ok(result?)}())
 }
 
-#[put("/top")]
-async fn create_top(db: Data<DatabasePool>, params: web::Json<CreateTopParams>) -> impl Responder {
+#[put("/sitzung/{sitzung_id}/top")]
+async fn create_top(db: Data<DatabasePool>, sitzung_id: web::Path<Uuid>, params: web::Json<CreateTopParams>) -> impl Responder {
 
-    let result = sqlx::query("INSERT INTO tops (name, sitzung_id, inhalt) VALUES ($1, $2, $3")
-        .bind(&params.titel)
-        .bind(params.sitzung_id)
-        .bind(&params.inhalt)
-        .execute(db.pool());
-    match result.await {
-        Ok(_) => "Top erstellt",
-        Err(e) => {
-            log::error!("Failed to create Top: {:?}", e);
-            "Failed to create Top"
+    let result = db.transaction(move |mut transaction| {
+        let params = params.clone();
+        let sitzung_id = sitzung_id.clone();
+        async move {
+            Ok((transaction.create_top(&params.titel, sitzung_id, params.inhalt).await?, transaction))
         }
-    }
+    }).await;
+
+    RestStatus::created_from_result(result)
 }
 
-#[get("/sitzungen/{id}/tops")]
+#[get("/sitzung/{id}/tops")]
 async fn tops_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
-    let topids = sqlx::query("SELECT top_id FROM sitzungstop WHERE sitzung_id = $1")
-        .bind(*id)
-        .fetch_all(db.pool())
-        .await
-        .map(|rows| {
-            rows.into_iter()
-                .map(|row| row.get::<Uuid, _>("top_id"))
-                .collect::<Vec<_>>()
-        });
-
-    match topids {
-        Ok(topids) => {
-            let tops = sqlx::query_as::<_, Top>("SELECT * FROM tops WHERE id = ANY($1)")
-                .bind(&topids)
-                .fetch_all(db.pool())
-                .await;
-            match tops {
-                Ok(tops) => HttpResponse::Ok().json(tops),
-                Err(e) => HttpResponse::NotFound().json(format!("Failed to get Tops: {:?}", e)),
-            }
+    let tops = db.transaction(move |mut transaction| {
+        let id = id.clone();
+        async move {
+            Ok((transaction.tops_by_sitzung(id.clone()).await?, transaction))
         }
-        Err(e) => HttpResponse::NotFound().json(format!("Failed to get TopIds: {:?}", e)),
-    }
+    }).await;
+
+    RestStatus::ok_from_result(tops)
 }
 
 #[get("/tops/{topid}/anträge")]
 async fn anträge_by_top(db: Data<DatabasePool>, topid: web::Path<Uuid>) -> impl Responder {
-    let anträge = sqlx::query_as::<_, Antrag>(
-        "SELECT * From anträge Join antragstop ON anträge.id = antragstop.antrag_id WHERE top_id = $1",
-    )
-    .bind(*topid)
-    .fetch_all(db.pool())
-    .await;
-    match anträge {
-        Ok(anträge) => HttpResponse::Ok().json(anträge),
-        Err(e) => HttpResponse::NotFound().json(format!("Failed to get Anträge: {:?}", e)),
-    }
+    let anträge = db.transaction(move |mut transaction| {
+        let topid = topid.clone();
+        async move {
+            Ok((transaction.anträge_by_top(topid.clone()).await?, transaction))
+        }
+    }).await;
+
+    RestStatus::ok_from_result(anträge)
 }
 
-#[get("/sitzungen/{id}/anträge")]
+#[get("/sitzung/{id}/anträge")]
 async fn anträge_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
-    let anträge = sqlx::query_as::<_, Antrag>(
-        "SELECT * FROM anträge
-        JOIN antragstop ON anträge.id = antragstop.antrag_id
-        JOIN public.sitzungen s2 on tops.sitzung_id = s2.id
-        WHERE s2.id = $1",
-    )
-    .bind(*id)
-    .fetch_all(db.pool())
-    .await;
+    let anträge = db.transaction(move |mut transaction| {
+        let id = id.clone();
+        async move {
+            Ok((transaction.anträge_by_sitzung(id.clone()).await?, transaction))
+        }
+    }).await;
 
-    match anträge {
-        Ok(anträge) => HttpResponse::Ok().json(anträge),
-        Err(e) => HttpResponse::NotFound().json(format!("Failed to get Anträge: {:?}", e)),
-    }
+    RestStatus::ok_from_result(anträge)
 }
