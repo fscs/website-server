@@ -108,9 +108,9 @@
           
           # Start postgreSQL and run migrations
           preBuild = ''
-            ${pkgs.postgresql}/bin/initdb -D ./database
+            ${pkgs.postgresql}/bin/initdb -D ./db
             sockets=$(mktemp -d)
-            ${pkgs.postgresql}/bin/pg_ctl -D ./database -o "-k $sockets -h \"\"" start
+            ${pkgs.postgresql}/bin/pg_ctl -D ./db -o "-k $sockets -h \"\"" start
             # Write the postgresql socket to DATABASE_URL
             sockets=$(echo $sockets | sed 's/\//%2f/g')
             export DATABASE_URL="postgresql://$sockets:5432/postgres"
@@ -135,7 +135,7 @@
         packages = {
           fullWebsite = pkgs.stdenv.mkDerivation {
             name = "with-files";
-            src = ./.;
+            src = builtins.filterSource (path: type: false) ./.;
             buildInputs = [my-crate];
 
             postInstall = ''
@@ -157,11 +157,39 @@
               };
             };
           };
+
+          # For `nix run`:
+          run = pkgs.stdenv.mkDerivation {
+            name = "fscs-website-run";
+            src = builtins.filterSource (path: type: false) ./.;
+            postInstall = ''
+              mkdir -p $out/bin
+              echo "echo \"Initializing the Database\"" >> $out/bin/run.sh
+              echo "mkdir -p ./db/data" >> $out/bin/run.sh
+              echo "mkdir -p ./db/sockets" >> $out/bin/run.sh
+              echo "${pkgs.postgresql}/bin/initdb -D ./db/data" >> $out/bin/run.sh
+              echo "echo \"Starting the db\"" >> $out/bin/run.sh
+              echo "sockets=\$PWD/db/sockets" >> $out/bin/run.sh
+              echo "${pkgs.postgresql}/bin/pg_ctl -D ./db/data -o \"-k \$sockets -h \\\"\\\"\" start" >> $out/bin/run.sh
+              echo "sockets=\$(echo \$sockets | sed 's/\\//%2f/g')" >> $out/bin/run.sh
+              echo "export DATABASE_URL=\"postgresql://\$sockets:5432/postgres\"" >> $out/bin/run.sh
+              echo "echo \"Starting the server\"" >> $out/bin/run.sh
+              echo "${packages.fullWebsite}/bin/fscs-website-backend --database-url \$DATABASE_URL --use-executable-dir" >> $out/bin/run.sh
+              echo "echo \"Stopping the database\"" >> $out/bin/run.sh
+              echo "${pkgs.postgresql}/bin/pg_ctl -D ./db/data stop" >> $out/bin/run.sh
+              chmod +x $out/bin/run.sh
+            '';
+          };
         };
 
         apps.default = flake-utils.lib.mkApp {
           drv = packages.fullWebsite;
           exePath = "/bin/fscs-website-backend";
+        };
+
+        apps.full = flake-utils.lib.mkApp {
+          drv = packages.run;
+          exePath = "/bin/run.sh";
         };
 
         # For `nix develop`:
