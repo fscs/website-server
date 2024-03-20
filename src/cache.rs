@@ -7,7 +7,7 @@ use std::time::{Duration, SystemTime};
 
 pub(crate) struct TimedCache<T: Sync> {
     data_last_updated: RwLock<Option<DataLastUpdate<T>>>,
-    generator: Box<dyn Fn() -> Pin<Box<dyn Future<Output = T>>> + 'static + Sync>,
+    generator: Box<dyn Fn() -> Pin<Box<dyn Future<Output=T>>> + 'static + Sync>,
     duration: Duration,
 }
 
@@ -23,13 +23,14 @@ impl<'a, T: 'a> Deref for ReadWrapper<'a, T> {
         &self.0.as_ref().unwrap().data
     }
 }
+
 struct DataLastUpdate<T> {
     data: T,
     last_updated: SystemTime,
 }
 
 impl<T: Sync> TimedCache<T> {
-    pub(crate) fn with_generator<FN: Fn() -> Pin<Box<dyn Future<Output = T>>> + 'static + Sync>(
+    pub(crate) fn with_generator<FN: Fn() -> Pin<Box<dyn Future<Output=T>>> + 'static + Sync>(
         generator: FN,
         duration: Duration,
     ) -> Self {
@@ -40,7 +41,7 @@ impl<T: Sync> TimedCache<T> {
         }
     }
 
-    pub(crate) async fn get(&self) -> impl Deref<Target = T> + '_ {
+    pub(crate) async fn get(&self) -> impl Deref<Target=T> + '_ {
         let data = self.data_last_updated.read().await;
         if (&data)
             .iter()
@@ -53,8 +54,8 @@ impl<T: Sync> TimedCache<T> {
             // Write only needed if not already updated
             if (*write).is_none()
                 || (*write)
-                    .iter()
-                    .any(|d| d.last_updated + self.duration < SystemTime::now())
+                .iter()
+                .any(|d| d.last_updated + self.duration < SystemTime::now())
             {
                 let data = (*self.generator)().await;
 

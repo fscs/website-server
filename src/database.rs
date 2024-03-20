@@ -33,7 +33,6 @@ impl<'a> Deref for DatabaseTransaction<'a> {
 }
 
 impl DatabaseTransaction<'_> {
-
     pub async fn commit(self) -> anyhow::Result<()> {
         self.transaction.commit().await?;
         Ok(())
@@ -62,16 +61,15 @@ impl DatabasePool {
         })
     }
 
-    pub async fn transaction<'a, T: 'static, Fut: Future<Output=anyhow::Result<(T, DatabaseTransaction<'a>)>>, F: Fn(DatabaseTransaction<'a>) -> Fut + 'static>(& self, fun: F) -> anyhow::Result<T> {
-            let transaction = self.start_transaction().await?;
-            let (result, transaction) = fun(transaction).await?;
-            transaction.commit().await?;
-            Ok(result)
+    pub async fn transaction<'a, T: 'static, Fut: Future<Output=anyhow::Result<(T, DatabaseTransaction<'a>)>>, F: Fn(DatabaseTransaction<'a>) -> Fut + 'static>(&self, fun: F) -> anyhow::Result<T> {
+        let transaction = self.start_transaction().await?;
+        let (result, transaction) = fun(transaction).await?;
+        transaction.commit().await?;
+        Ok(result)
     }
 }
 
 impl TopManagerRepo for DatabaseTransaction<'_> {
-
     async fn create_sitzung(&mut self, date_time: NaiveDateTime, name: &str) -> anyhow::Result<Sitzung> {
         Ok(sqlx::query_as!(Sitzung, "INSERT INTO sitzungen (datum, name) VALUES ($1, $2) RETURNING *", date_time, name)
             .fetch_one(&mut **self)
@@ -170,5 +168,4 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
             .fetch_all(&mut **self)
             .await?)
     }
-
 }

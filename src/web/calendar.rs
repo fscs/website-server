@@ -4,7 +4,6 @@ use actix_web::{get, web, Responder, Scope};
 use chrono::{DateTime, NaiveTime, Utc};
 use icalendar::{Component, Event, EventLike};
 use lazy_static::lazy_static;
-use log::log;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -51,7 +50,7 @@ async fn get_branchen_events() -> impl Responder {
     Json(x)
 }
 
-fn request_calendar<'a>(url: &str) -> Pin<Box<dyn Future<Output = Vec<CalendarEvent>> + 'a>> {
+fn request_calendar<'a>(url: &str) -> Pin<Box<dyn Future<Output=Vec<CalendarEvent>> + 'a>> {
     let url = url.to_owned();
     Box::pin((move || async { request_cal(url).await })())
 }

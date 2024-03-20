@@ -1,6 +1,7 @@
-
 mod cache;
+
 use std::str::FromStr;
+
 mod database;
 mod web;
 mod domain;
@@ -12,8 +13,7 @@ use actix_web::{App, HttpServer};
 use anyhow::anyhow;
 use clap::Parser;
 use lazy_static::lazy_static;
-use log::{info, LevelFilter};
-use web::calendar;
+use log::LevelFilter;
 use web::topmanager;
 
 #[derive(Parser)]
@@ -55,9 +55,9 @@ async fn main() -> anyhow::Result<()> {
             .service(fs::Files::new("/", &(dir.clone() + "/static/")).index_file("index.html"))
             .app_data(Data::new(database.clone()))
     })
-    .bind((ARGS.host.as_str(), ARGS.port))?
-    .run()
-    .await?)
+        .bind((ARGS.host.as_str(), ARGS.port))?
+        .run()
+        .await?)
 }
 
 fn get_base_dir() -> anyhow::Result<String> {
