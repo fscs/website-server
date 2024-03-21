@@ -1,19 +1,23 @@
 mod cache;
-
+use std::fs::File;
+use std::io::prelude::*;
 use std::str::FromStr;
 
 mod database;
-mod web;
 mod domain;
+mod web;
 
 use crate::database::DatabasePool;
 use actix_files as fs;
+use actix_web::dev::ServiceResponse;
+use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
 use actix_web::{App, HttpServer};
 use anyhow::anyhow;
 use clap::Parser;
 use lazy_static::lazy_static;
 use log::LevelFilter;
+use reqwest::StatusCode;
 use web::topmanager;
 
 #[derive(Parser)]
@@ -50,14 +54,15 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(HttpServer::new(move || {
         App::new()
+            .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found))
             .service(web::calendar::service("/api/calendar"))
             .service(topmanager::service("/api/topmanager"))
-            .service(fs::Files::new("/", &(dir.clone() + "/static/")).index_file("index.html"))
+            .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
             .app_data(Data::new(database.clone()))
     })
-        .bind((ARGS.host.as_str(), ARGS.port))?
-        .run()
-        .await?)
+    .bind((ARGS.host.as_str(), ARGS.port))?
+    .run()
+    .await?)
 }
 
 fn get_base_dir() -> anyhow::Result<String> {
@@ -77,4 +82,22 @@ fn get_base_dir() -> anyhow::Result<String> {
             ))?
             .to_string()
     })
+}
+
+fn not_found<B>(
+    res: actix_web::dev::ServiceResponse<B>,
+) -> actix_web::Result<actix_web::middleware::ErrorHandlerResponse<B>> {
+    let (req, res) = res.into_parts();
+    let mut file =
+        File::open("/".to_owned() + &(get_base_dir().unwrap() + "/static/404.html")).unwrap();
+    let mut content = String::new();
+    file.read_to_string(&mut content).unwrap();
+
+    let res = res.set_body(content);
+
+    let res = ServiceResponse::new(req, res)
+        .map_into_boxed_body()
+        .map_into_right_body();
+
+    Ok(ErrorHandlerResponse::Response(res))
 }
