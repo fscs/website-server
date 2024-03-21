@@ -279,11 +279,11 @@
         "server": "server"
       },
       "locked": {
-        "lastModified": 1710943990,
-        "narHash": "sha256-vs1WmE5odWBDMJPBdrTuPZrV0AL4G2bmB9z/zxJRrYc=",
+        "lastModified": 1710977119,
+        "narHash": "sha256-39zQ9jJWnBX3pCXdJ8s1ToKCraLsgAD4V/jWOrGlKl4=",
         "owner": "fscs",
         "repo": "website-theme",
-        "rev": "47fe26d979024724f9c135edc6c844e009542494",
+        "rev": "b171ca8df1305236a0ef1e468d18952aff9e8866",
         "type": "github"
       },
       "original": {
