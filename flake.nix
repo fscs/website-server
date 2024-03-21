@@ -164,6 +164,7 @@
             src = builtins.filterSource (path: type: false) ./.;
             postInstall = ''
               mkdir -p $out/bin
+              echo "#!/bin/bash" >> $out/bin/run.sh
               echo "echo \"Initializing the Database\"" >> $out/bin/run.sh
               echo "mkdir -p ./db/data" >> $out/bin/run.sh
               echo "mkdir -p ./db/sockets" >> $out/bin/run.sh
