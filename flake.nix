@@ -53,7 +53,6 @@
         craneLib = crane.lib.${system};
         inherit (pkgs) lib;
 
-
         sqlFilter = path: _type: null != builtins.match ".*sql$" path;
         sqlOrCargo = path: type: (sqlFilter path type) || (craneLib.filterCargoSources path type);
 
@@ -71,14 +70,16 @@
             pkgs.pkg-config
           ];
 
-          buildInputs = [
-            # Add additional build inputs here
-            pkgs.openssl
-          ] ++ lib.optionals pkgs.stdenv.isDarwin [
-            # Additional darwin specific inputs can be set here
-            pkgs.libiconv
-            pkgs.darwin.apple_sdk.frameworks.Security
-          ];
+          buildInputs =
+            [
+              # Add additional build inputs here
+              pkgs.openssl
+            ]
+            ++ lib.optionals pkgs.stdenv.isDarwin [
+              # Additional darwin specific inputs can be set here
+              pkgs.libiconv
+              pkgs.darwin.apple_sdk.frameworks.Security
+            ];
 
           # Additional environment variables can be set directly
           # MY_CUSTOM_VAR = "some value";
@@ -90,41 +91,42 @@
 
         # Build the actual crate itself, reusing the dependency
         # artifacts from above.
-        my-crate = craneLib.buildPackage (commonArgs // {
-          inherit cargoArtifacts;
+        my-crate = craneLib.buildPackage (commonArgs
+          // {
+            inherit cargoArtifacts;
 
-          nativeBuildInputs = with pkgs; [pkg-config];
-          buildInputs =
-            [
-              pkgs.openssl
-              pkgs.sqlx-cli
-              pkgs.postgresql
-              # Add additional build inputs here
-            ]
-            ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-              # Additional darwin specific inputs can be set here
-              pkgs.libiconv
-            ];
-          
-          # Start postgreSQL and run migrations
-          preBuild = ''
-            ${pkgs.postgresql}/bin/initdb -D ./db
-            sockets=$(mktemp -d)
-            ${pkgs.postgresql}/bin/pg_ctl -D ./db -o "-k $sockets -h \"\"" start
-            # Write the postgresql socket to DATABASE_URL
-            sockets=$(echo $sockets | sed 's/\//%2f/g')
-            export DATABASE_URL="postgresql://$sockets:5432/postgres"
-            echo "DATABASE_URL=$DATABASE_URL"
-            ${pkgs.sqlx-cli}/bin/sqlx migrate run --source ./migrations  --database-url $DATABASE_URL
-          '';
+            nativeBuildInputs = with pkgs; [pkg-config];
+            buildInputs =
+              [
+                pkgs.openssl
+                pkgs.sqlx-cli
+                pkgs.postgresql
+                # Add additional build inputs here
+              ]
+              ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+                # Additional darwin specific inputs can be set here
+                pkgs.libiconv
+              ];
 
-          postInstall = ''
-            cp -r migrations $out/bin/migrations
-          '';
+            # Start postgreSQL and run migrations
+            preBuild = ''
+              ${pkgs.postgresql}/bin/initdb -D ./db
+              sockets=$(mktemp -d)
+              ${pkgs.postgresql}/bin/pg_ctl -D ./db -o "-k $sockets -h \"\"" start
+              # Write the postgresql socket to DATABASE_URL
+              sockets=$(echo $sockets | sed 's/\//%2f/g')
+              export DATABASE_URL="postgresql://$sockets:5432/postgres"
+              echo "DATABASE_URL=$DATABASE_URL"
+              ${pkgs.sqlx-cli}/bin/sqlx migrate run --source ./migrations  --database-url $DATABASE_URL
+            '';
 
-          # Additional environment variables can be set directly
-          # MY_CUSTOM_VAR = "some value";
-        });
+            postInstall = ''
+              cp -r migrations $out/bin/migrations
+            '';
+
+            # Additional environment variables can be set directly
+            # MY_CUSTOM_VAR = "some value";
+          });
       in rec {
         checks = {
           inherit my-crate;
@@ -164,20 +166,27 @@
             src = builtins.filterSource (path: type: false) ./.;
             postInstall = ''
               mkdir -p $out/bin
-              echo "#!/bin/bash" >> $out/bin/run.sh
-              echo "echo \"Initializing the Database\"" >> $out/bin/run.sh
-              echo "mkdir -p ./db/data" >> $out/bin/run.sh
-              echo "mkdir -p ./db/sockets" >> $out/bin/run.sh
-              echo "${pkgs.postgresql}/bin/initdb -D ./db/data" >> $out/bin/run.sh
-              echo "echo \"Starting the db\"" >> $out/bin/run.sh
-              echo "sockets=\$PWD/db/sockets" >> $out/bin/run.sh
-              echo "${pkgs.postgresql}/bin/pg_ctl -D ./db/data -o \"-k \$sockets -h \\\"\\\"\" start" >> $out/bin/run.sh
-              echo "sockets=\$(echo \$sockets | sed 's/\\//%2f/g')" >> $out/bin/run.sh
-              echo "export DATABASE_URL=\"postgresql://\$sockets:5432/postgres\"" >> $out/bin/run.sh
-              echo "echo \"Starting the server\"" >> $out/bin/run.sh
-              echo "${packages.fullWebsite}/bin/fscs-website-backend --database-url \$DATABASE_URL --use-executable-dir" >> $out/bin/run.sh
-              echo "echo \"Stopping the database\"" >> $out/bin/run.sh
-              echo "${pkgs.postgresql}/bin/pg_ctl -D ./db/data stop" >> $out/bin/run.sh
+              tee $out/bin/run.sh <<- EOF
+                #!/usr/bin/env bash
+                DATA_DIR="\$PWD/db/data"
+                SOCKET_DIR="\$PWD/db/sockets"
+                SOCKET_URL="\$(echo \$SOCKET_DIR | sed 's/\\//%2f/g')"
+                export DATABASE_URL="postgresql://\$SOCKET_URL:5432/postgres"
+
+                mkdir -p "\$DATA_DIR" "\$SOCKET_DIR"
+
+                echo Initializing the Database
+                ${pkgs.postgresql}/bin/initdb -D "\$DATA_DIR"
+
+                echo Starting the Database
+                ${pkgs.postgresql}/bin/pg_ctl -D \$DATA_DIR -o "-k \$SOCKET_DIR -h \"\"" start
+
+                echo Starting the server
+                ${packages.fullWebsite}/bin/fscs-website-backend --database-url \$DATABASE_URL --use-executable-dir
+
+                echo Stopping the Database
+                ${pkgs.postgresql}/bin/pg_ctl -D "\$DATA_DIR" stop
+              EOF
               chmod +x $out/bin/run.sh
             '';
           };
