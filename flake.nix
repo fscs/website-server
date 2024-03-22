@@ -138,9 +138,15 @@
             mkdir -p "$DATA_DIR" "$SOCKET_DIR"
 
             echo Initializing the Database
-            ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR"
+            ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
 
-            ${pkgs.postgresql}/bin/postgres -D "$DATA_DIR" -k $SOCKET_DIR
+            ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
+
+            ${pkgs.sqlx-cli}/bin/sqlx migrate run --source ./migrations  --database-url $DATABASE_URL
+
+            read -p "Press enter to stop the database"
+
+            ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
           '';
 
           full = pkgs.writeScriptBin "run.sh" ''
@@ -152,17 +158,27 @@
 
             mkdir -p "$DATA_DIR" "$SOCKET_DIR"
 
-            echo Initializing the Database
-            ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR"
 
-            echo Starting the Database
-            ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
+            ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
+
+            # Check if the database is already running
+            ALREADY_RUNNING=false
+            if ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR status; then
+              echo Initializing the Database
+              ALREADY_RUNNING=true
+            fi
+
+            if [ "$ALREADY_RUNNING" = false ]; then
+              ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
+            fi
 
             echo Starting the server
             ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --use-executable-dir
 
-            echo Stopping the Database
-            ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
+            if [ "$ALREADY_RUNNING" = false ]; then
+              echo Stopping the Database
+              ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
+            fi
           '';
         };
 
