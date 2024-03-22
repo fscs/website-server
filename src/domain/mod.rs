@@ -72,5 +72,5 @@ pub trait TopManagerRepo {
 
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>>;
 
-    async fn get_next_sitzung(&mut self) -> anyhow::Result<Sitzung>;
+    async fn get_next_sitzung(&mut self) -> anyhow::Result<Option<Sitzung>>;
 }

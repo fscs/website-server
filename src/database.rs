@@ -234,14 +234,14 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_next_sitzung(&mut self) -> anyhow::Result<Sitzung> {
+    async fn get_next_sitzung(&mut self) -> anyhow::Result<Option<Sitzung>> {
         let now = chrono::Utc::now();
         Ok(sqlx::query_as!(
             Sitzung,
             "SELECT * FROM sitzungen WHERE datum > $1",
             now.naive_utc()
         )
-        .fetch_one(&mut **self)
+        .fetch_optional(&mut **self)
         .await?)
     }
 }
