@@ -10,7 +10,7 @@ use crate::database::DatabasePool;
 use anyhow::anyhow;
 use clap::Parser;
 use lazy_static::lazy_static;
-use log::LevelFilter;
+use log::{info, LevelFilter};
 
 #[derive(Parser)]
 struct Args {
@@ -40,6 +40,8 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let dir = get_base_dir()?;
+
+    info!("Base Directory: {}", dir);
 
     let database_url = ARGS.database_url.clone().map_or(
         std::env::var("DATABASE_URL").map_or("postgres://postgres:postgres@localhost/postgres".to_string(), identity),
