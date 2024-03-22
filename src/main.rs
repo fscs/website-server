@@ -88,12 +88,16 @@ fn get_base_dir() -> anyhow::Result<String> {
 fn not_found<B>(
     res: actix_web::dev::ServiceResponse<B>,
 ) -> actix_web::Result<actix_web::middleware::ErrorHandlerResponse<B>> {
+    if res.headers().get("content-type") != Some(&actix_web::http::header::HeaderValue::from_static("text/html")) {
+        return Ok(ErrorHandlerResponse::Response(res.map_into_left_body()));
+    };
+
     let (req, res) = res.into_parts();
-    let path = PathBuf::from_str(format!("/{}/static/404.html", get_base_dir()?).as_str());
-    let mut file = File::open(path)?;
+    let path = PathBuf::from_str(format!("/{}/static/404.html", get_base_dir().unwrap()).as_str()).unwrap();
+    let mut file = File::open(path).unwrap();
     
     let mut content = String::new();
-    file.read_to_string(&mut content)?;
+    file.read_to_string(&mut content).unwrap();
 
     let res = res.set_body(content);
 
