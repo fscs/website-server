@@ -1,4 +1,4 @@
-use crate::domain::{Antrag, Sitzung, Top, TopManagerRepo};
+use crate::domain::{Antrag, Doorstate, Sitzung, Top, TopManagerRepo};
 use chrono::NaiveDateTime;
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
@@ -238,8 +238,33 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         let now = chrono::Utc::now();
         Ok(sqlx::query_as!(
             Sitzung,
-            "SELECT * FROM sitzungen WHERE datum > $1",
+            "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC",
             now.naive_utc()
+        )
+        .fetch_optional(&mut **self)
+        .await?)
+    }
+
+    async fn add_doorstate(
+        &mut self,
+        time: NaiveDateTime,
+        state: bool,
+    ) -> anyhow::Result<Doorstate> {
+        Ok(sqlx::query_as!(
+            Doorstate,
+            "INSERT INTO doorstate (time, state) VALUES ($1, $2) RETURNING *",
+            time,
+            state
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn get_doorstate(&mut self, time: NaiveDateTime) -> anyhow::Result<Option<Doorstate>> {
+        Ok(sqlx::query_as!(
+            Doorstate,
+            "SELECT * FROM doorstate WHERE time < $1 ORDER BY time DESC LIMIT 1",
+            time
         )
         .fetch_optional(&mut **self)
         .await?)

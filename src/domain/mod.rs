@@ -26,6 +26,12 @@ pub struct Antrag {
     pub begründung: String,
 }
 
+#[derive(Debug, Serialize, FromRow)]
+pub struct Doorstate {
+    pub time: NaiveDateTime,
+    pub state: bool,
+}
+
 pub trait TopManagerRepo {
     async fn create_sitzung(
         &mut self,
@@ -73,4 +79,12 @@ pub trait TopManagerRepo {
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>>;
 
     async fn get_next_sitzung(&mut self) -> anyhow::Result<Option<Sitzung>>;
+
+    async fn add_doorstate(
+        &mut self,
+        time: NaiveDateTime,
+        state: bool,
+    ) -> anyhow::Result<Doorstate>;
+
+    async fn get_doorstate(&mut self, time: NaiveDateTime) -> anyhow::Result<Option<Doorstate>>;
 }

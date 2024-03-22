@@ -5,6 +5,7 @@ use crate::web::topmanager::antrag::{create_antrag, delete_antrag, get_anträge,
 use crate::web::topmanager::sitzungen::{
     create_sitzung, create_top, get_next_sitzung, get_sitzungen, tops_by_sitzung,
 };
+use crate::web::RestStatus;
 use actix_web::body::BoxBody;
 use actix_web::{
     get,
@@ -55,57 +56,6 @@ struct TopWithAnträge {
     pub name: String,
     pub anträge: Vec<Antrag>,
     pub inhalt: Option<serde_json::Value>,
-}
-
-pub(super) enum RestStatus {
-    Ok(serde_json::Value),
-    Created(serde_json::Value),
-    NotFound,
-    Error(anyhow::Error),
-}
-
-impl RestStatus {
-    fn created_from_result<T: Serialize>(result: anyhow::Result<T>) -> RestStatus {
-        match result {
-            Ok(antrag) => match serde_json::to_value(antrag) {
-                Ok(value) => RestStatus::Created(value),
-                Err(e) => RestStatus::Error(anyhow::Error::from(e)),
-            },
-            Err(e) => RestStatus::Error(anyhow::Error::from(e)),
-        }
-    }
-
-    fn ok_from_result<T: Serialize>(result: anyhow::Result<T>) -> RestStatus {
-        match result {
-            Ok(antrag) => match serde_json::to_value(antrag) {
-                Ok(value) => RestStatus::Ok(value),
-                Err(e) => RestStatus::Error(anyhow::Error::from(e)),
-            },
-            Err(e) => RestStatus::Error(anyhow::Error::from(e)),
-        }
-    }
-}
-
-impl Responder for RestStatus {
-    type Body = BoxBody;
-
-    fn respond_to(self, req: &HttpRequest) -> HttpResponse<Self::Body> {
-        match self {
-            RestStatus::Ok(value) => HttpResponse::Ok().json(value),
-            RestStatus::Created(value) => {
-                log::debug!("Created: {:?}", value.as_str());
-                HttpResponse::Created().json(value)
-            }
-            RestStatus::NotFound => {
-                log::debug!("Resource {} not found", req.path());
-                HttpResponse::NotFound().body("Not Found")
-            }
-            RestStatus::Error(error) => {
-                log::error!("{:?}", error);
-                HttpResponse::InternalServerError().body("Internal Server Error")
-            }
-        }
-    }
 }
 
 #[get("/tops/{topid}/anträge")]
