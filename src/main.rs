@@ -1,6 +1,7 @@
 mod cache;
 use std::fs::File;
 use std::io::prelude::*;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 mod database;
@@ -88,10 +89,11 @@ fn not_found<B>(
     res: actix_web::dev::ServiceResponse<B>,
 ) -> actix_web::Result<actix_web::middleware::ErrorHandlerResponse<B>> {
     let (req, res) = res.into_parts();
-    let mut file =
-        File::open("/".to_owned() + &(get_base_dir().unwrap() + "/static/404.html")).unwrap();
+    let path = PathBuf::from_str(format!("/{}/static/404.html", get_base_dir()?).as_str());
+    let mut file = File::open(path)?;
+    
     let mut content = String::new();
-    file.read_to_string(&mut content).unwrap();
+    file.read_to_string(&mut content)?;
 
     let res = res.set_body(content);
 
