@@ -41,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
 
     let dir = get_base_dir()?;
 
-    let database_url = ARGS.database_url.map_or(
+    let database_url = ARGS.database_url.clone().map_or(
         std::env::var("DATABASE_URL").map_or("postgres://postgres:postgres@localhost/postgres".to_string(), identity),
         identity
     );
