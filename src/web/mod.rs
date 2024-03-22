@@ -47,6 +47,17 @@ impl RestStatus {
             Err(e) => RestStatus::Error(anyhow::Error::from(e)),
         }
     }
+
+    fn ok_or_not_found_from_result<T: Serialize>(result: anyhow::Result<Option<T>>) -> RestStatus {
+        match result {
+            Ok(Some(antrag)) => match serde_json::to_value(antrag) {
+                Ok(value) => RestStatus::Ok(value),
+                Err(e) => RestStatus::Error(anyhow::Error::from(e)),
+            },
+            Ok(None) => RestStatus::NotFound,
+            Err(e) => RestStatus::Error(anyhow::Error::from(e)),
+        }
+    }
 }
 
 impl Responder for RestStatus {
