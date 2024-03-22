@@ -15,34 +15,14 @@
         flake-utils.follows = "flake-utils";
       };
     };
-
-    theme = {
-      url = "github:fscs/website-theme";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "flake-utils";
-      };
-    };
-
-    website = {
-      type = "git";
-      url = "ssh://git@git.hhu.de/fscs/website.git";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "flake-utils";
-        theme.follows = "theme";
-      };
-    };
   };
 
   outputs = {
     self,
-    website,
     flake-utils,
     crane,
     nixpkgs,
     rust-overlay,
-    theme,
   }:
     flake-utils.lib.eachDefaultSystem (
       system: let
@@ -121,6 +101,7 @@
             '';
 
             postInstall = ''
+              ${pkgs.postgresql}/bin/pg_ctl -D ./db stop
               cp -r migrations $out/bin/migrations
             '';
 
@@ -135,19 +116,6 @@
         defaultPackage = my-crate;
 
         packages = {
-          fullWebsite = pkgs.stdenv.mkDerivation {
-            name = "with-files";
-            src = builtins.filterSource (path: type: false) ./.;
-            buildInputs = [my-crate];
-
-            postInstall = ''
-              mkdir -p $out/bin
-              ln -s ${website.defaultPackage.${system}} $out/bin/static
-              cp ${defaultPackage}/bin/fscs-website-backend $out/bin/fscs-website-backend
-              cp -r ${defaultPackage}/bin/migrations $out/bin/migrations
-            '';
-          };
-
           docker = pkgs.dockerTools.buildImage {
             name = "fscs-website";
             tag = "latest";
@@ -160,45 +128,51 @@
             };
           };
 
-          # For `nix run`:
-          run = pkgs.stdenv.mkDerivation {
-            name = "fscs-website-run";
-            src = builtins.filterSource (path: type: false) ./.;
-            postInstall = ''
-              mkdir -p $out/bin
-              tee $out/bin/run.sh <<- EOF
-                #!/usr/bin/env bash
-                DATA_DIR="\$PWD/db/data"
-                SOCKET_DIR="\$PWD/db/sockets"
-                SOCKET_URL="\$(echo \$SOCKET_DIR | sed 's/\\//%2f/g')"
-                export DATABASE_URL="postgresql://\$SOCKET_URL:5432/postgres"
+          database = pkgs.writeScriptBin "run.sh" ''
+            #!/usr/bin/env bash
+            DATA_DIR="$PWD/db/data"
+            SOCKET_DIR="$PWD/db/sockets"
+            SOCKET_URL="$(echo $SOCKET_DIR | sed 's/\//%2f/g')"
+            export DATABASE_URL="postgresql://$SOCKET_URL:5432/postgres"
 
-                mkdir -p "\$DATA_DIR" "\$SOCKET_DIR"
+            mkdir -p "$DATA_DIR" "$SOCKET_DIR"
 
-                echo Initializing the Database
-                ${pkgs.postgresql}/bin/initdb -D "\$DATA_DIR"
+            echo Initializing the Database
+            ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR"
 
-                echo Starting the Database
-                ${pkgs.postgresql}/bin/pg_ctl -D \$DATA_DIR -o "-k \$SOCKET_DIR -h \"\"" start
+            ${pkgs.postgresql}/bin/postgres -D "$DATA_DIR" -k $SOCKET_DIR
+          '';
 
-                echo Starting the server
-                ${packages.fullWebsite}/bin/fscs-website-backend --database-url \$DATABASE_URL --use-executable-dir
+          full = pkgs.writeScriptBin "run.sh" ''
+            #!/usr/bin/env bash
+            DATA_DIR="$PWD/db/data"
+            SOCKET_DIR="$PWD/db/sockets"
+            SOCKET_URL="$(echo $SOCKET_DIR | sed 's/\//%2f/g')"
+            export DATABASE_URL="postgresql://$SOCKET_URL:5432/postgres"
 
-                echo Stopping the Database
-                ${pkgs.postgresql}/bin/pg_ctl -D "\$DATA_DIR" stop
-              EOF
-              chmod +x $out/bin/run.sh
-            '';
-          };
+            mkdir -p "$DATA_DIR" "$SOCKET_DIR"
+
+            echo Initializing the Database
+            ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR"
+
+            echo Starting the Database
+            ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
+
+            echo Starting the server
+            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --use-executable-dir
+
+            echo Stopping the Database
+            ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
+          '';
         };
 
         apps.default = flake-utils.lib.mkApp {
-          drv = packages.fullWebsite;
-          exePath = "/bin/fscs-website-backend";
+          drv = self.packages.${system}.full;
+          exePath = "/bin/run.sh";
         };
 
-        apps.full = flake-utils.lib.mkApp {
-          drv = packages.run;
+        apps.database = flake-utils.lib.mkApp {
+          drv = self.packages.${system}.database;
           exePath = "/bin/run.sh";
         };
 
@@ -215,6 +189,7 @@
             cargo-binutils
             sqlx-cli
             postgresql
+            docker-compose
           ];
         };
       }
