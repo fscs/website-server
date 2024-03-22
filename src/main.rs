@@ -1,6 +1,6 @@
 mod cache;
 
-use std::str::FromStr;
+use std::{convert::identity, str::FromStr};
 
 mod database;
 mod domain;
@@ -25,8 +25,8 @@ struct Args {
     use_executable_dir: bool,
     #[arg(long, default_value_t = {"Info".to_string()})]
     log_level: String,
-    #[arg(short, long, default_value_t = {"postgres://postgres:postgres@localhost/postgres".to_string()})]
-    database_url: String,
+    #[arg(short, long)]
+    database_url: Option<String>,
 }
 
 lazy_static! {
@@ -41,7 +41,12 @@ async fn main() -> anyhow::Result<()> {
 
     let dir = get_base_dir()?;
 
-    let database = DatabasePool::new(&ARGS.database_url).await?;
+    let database_url = ARGS.database_url.map_or(
+        std::env::var("DATABASE_URL").map_or("postgres://postgres:postgres@localhost/postgres".to_string(), identity),
+        identity
+    );
+
+    let database = DatabasePool::new(&database_url).await?;
     sqlx::migrate!().run(database.pool()).await?;
 
     web::start_server(dir, database).await
