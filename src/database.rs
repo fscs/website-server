@@ -1,5 +1,8 @@
-use crate::domain::{Antrag, Doorstate, Sitzung, Top, TopManagerRepo};
-use chrono::NaiveDateTime;
+use crate::domain::{
+    Antrag, Antragsstellende, DoorStateRepo, Doorstate, Person, PersonRepo, PersonRoleMapping,
+    Sitzung, Top, TopManagerRepo,
+};
+use chrono::{NaiveDate, NaiveDateTime};
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgConnection, PgPool, Postgres, Transaction};
@@ -157,6 +160,32 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         )
     }
 
+    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person> {
+        Ok(sqlx::query_as!(
+            Person,
+            "INSERT INTO person (name) VALUES ($1) ON CONFLICT(name) DO UPDATE SET name = $1 RETURNING *",
+            name
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn create_antragssteller(
+        &mut self,
+        antrag_id: Uuid,
+        person_id: Uuid,
+    ) -> anyhow::Result<()> {
+        sqlx::query_as!(
+            Antragssteller,
+            "INSERT INTO antragsstellende (antrags_id, person_id) VALUES ($1, $2)",
+            antrag_id,
+            person_id
+        )
+        .execute(&mut **self)
+        .await?;
+        Ok(())
+    }
+
     async fn get_anträge(&mut self) -> anyhow::Result<Vec<Antrag>> {
         Ok(sqlx::query_as!(Antrag, "SELECT * FROM anträge")
             .fetch_all(&mut **self)
@@ -244,7 +273,9 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .fetch_optional(&mut **self)
         .await?)
     }
+}
 
+impl DoorStateRepo for DatabaseTransaction<'_> {
     async fn add_doorstate(
         &mut self,
         time: NaiveDateTime,
@@ -267,6 +298,69 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
             time
         )
         .fetch_optional(&mut **self)
+        .await?)
+    }
+}
+
+impl PersonRepo for DatabaseTransaction<'_> {
+    async fn add_person(
+        &mut self,
+        person_id: Uuid,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<PersonRoleMapping> {
+        Ok(sqlx::query_as!(
+            PersonRoleMapping,
+            "INSERT INTO rollen (person_id, rolle, anfangsdatum, ablaufdatum) VALUES ($1, $2, $3, $4) RETURNING *",
+            person_id,
+            rolle,
+            anfangsdatum,
+            ablaufdatum
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+    async fn get_persons(&mut self) -> anyhow::Result<Vec<Person>> {
+        Ok(sqlx::query_as!(Person, "SELECT * FROM person")
+            .fetch_all(&mut **self)
+            .await?)
+    }
+
+    async fn get_person_by_role(
+        &mut self,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<Vec<Person>> {
+        Ok(sqlx::query_as!(
+            Person,
+            "SELECT id,name FROM person
+         JOIN public.rollen r on person.id = r.person_id
+         WHERE r.rolle = $1 AND anfangsdatum >= $2 AND ablaufdatum <= $3",
+            rolle,
+            anfangsdatum,
+            ablaufdatum
+        )
+        .fetch_all(&mut **self)
+        .await?)
+    }
+    async fn update_person(
+        &mut self,
+        person_id: Uuid,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<PersonRoleMapping> {
+        Ok(sqlx::query_as!(
+            PersonRoleMapping,
+            "UPDATE rollen SET rolle = $1, anfangsdatum = $2, ablaufdatum = $3 WHERE person_id = $4 RETURNING *",
+            rolle,
+            anfangsdatum,
+            ablaufdatum,
+            person_id
+        )
+        .fetch_one(&mut **self)
         .await?)
     }
 }

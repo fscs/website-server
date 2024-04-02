@@ -18,6 +18,7 @@ use std::str::FromStr;
 
 pub(crate) mod calendar;
 pub(crate) mod doorstate;
+pub(crate) mod person;
 pub(crate) mod topmanager;
 
 pub(super) enum RestStatus {
@@ -116,6 +117,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             .service(web::calendar::service("/api/calendar"))
             .service(topmanager::service("/api/topmanager"))
             .service(doorstate::service("/api/doorstate"))
+            .service(person::service("/api/person"))
             .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
             .app_data(Data::new(database.clone()))
     })

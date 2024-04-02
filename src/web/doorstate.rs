@@ -7,7 +7,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use sqlx::types::chrono;
 
-use crate::{database::DatabasePool, domain::TopManagerRepo, web::RestStatus};
+use crate::{database::DatabasePool, domain::DoorStateRepo, web::RestStatus};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
