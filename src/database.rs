@@ -1,6 +1,6 @@
 use crate::domain::{
-    Antrag, Antragsstellende, DoorStateRepo, Doorstate, Person, PersonRepo, PersonRoleMapping,
-    Sitzung, Top, TopManagerRepo,
+    Abmeldung, AbmeldungRepo, Antrag, DoorStateRepo, Doorstate, Person, PersonRepo,
+    PersonRoleMapping, Sitzung, Top, TopManagerRepo,
 };
 use chrono::{NaiveDate, NaiveDateTime};
 use serde_json::Value;
@@ -23,7 +23,7 @@ pub struct DatabaseTransaction<'a> {
 
 impl<'a> DerefMut for DatabaseTransaction<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut *self.transaction
+        &mut self.transaction
     }
 }
 
@@ -31,7 +31,7 @@ impl<'a> Deref for DatabaseTransaction<'a> {
     type Target = PgConnection;
 
     fn deref(&self) -> &Self::Target {
-        &*self.transaction
+        &self.transaction
     }
 }
 
@@ -362,5 +362,64 @@ impl PersonRepo for DatabaseTransaction<'_> {
         )
         .fetch_one(&mut **self)
         .await?)
+    }
+}
+
+impl AbmeldungRepo for DatabaseTransaction<'_> {
+    async fn add_person_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<Abmeldung> {
+        Ok(sqlx::query_as!(
+            Abmeldung,
+            "INSERT INTO abmeldungen (person_id, anfangsdatum, ablaufdatum) VALUES ($1, $2, $3) RETURNING *",
+            person_id,
+            anfangsdatum,
+            ablaufdatum
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn get_abmeldungen(&mut self) -> anyhow::Result<Vec<Abmeldung>> {
+        Ok(sqlx::query_as!(Abmeldung, "SELECT * FROM abmeldungen")
+            .fetch_all(&mut **self)
+            .await?)
+    }
+
+    async fn update_person_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<Abmeldung> {
+        Ok(sqlx::query_as!(
+            Abmeldung,
+            "UPDATE abmeldungen SET anfangsdatum = $1, ablaufdatum = $2 WHERE person_id = $3 RETURNING *",
+            anfangsdatum,
+            ablaufdatum,
+            person_id
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn delete_person_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<()> {
+        sqlx::query!(
+            "DELETE FROM abmeldungen WHERE person_id = $1 AND anfangsdatum = $2 AND ablaufdatum = $3",
+            person_id,
+            anfangsdatum,
+            ablaufdatum
+        )
+        .execute(&mut **self)
+        .await?;
+        Ok(())
     }
 }
