@@ -2,6 +2,7 @@ use actix_web::web;
 use actix_web::{get, patch, put, web::Data, Responder, Scope};
 use serde::Deserialize;
 use sqlx::types::chrono;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::{database::DatabasePool, domain::PersonRepo, web::RestStatus};
@@ -14,7 +15,7 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(update_person)
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
 pub struct CreatePersonParams {
     pub person_id: Uuid,
     pub rolle: String,
@@ -22,14 +23,22 @@ pub struct CreatePersonParams {
     pub ablaufdatum: chrono::NaiveDate,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
 pub struct GetPersonsByRoleParams {
     pub rolle: String,
     pub anfangsdatum: chrono::NaiveDate,
     pub ablaufdatum: chrono::NaiveDate,
 }
 
-#[put("/role-mapping")]
+#[utoipa::path(
+    path = "/api/person/role-mapping/",
+    params(CreatePersonParams),
+    responses(
+        (status = 200, description = "Success", body = Person),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[put("/role-mapping/")]
 async fn put_person_role(
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonParams>,
@@ -54,6 +63,13 @@ async fn put_person_role(
     RestStatus::ok_from_result(result)
 }
 
+#[utoipa::path(
+    path = "/api/person/",
+    responses(
+        (status = 200, description = "Success", body = Vec<Person>),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[get("/")]
 async fn get_persons(db: Data<DatabasePool>) -> impl Responder {
     let result = db
@@ -66,7 +82,15 @@ async fn get_persons(db: Data<DatabasePool>) -> impl Responder {
     RestStatus::ok_from_result(result)
 }
 
-#[get("/by-role")]
+#[utoipa::path(
+    path = "/api/person/by-role/",
+    params(GetPersonsByRoleParams),
+    responses(
+        (status = 200, description = "Success", body = Vec<Person>),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/by-role/")]
 async fn get_person_by_role(
     db: Data<DatabasePool>,
     params: web::Json<GetPersonsByRoleParams>,
@@ -86,7 +110,15 @@ async fn get_person_by_role(
     RestStatus::ok_from_result(result)
 }
 
-#[patch("/role-mapping")]
+#[utoipa::path(
+    path = "/api/person/role-mapping/",
+    params(CreatePersonParams),
+    responses(
+        (status = 200, description = "Success", body = Person),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[patch("/role-mapping/")]
 async fn update_person(
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonParams>,

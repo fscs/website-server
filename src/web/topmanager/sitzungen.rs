@@ -4,15 +4,24 @@ use crate::web::topmanager::{CreateTopParams, RestStatus};
 use actix_web::web::Data;
 use actix_web::{get, put, web, Responder};
 use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize, Clone)]
-struct CreateSitzungParams {
+#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
+pub struct CreateSitzungParams {
     pub datum: chrono::NaiveDateTime,
     pub name: String,
 }
 
-#[get("/sitzung")]
+#[utoipa::path(
+    path = "/api/topmanager/sitzung/",
+    params(CreateSitzungParams),
+    responses(
+        (status = 201, description = "Created", body = Sitzung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/sitzung/")]
 async fn get_sitzungen(db: Data<DatabasePool>) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| async move {
@@ -23,7 +32,15 @@ async fn get_sitzungen(db: Data<DatabasePool>) -> impl Responder {
     RestStatus::ok_from_result(result)
 }
 
-#[put("/sitzung")]
+#[utoipa::path(
+    path = "/api/topmanager/sitzung/",
+    params(CreateSitzungParams),
+    responses(
+        (status = 201, description = "Created", body = Sitzung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[put("/sitzung/")]
 async fn create_sitzung(
     db: Data<DatabasePool>,
     params: web::Json<CreateSitzungParams>,
@@ -45,7 +62,15 @@ async fn create_sitzung(
     RestStatus::created_from_result(result)
 }
 
-#[put("/sitzung/{sitzung_id}/top")]
+#[utoipa::path(
+    path = "/api/topmanager/sitzung/{id}/",
+    params(("id" = Uuid, Path,)),
+    responses(
+        (status = 200, description = "Success", body = Sitzung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[put("/sitzung/{sitzung_id}/top/")]
 async fn create_top(
     db: Data<DatabasePool>,
     sitzung_id: web::Path<Uuid>,
@@ -69,7 +94,15 @@ async fn create_top(
     RestStatus::created_from_result(result)
 }
 
-#[get("/sitzung/{id}/tops")]
+#[utoipa::path(
+    path = "/api/topmanager/sitzung/{id}/",
+    params(("id" = Uuid, Path,)),
+    responses(
+        (status = 200, description = "Success", body = Sitzung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/sitzung/{id}/tops/")]
 async fn tops_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
     let tops = db
         .transaction(move |mut transaction| {
@@ -81,7 +114,14 @@ async fn tops_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Re
     RestStatus::ok_from_result(tops)
 }
 
-#[get("/next_sitzung")]
+#[utoipa::path(
+    path = "/api/topmanager/sitzung/next/",
+    responses(
+        (status = 200, description = "Success", body = Sitzung),
+        (status = 404, description = "Not Found"),
+    )
+)]
+#[get("/next_sitzung/")]
 async fn get_next_sitzung(db: Data<DatabasePool>) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| async move {

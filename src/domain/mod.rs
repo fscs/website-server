@@ -4,14 +4,14 @@ use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Sitzung {
     pub id: Uuid,
     pub datum: NaiveDateTime,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Top {
     pub id: Uuid,
     pub position: i64,
@@ -19,7 +19,7 @@ pub struct Top {
     pub inhalt: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Antrag {
     pub id: Uuid,
     pub titel: String,
@@ -33,7 +33,7 @@ pub struct Doorstate {
     pub state: bool,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct PersonRoleMapping {
     pub person_id: Uuid,
     pub rolle: String,
@@ -41,19 +41,19 @@ pub struct PersonRoleMapping {
     pub ablaufdatum: NaiveDate,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Person {
     pub id: Uuid,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Antragsstellende {
     pub antrags_id: Uuid,
     pub person_id: Uuid,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Abmeldung {
     pub person_id: Uuid,
     pub anfangsdatum: NaiveDate,

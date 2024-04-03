@@ -22,6 +22,7 @@ pub struct CreateDoorStateParams {
 }
 
 #[utoipa::path(
+    path = "/api/doorstate/",
     params(CreateDoorStateParams),
     responses(
         (status = 200, description = "Success", body = Doorstate),
@@ -49,6 +50,13 @@ async fn put_doorstate(
     RestStatus::ok_from_result(result)
 }
 
+#[utoipa::path(
+    path = "/api/doorstate/",
+    responses(
+        (status = 200, description = "Success", body = Doorstate),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[get("/")]
 async fn get_doorstate(db: Data<DatabasePool>) -> impl Responder {
     let result = db

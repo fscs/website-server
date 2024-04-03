@@ -2,6 +2,7 @@ use actix_web::{delete, web};
 use actix_web::{get, patch, put, web::Data, Responder, Scope};
 use serde::Deserialize;
 use sqlx::types::chrono;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::{database::DatabasePool, domain::AbmeldungRepo, web::RestStatus};
@@ -12,13 +13,21 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(get_abmeldungen)
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, IntoParams, ToSchema)]
 pub struct CreatePersonAbmeldungParams {
     pub person_id: Uuid,
     pub anfangsdatum: chrono::NaiveDate,
     pub ablaufdatum: chrono::NaiveDate,
 }
 
+#[utoipa::path(
+    path = "/api/abmeldung/",
+    params(CreatePersonAbmeldungParams),
+    responses(
+        (status = 200, description = "Success", body = Abmeldung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[put("/")]
 async fn put_person_abmeldung(
     db: Data<DatabasePool>,
@@ -39,6 +48,13 @@ async fn put_person_abmeldung(
     RestStatus::ok_from_result(result)
 }
 
+#[utoipa::path(
+    path = "/api/abmeldung/",
+    responses(
+        (status = 200, description = "Success", body = Abmeldung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[get("/")]
 async fn get_abmeldungen(db: Data<DatabasePool>) -> impl Responder {
     let result = db
@@ -51,6 +67,14 @@ async fn get_abmeldungen(db: Data<DatabasePool>) -> impl Responder {
     RestStatus::ok_from_result(result)
 }
 
+#[utoipa::path(
+    path = "/api/abmeldung/",
+    params(CreatePersonAbmeldungParams),
+    responses(
+        (status = 200, description = "Success", body = Abmeldung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[patch("/")]
 async fn update_person_abmeldung(
     db: Data<DatabasePool>,
@@ -74,6 +98,14 @@ async fn update_person_abmeldung(
     RestStatus::ok_from_result(result)
 }
 
+#[utoipa::path(
+    path = "/api/abmeldung/",
+    params(CreatePersonAbmeldungParams),
+    responses(
+        (status = 200, description = "Success", body = Abmeldung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[delete("/")]
 async fn delete_person_abmeldung(
     db: Data<DatabasePool>,

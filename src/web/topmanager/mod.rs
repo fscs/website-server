@@ -14,10 +14,12 @@ use actix_web::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
+use utoipa::IntoParams;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-mod antrag;
-mod sitzungen;
+pub mod antrag;
+pub mod sitzungen;
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
@@ -35,7 +37,7 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(get_next_sitzung)
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct CreateTopParams {
     pub titel: String,
     pub sitzung_id: Uuid,
@@ -43,14 +45,14 @@ pub struct CreateTopParams {
     pub position: i64,
 }
 
-#[derive(Debug, Serialize, FromRow)]
-struct Person {
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
+pub struct Person {
     pub id: Uuid,
     pub name: String,
 }
 
-#[derive(Debug, Serialize)]
-struct TopWithAnträge {
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
+pub struct TopWithAnträge {
     pub id: Uuid,
     pub position: i64,
     pub name: String,
@@ -58,7 +60,15 @@ struct TopWithAnträge {
     pub inhalt: Option<serde_json::Value>,
 }
 
-#[get("/tops/{topid}/anträge")]
+#[utoipa::path(
+    path = "/api/topmanager/top/",
+    params(CreateTopParams),
+    responses(
+        (status = 201, description = "Created", body = TopWithAnträge),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/tops/{topid}/anträge/")]
 async fn anträge_by_top(db: Data<DatabasePool>, topid: web::Path<Uuid>) -> impl Responder {
     let anträge = sqlx::query_as::<_, Antrag>(
         "SELECT * From anträge Join antragstop ON anträge.id = antragstop.antrag_id WHERE top_id = $1",
@@ -72,7 +82,15 @@ async fn anträge_by_top(db: Data<DatabasePool>, topid: web::Path<Uuid>) -> impl
     }
 }
 
-#[get("/current_tops")]
+#[utoipa::path(
+    path = "/api/topmanager/top/",
+    params(CreateTopParams),
+    responses(
+        (status = 201, description = "Created", body = TopWithAnträge),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/current_tops/")]
 async fn get_current_tops_with_anträge(db: Data<DatabasePool>) -> impl Responder {
     let tops_with_anträge: Option<anyhow::Result<Vec<TopWithAnträge>>> = db
         .transaction(move |mut transaction| async move {
@@ -108,7 +126,14 @@ async fn get_current_tops_with_anträge(db: Data<DatabasePool>) -> impl Responde
     }
 }
 
-#[get("/sitzung/{id}/anträge")]
+#[utoipa::path(
+    path = "/api/topmanager/sitzung/next/",
+    responses(
+        (status = 201, description = "Created", body = Sitzung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/sitzung/{id}/anträge/")]
 async fn anträge_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
     let anträge = db
         .transaction(move |mut transaction| {

@@ -1,4 +1,4 @@
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct CreateAntragParams {
     pub titel: String,
     pub antragstext: String,
@@ -6,7 +6,7 @@ pub struct CreateAntragParams {
     pub antragssteller: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct UpdateAntragParams {
     pub id: Uuid,
     pub titel: String,
@@ -14,7 +14,7 @@ pub struct UpdateAntragParams {
     pub begründung: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct DeleteAntragParams {
     pub id: Uuid,
 }
@@ -26,9 +26,18 @@ use actix_web::web::Data;
 use actix_web::{delete, get, patch, put, web, Responder};
 use chrono::Utc;
 use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-#[patch("/antrag")]
+#[utoipa::path(
+    path = "/api/topmanager/antrag/",
+    params(CreateAntragParams),
+    responses(
+        (status = 201, description = "Created", body = Antrag),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[patch("/antrag/")]
 async fn update_antrag(
     db: Data<DatabasePool>,
     params: web::Json<UpdateAntragParams>,
@@ -51,7 +60,15 @@ async fn update_antrag(
     }
 }
 
-#[put("/antrag")]
+#[utoipa::path(
+    path = "/api/topmanager/antrag/",
+    params(DeleteAntragParams),
+    responses(
+        (status = 200, description = "Success", body = Antrag),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[put("/antrag/")]
 async fn create_antrag(
     db: Data<DatabasePool>,
     params: web::Json<CreateAntragParams>,
@@ -88,7 +105,14 @@ async fn create_antrag(
     RestStatus::created_from_result(result)
 }
 
-#[get("/antrag")]
+#[utoipa::path(
+    path = "/api/topmanager/antrag/",
+    responses(
+        (status = 200, description = "Success", body = Vec<Antrag>),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/antrag/")]
 async fn get_anträge(db: Data<DatabasePool>) -> impl Responder {
     let anträge = db
         .transaction(move |mut transaction| async move {
@@ -99,7 +123,15 @@ async fn get_anträge(db: Data<DatabasePool>) -> impl Responder {
     RestStatus::ok_from_result(anträge)
 }
 
-#[get("/antrag/{id}")]
+#[utoipa::path(
+    path = "/api/topmanager/antrag/{id}/",
+    params(("id" = Uuid, Path,)),
+    responses(
+        (status = 200, description = "Success", body = Antrag),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/antrag/{id}/")]
 async fn get_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
     let antrag = db
         .transaction(move |mut transaction| {
@@ -110,8 +142,15 @@ async fn get_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Respond
 
     RestStatus::ok_from_result(antrag)
 }
-
-#[delete("/antrag/{id}")]
+#[utoipa::path(
+    path = "/api/topmanager/antrag/{id}/",
+    params(("id" = Uuid, Path,), DeleteAntragParams),
+    responses(
+        (status = 200, description = "Success", body = Antrag),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[delete("/antrag/{id}/")]
 async fn delete_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| {
