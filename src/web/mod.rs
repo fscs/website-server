@@ -1,5 +1,5 @@
 use crate::database::{DatabasePool, DatabaseTransaction};
-use crate::{get_base_dir, web, ARGS};
+use crate::{domain, get_base_dir, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceResponse};
@@ -15,6 +15,10 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::str::FromStr;
+use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
+use utoipa_redoc::{Redoc, Servable};
+use utoipa_swagger_ui::SwaggerUi;
 
 pub(crate) mod abmmeldungen;
 pub(crate) mod calendar;
@@ -112,6 +116,20 @@ impl FromRequest for DatabaseTransaction<'static> {
 }
 
 pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Error> {
+    #[derive(OpenApi)]
+    #[openapi(
+        info(
+            title = "FSCS API",
+            description = "Our API to manage the FSCS System",
+            contact(name = "FSCS", email = "fscs@hhu.de", url = "https://new.hhu-fscs.de"),
+            version = "1.0.0"
+        ),
+        paths(doorstate::put_doorstate),
+        components(schemas(doorstate::CreateDoorStateParams, domain::Doorstate))
+    )]
+    struct ApiDoc;
+
+    let openapi = ApiDoc::openapi();
     Ok(HttpServer::new(move || {
         App::new()
             .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found))
@@ -120,6 +138,11 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             .service(doorstate::service("/api/doorstate"))
             .service(person::service("/api/person"))
             .service(abmmeldungen::service("/api/abmeldungen"))
+            .service(Redoc::with_url("/redoc", openapi.clone()))
+            .service(
+                SwaggerUi::new("/api/docs/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
+            )
+            .service(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
             .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
             .app_data(Data::new(database.clone()))
     })

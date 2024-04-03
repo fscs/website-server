@@ -1,6 +1,7 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use serde::Serialize;
 use sqlx::FromRow;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
@@ -26,7 +27,7 @@ pub struct Antrag {
     pub begründung: String,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Doorstate {
     pub time: NaiveDateTime,
     pub state: bool,
