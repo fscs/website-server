@@ -16,6 +16,7 @@ use std::path::PathBuf;
 use std::pin::Pin;
 use std::str::FromStr;
 
+pub(crate) mod abmmeldungen;
 pub(crate) mod calendar;
 pub(crate) mod doorstate;
 pub(crate) mod person;
@@ -118,6 +119,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             .service(topmanager::service("/api/topmanager"))
             .service(doorstate::service("/api/doorstate"))
             .service(person::service("/api/person"))
+            .service(abmmeldungen::service("/api/abmeldungen"))
             .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
             .app_data(Data::new(database.clone()))
     })

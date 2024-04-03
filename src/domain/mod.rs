@@ -52,6 +52,13 @@ pub struct Antragsstellende {
     pub person_id: Uuid,
 }
 
+#[derive(Debug, Serialize, FromRow)]
+pub struct Abmeldung {
+    pub person_id: Uuid,
+    pub anfangsdatum: NaiveDate,
+    pub ablaufdatum: NaiveDate,
+}
+
 pub trait TopManagerRepo {
     async fn create_sitzung(
         &mut self,
@@ -140,4 +147,29 @@ pub trait PersonRepo {
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<PersonRoleMapping>;
+}
+
+pub trait AbmeldungRepo {
+    async fn add_person_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<Abmeldung>;
+
+    async fn get_abmeldungen(&mut self) -> anyhow::Result<Vec<Abmeldung>>;
+
+    async fn update_person_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<Abmeldung>;
+
+    async fn delete_person_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<()>;
 }
