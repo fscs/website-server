@@ -3,10 +3,11 @@ use crate::domain::Antrag;
 use crate::domain::TopManagerRepo;
 use crate::web::topmanager::antrag::{create_antrag, delete_antrag, get_anträge, update_antrag};
 use crate::web::topmanager::sitzungen::{
-    create_sitzung, create_top, get_next_sitzung, get_sitzungen, tops_by_sitzung,
+    create_sitzung, create_top, get_next_sitzung, get_sitzungen, tops_by_sitzung, update_sitzung,
 };
 use crate::web::RestStatus;
 use actix_web::body::BoxBody;
+use actix_web::web::delete;
 use actix_web::{
     get,
     web::{self, Data},
@@ -17,6 +18,10 @@ use sqlx::prelude::FromRow;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+use self::sitzungen::delete_sitzung;
+use self::sitzungen::delete_top;
+use self::sitzungen::update_top;
 
 pub mod antrag;
 pub mod sitzungen;
@@ -35,6 +40,10 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(create_top)
         .service(get_current_tops_with_anträge)
         .service(get_next_sitzung)
+        .service(update_sitzung)
+        .service(delete_sitzung)
+        .service(update_top)
+        .service(delete_top)
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]

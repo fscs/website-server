@@ -133,6 +133,10 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             person::get_persons,
             person::get_person_by_role,
             person::create_person,
+            person::patch_person,
+            person::delete_person,
+            person::update_person_role,
+            person::delete_person_role,
             calendar::get_events,
             calendar::get_branchen_events,
             abmeldungen::get_abmeldungen,
@@ -149,6 +153,10 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             topmanager::sitzungen::create_top,
             topmanager::sitzungen::tops_by_sitzung,
             topmanager::sitzungen::get_next_sitzung,
+            topmanager::sitzungen::delete_sitzung,
+            topmanager::sitzungen::update_sitzung,
+            topmanager::sitzungen::update_top,
+            topmanager::sitzungen::delete_top,
             topmanager::anträge_by_top,
             topmanager::get_current_tops_with_anträge,
             topmanager::anträge_by_sitzung
@@ -159,6 +167,10 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             person::CreatePersonRoleParams,
             person::GetPersonsByRoleParams,
             person::CreatePersonParams,
+            person::UpdatePersonParams,
+            person::DeletePersonParams,
+            person::UpdatePersonRoleParams,
+            person::DeletePersonRoleParams,
             domain::Person,
             calendar::CalendarEvent,
             domain::Abmeldung,
@@ -174,7 +186,11 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             topmanager::TopWithAnträge,
             topmanager::Person,
             topmanager::CreateTopParams,
-            topmanager::sitzungen::CreateSitzungParams
+            topmanager::sitzungen::CreateSitzungParams,
+            topmanager::sitzungen::DeleteSitzungParams,
+            topmanager::sitzungen::UpdateSitzungParams,
+            topmanager::sitzungen::UpdateTopParams,
+            topmanager::sitzungen::DeleteTopParams,
         ))
     )]
     struct ApiDoc;

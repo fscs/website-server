@@ -115,6 +115,25 @@ pub trait TopManagerRepo {
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>>;
 
     async fn get_next_sitzung(&mut self) -> anyhow::Result<Option<Sitzung>>;
+
+    async fn update_sitzung(
+        &mut self,
+        id: Uuid,
+        datum: NaiveDateTime,
+        name: &str,
+    ) -> anyhow::Result<Sitzung>;
+
+    async fn delete_sitzung(&mut self, id: Uuid) -> anyhow::Result<()>;
+
+    async fn update_top(
+        &mut self,
+        sitzung_id: Uuid,
+        id: Uuid,
+        titel: &str,
+        inhalt: Option<serde_json::Value>,
+    ) -> anyhow::Result<Top>;
+
+    async fn delete_top(&mut self, id: Uuid) -> anyhow::Result<()>;
 }
 
 pub trait DoorStateRepo {
@@ -127,6 +146,8 @@ pub trait DoorStateRepo {
 }
 
 pub trait PersonRepo {
+    async fn patch_person(&mut self, id: Uuid, name: &str) -> anyhow::Result<Person>;
+
     async fn add_person_role_mapping(
         &mut self,
         person_id: Uuid,
@@ -134,14 +155,28 @@ pub trait PersonRepo {
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<PersonRoleMapping>;
+
+    async fn update_person_role_mapping(
+        &mut self,
+        person_id: Uuid,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<PersonRoleMapping>;
+
+    async fn delete_person_role_mapping(&mut self, person_id: Uuid) -> anyhow::Result<()>;
+
     async fn create_person(&mut self, name: &str) -> anyhow::Result<Person>;
+
     async fn get_persons(&mut self) -> anyhow::Result<Vec<Person>>;
+
     async fn get_person_by_role(
         &mut self,
         rolle: &str,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<Vec<Person>>;
+
     async fn update_person(
         &mut self,
         person_id: Uuid,
@@ -149,6 +184,8 @@ pub trait PersonRepo {
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<PersonRoleMapping>;
+
+    async fn delete_person(&mut self, id: Uuid) -> anyhow::Result<()>;
 }
 
 pub trait AbmeldungRepo {

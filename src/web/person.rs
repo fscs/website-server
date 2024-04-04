@@ -1,4 +1,4 @@
-use actix_web::web;
+use actix_web::{delete, web};
 use actix_web::{get, patch, put, web::Data, Responder, Scope};
 use serde::Deserialize;
 use sqlx::types::chrono;
@@ -14,6 +14,10 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(get_person_by_role)
         .service(update_person)
         .service(create_person)
+        .service(patch_person)
+        .service(delete_person)
+        .service(update_person_role)
+        .service(delete_person_role)
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
@@ -25,8 +29,32 @@ pub struct CreatePersonRoleParams {
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
+pub struct UpdatePersonRoleParams {
+    pub person_id: Uuid,
+    pub rolle: String,
+    pub anfangsdatum: chrono::NaiveDate,
+    pub ablaufdatum: chrono::NaiveDate,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
+pub struct DeletePersonRoleParams {
+    pub person_id: Uuid,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
 pub struct CreatePersonParams {
     pub name: String,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
+pub struct UpdatePersonParams {
+    pub id: Uuid,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
+pub struct DeletePersonParams {
+    pub id: Uuid,
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
@@ -70,6 +98,67 @@ async fn put_person_role(
 }
 
 #[utoipa::path(
+    path = "/api/person/role-mapping/",
+    request_body = UpdatePersonRoleParams,
+    responses(
+        (status = 200, description = "Success", body = Person),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[patch("/role-mapping/")]
+async fn update_person_role(
+    db: Data<DatabasePool>,
+    params: web::Json<UpdatePersonRoleParams>,
+) -> impl Responder {
+    let result = db
+        .transaction(move |mut transaction| {
+            let params = params.clone();
+            async move {
+                let person = transaction
+                    .update_person_role_mapping(
+                        params.person_id,
+                        &params.rolle,
+                        params.anfangsdatum,
+                        params.ablaufdatum,
+                    )
+                    .await?;
+                Ok((person, transaction))
+            }
+        })
+        .await;
+
+    RestStatus::ok_from_result(result)
+}
+
+#[utoipa::path(
+    path = "/api/person/role-mapping/",
+    request_body = DeletePersonRoleParams,
+    responses(
+        (status = 200, description = "Success"),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[delete("/role-mapping/")]
+async fn delete_person_role(
+    db: Data<DatabasePool>,
+    params: web::Json<DeletePersonRoleParams>,
+) -> impl Responder {
+    let result = db
+        .transaction(move |mut transaction| {
+            let params = params.clone();
+            async move {
+                let person = transaction
+                    .delete_person_role_mapping(params.person_id)
+                    .await?;
+                Ok((person, transaction))
+            }
+        })
+        .await;
+
+    RestStatus::ok_from_result(result)
+}
+
+#[utoipa::path(
     path = "/api/person/",
     responses(
         (status = 200, description = "Success", body = Vec<Person>),
@@ -82,6 +171,54 @@ async fn get_persons(db: Data<DatabasePool>) -> impl Responder {
         .transaction(move |mut transaction| async move {
             let person = transaction.get_persons().await?;
             Ok((person, transaction))
+        })
+        .await;
+
+    RestStatus::ok_from_result(result)
+}
+
+#[utoipa::path(
+    path = "/api/person/",
+    request_body = UpdatePersonParams,
+    responses(
+        (status = 200, description = "Success", body = Vec<Person>),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[patch("/")]
+async fn patch_person(
+    db: Data<DatabasePool>,
+    params: web::Json<UpdatePersonParams>,
+) -> impl Responder {
+    let result = db
+        .transaction(move |mut transaction| {
+            let params = params.clone();
+            async move {
+                let person = transaction.patch_person(params.id, &params.name).await?;
+                Ok((person, transaction))
+            }
+        })
+        .await;
+    RestStatus::created_from_result(result)
+}
+
+#[utoipa::path(
+    path = "/api/person/",
+    request_body = DeletePersonParams,
+    responses(
+        (status = 200, description = "Success", body = Vec<Person>),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[delete("/")]
+async fn delete_person(
+    db: Data<DatabasePool>,
+    params: web::Json<DeletePersonParams>,
+) -> impl Responder {
+    let result = db
+        .transaction(move |mut transaction| {
+            let id = params.id;
+            async move { Ok((transaction.delete_person(id).await?, transaction)) }
         })
         .await;
 
