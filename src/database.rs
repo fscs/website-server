@@ -303,7 +303,7 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
 }
 
 impl PersonRepo for DatabaseTransaction<'_> {
-    async fn add_person(
+    async fn add_person_role_mapping(
         &mut self,
         person_id: Uuid,
         rolle: &str,
@@ -317,6 +317,15 @@ impl PersonRepo for DatabaseTransaction<'_> {
             rolle,
             anfangsdatum,
             ablaufdatum
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person> {
+        Ok(sqlx::query_as!(
+            Person,
+            "INSERT INTO person (name) VALUES ($1) ON CONFLICT(name) DO UPDATE SET name = $1 RETURNING *",
+            name
         )
         .fetch_one(&mut **self)
         .await?)

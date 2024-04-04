@@ -13,14 +13,20 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(get_persons)
         .service(get_person_by_role)
         .service(update_person)
+        .service(create_person)
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
-pub struct CreatePersonParams {
+pub struct CreatePersonRoleParams {
     pub person_id: Uuid,
     pub rolle: String,
     pub anfangsdatum: chrono::NaiveDate,
     pub ablaufdatum: chrono::NaiveDate,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
+pub struct CreatePersonParams {
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema, IntoParams)]
@@ -32,7 +38,7 @@ pub struct GetPersonsByRoleParams {
 
 #[utoipa::path(
     path = "/api/person/role-mapping/",
-    params(CreatePersonParams),
+    request_body = CreatePersonRoleParams,
     responses(
         (status = 200, description = "Success", body = Person),
         (status = 400, description = "Bad Request"),
@@ -41,14 +47,14 @@ pub struct GetPersonsByRoleParams {
 #[put("/role-mapping/")]
 async fn put_person_role(
     db: Data<DatabasePool>,
-    params: web::Json<CreatePersonParams>,
+    params: web::Json<CreatePersonRoleParams>,
 ) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| {
             let params = params.clone();
             async move {
                 let person = transaction
-                    .add_person(
+                    .add_person_role_mapping(
                         params.person_id,
                         &params.rolle,
                         params.anfangsdatum,
@@ -83,8 +89,33 @@ async fn get_persons(db: Data<DatabasePool>) -> impl Responder {
 }
 
 #[utoipa::path(
+    path = "/api/person/",
+    request_body = CreatePersonParams,
+    responses(
+        (status = 200, description = "Success", body = Person),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[put("/")]
+async fn create_person(
+    db: Data<DatabasePool>,
+    params: web::Json<CreatePersonParams>,
+) -> impl Responder {
+    let result = db
+        .transaction(move |mut transaction| {
+            let params = params.clone();
+            async move {
+                let person = transaction.create_person(&params.name).await?;
+                Ok((person, transaction))
+            }
+        })
+        .await;
+    RestStatus::created_from_result(result)
+}
+
+#[utoipa::path(
     path = "/api/person/by-role/",
-    params(GetPersonsByRoleParams),
+    request_body = GetPersonsByRoleParams,
     responses(
         (status = 200, description = "Success", body = Vec<Person>),
         (status = 400, description = "Bad Request"),
@@ -112,7 +143,7 @@ async fn get_person_by_role(
 
 #[utoipa::path(
     path = "/api/person/role-mapping/",
-    params(CreatePersonParams),
+    request_body = CreatePersonRoleParams,
     responses(
         (status = 200, description = "Success", body = Person),
         (status = 400, description = "Bad Request"),
@@ -121,7 +152,7 @@ async fn get_person_by_role(
 #[patch("/role-mapping/")]
 async fn update_person(
     db: Data<DatabasePool>,
-    params: web::Json<CreatePersonParams>,
+    params: web::Json<CreatePersonRoleParams>,
 ) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| {

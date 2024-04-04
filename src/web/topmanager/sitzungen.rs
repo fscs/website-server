@@ -15,7 +15,6 @@ pub struct CreateSitzungParams {
 
 #[utoipa::path(
     path = "/api/topmanager/sitzung/",
-    params(CreateSitzungParams),
     responses(
         (status = 201, description = "Created", body = Sitzung),
         (status = 400, description = "Bad Request"),
@@ -34,7 +33,7 @@ async fn get_sitzungen(db: Data<DatabasePool>) -> impl Responder {
 
 #[utoipa::path(
     path = "/api/topmanager/sitzung/",
-    params(CreateSitzungParams),
+    request_body = CreateSitzungParams,
     responses(
         (status = 201, description = "Created", body = Sitzung),
         (status = 400, description = "Bad Request"),
@@ -63,8 +62,7 @@ async fn create_sitzung(
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/sitzung/{id}/",
-    params(("id" = Uuid, Path,)),
+    path = "/api/topmanager/{sitzung_id}/top/",
     responses(
         (status = 200, description = "Success", body = Sitzung),
         (status = 400, description = "Bad Request"),
@@ -95,7 +93,7 @@ async fn create_top(
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/sitzung/{id}/",
+    path = "/api/topmanager/sitzung/{id}/tops/",
     params(("id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Sitzung),
@@ -115,7 +113,7 @@ async fn tops_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Re
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/sitzung/next/",
+    path = "/api/topmanager/next_sitzung/",
     responses(
         (status = 200, description = "Success", body = Sitzung),
         (status = 404, description = "Not Found"),

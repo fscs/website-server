@@ -127,13 +127,14 @@ pub trait DoorStateRepo {
 }
 
 pub trait PersonRepo {
-    async fn add_person(
+    async fn add_person_role_mapping(
         &mut self,
         person_id: Uuid,
         rolle: &str,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<PersonRoleMapping>;
+    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person>;
     async fn get_persons(&mut self) -> anyhow::Result<Vec<Person>>;
     async fn get_person_by_role(
         &mut self,

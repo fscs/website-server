@@ -23,7 +23,7 @@ pub struct CreateDoorStateParams {
 
 #[utoipa::path(
     path = "/api/doorstate/",
-    params(CreateDoorStateParams),
+    request_body = CreateDoorStateParams,
     responses(
         (status = 200, description = "Success", body = Doorstate),
         (status = 400, description = "Bad Request"),

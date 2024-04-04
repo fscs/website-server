@@ -61,8 +61,8 @@ pub struct TopWithAnträge {
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/top/",
-    params(CreateTopParams),
+    path = "/api/topmanager/tops/{topid}/anträge/",
+    params(("topid" = Uuid,Path,)),
     responses(
         (status = 201, description = "Created", body = TopWithAnträge),
         (status = 400, description = "Bad Request"),
@@ -83,8 +83,7 @@ async fn anträge_by_top(db: Data<DatabasePool>, topid: web::Path<Uuid>) -> impl
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/top/",
-    params(CreateTopParams),
+    path = "/api/topmanager/current_tops/",
     responses(
         (status = 201, description = "Created", body = TopWithAnträge),
         (status = 400, description = "Bad Request"),
@@ -127,7 +126,7 @@ async fn get_current_tops_with_anträge(db: Data<DatabasePool>) -> impl Responde
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/sitzung/next/",
+    path = "/api/topmanager/sitzung/{id}/anträge/",
     responses(
         (status = 201, description = "Created", body = Sitzung),
         (status = 400, description = "Bad Request"),

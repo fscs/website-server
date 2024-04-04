@@ -21,8 +21,8 @@ pub struct CreatePersonAbmeldungParams {
 }
 
 #[utoipa::path(
-    path = "/api/abmeldung/",
-    params(CreatePersonAbmeldungParams),
+    path = "/api/abmeldungen/",
+    request_body = CreatePersonAbmeldungParams,
     responses(
         (status = 200, description = "Success", body = Abmeldung),
         (status = 400, description = "Bad Request"),
@@ -49,7 +49,7 @@ async fn put_person_abmeldung(
 }
 
 #[utoipa::path(
-    path = "/api/abmeldung/",
+    path = "/api/abmeldungen/",
     responses(
         (status = 200, description = "Success", body = Abmeldung),
         (status = 400, description = "Bad Request"),
@@ -68,8 +68,8 @@ async fn get_abmeldungen(db: Data<DatabasePool>) -> impl Responder {
 }
 
 #[utoipa::path(
-    path = "/api/abmeldung/",
-    params(CreatePersonAbmeldungParams),
+    path = "/api/abmeldungen/",
+    request_body = CreatePersonAbmeldungParams,
     responses(
         (status = 200, description = "Success", body = Abmeldung),
         (status = 400, description = "Bad Request"),
@@ -99,8 +99,8 @@ async fn update_person_abmeldung(
 }
 
 #[utoipa::path(
-    path = "/api/abmeldung/",
-    params(CreatePersonAbmeldungParams),
+    path = "/api/abmeldungen/",
+    request_body = CreatePersonAbmeldungParams,
     responses(
         (status = 200, description = "Success", body = Abmeldung),
         (status = 400, description = "Bad Request"),

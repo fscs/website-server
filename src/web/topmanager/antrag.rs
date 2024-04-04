@@ -22,16 +22,17 @@ pub struct DeleteAntragParams {
 use crate::database::DatabasePool;
 use crate::domain::{Antragsstellende, TopManagerRepo};
 use crate::web::topmanager::RestStatus;
-use actix_web::web::Data;
+use actix_web::web::{Data, Query};
 use actix_web::{delete, get, patch, put, web, Responder};
 use chrono::Utc;
 use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
+use serde_json::Value;
+use utoipa::{IntoParams, Path, ToSchema};
 use uuid::Uuid;
 
 #[utoipa::path(
     path = "/api/topmanager/antrag/",
-    params(CreateAntragParams),
+    request_body=UpdateAntragParams,
     responses(
         (status = 201, description = "Created", body = Antrag),
         (status = 400, description = "Bad Request"),
@@ -62,7 +63,7 @@ async fn update_antrag(
 
 #[utoipa::path(
     path = "/api/topmanager/antrag/",
-    params(DeleteAntragParams),
+    request_body = CreateAntragParams,
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 400, description = "Bad Request"),
@@ -124,8 +125,8 @@ async fn get_anträge(db: Data<DatabasePool>) -> impl Responder {
 }
 
 #[utoipa::path(
+    get,
     path = "/api/topmanager/antrag/{id}/",
-    params(("id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 400, description = "Bad Request"),
@@ -142,9 +143,9 @@ async fn get_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Respond
 
     RestStatus::ok_from_result(antrag)
 }
+
 #[utoipa::path(
     path = "/api/topmanager/antrag/{id}/",
-    params(("id" = Uuid, Path,), DeleteAntragParams),
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 400, description = "Bad Request"),
