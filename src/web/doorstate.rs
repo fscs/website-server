@@ -6,8 +6,13 @@ use actix_web::{
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::types::chrono;
+use utoipa::{IntoParams, ToSchema};
 
-use crate::{database::DatabasePool, domain::TopManagerRepo, web::RestStatus};
+use crate::{
+    database::DatabasePool,
+    domain::DoorStateRepo,
+    web::{auth::User, RestStatus},
+};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
@@ -15,13 +20,22 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(get_doorstate)
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, IntoParams, ToSchema)]
 pub struct CreateDoorStateParams {
-    pub state: bool,
+    pub is_open: bool,
 }
 
+#[utoipa::path(
+    path = "/api/doorstate/",
+    request_body = CreateDoorStateParams,
+    responses(
+        (status = 200, description = "Success", body = Doorstate),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[put("/")]
 async fn put_doorstate(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateDoorStateParams>,
 ) -> impl Responder {
@@ -31,7 +45,7 @@ async fn put_doorstate(
             async move {
                 let now = Utc::now();
                 let doorstate = transaction
-                    .add_doorstate(now.naive_utc(), params.state)
+                    .add_doorstate(now.naive_utc(), params.is_open)
                     .await?;
                 Ok((doorstate, transaction))
             }
@@ -41,6 +55,13 @@ async fn put_doorstate(
     RestStatus::ok_from_result(result)
 }
 
+#[utoipa::path(
+    path = "/api/doorstate/",
+    responses(
+        (status = 200, description = "Success", body = Doorstate),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[get("/")]
 async fn get_doorstate(db: Data<DatabasePool>) -> impl Responder {
     let result = db

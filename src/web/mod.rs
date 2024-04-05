@@ -1,5 +1,5 @@
 use crate::database::{DatabasePool, DatabaseTransaction};
-use crate::{get_base_dir, web, ARGS};
+use crate::{domain, get_base_dir, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceResponse};
@@ -9,19 +9,26 @@ use actix_web::web::Data;
 use actix_web::{App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
 use serde::Serialize;
+use serde_json::json;
 use std::fs::File;
 use std::future::Future;
 use std::io::Read;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::str::FromStr;
+use utoipa::openapi::Server;
+use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
+use utoipa_redoc::{Redoc, Servable};
+use utoipa_swagger_ui::SwaggerUi;
 
 use self::auth::oauth_client;
-
+pub(crate) mod abmeldungen;
+pub(crate) mod auth;
 pub(crate) mod calendar;
 pub(crate) mod doorstate;
+pub(crate) mod person;
 pub(crate) mod topmanager;
-pub(crate) mod auth;
 
 pub(super) enum RestStatus {
     Ok(serde_json::Value),
@@ -113,13 +120,105 @@ impl FromRequest for DatabaseTransaction<'static> {
 }
 
 pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Error> {
+    #[derive(OpenApi)]
+    #[openapi(
+        info(
+            title = "FSCS API",
+            description = "Our API to manage the FSCS System",
+            contact(name = "FSCS", email = "fscs@hhu.de", url = "https://new.hhu-fscs.de"),
+            version = "1.0.0"
+        ),
+        paths(
+            doorstate::put_doorstate,
+            doorstate::get_doorstate,
+            person::put_person_role,
+            person::get_persons,
+            person::get_person_by_role,
+            person::create_person,
+            person::patch_person,
+            person::delete_person,
+            person::update_person_role,
+            person::delete_person_role,
+            calendar::get_events,
+            calendar::get_branchen_events,
+            abmeldungen::get_abmeldungen,
+            abmeldungen::put_person_abmeldung,
+            abmeldungen::update_person_abmeldung,
+            abmeldungen::delete_person_abmeldung,
+            topmanager::antrag::create_antrag,
+            topmanager::antrag::update_antrag,
+            topmanager::antrag::delete_antrag,
+            topmanager::antrag::get_anträge,
+            topmanager::antrag::get_antrag,
+            topmanager::antrag::put_antrag_top_mapping,
+            topmanager::antrag::delete_antrag_top_mapping,
+            topmanager::sitzungen::get_sitzungen,
+            topmanager::sitzungen::create_sitzung,
+            topmanager::sitzungen::create_top,
+            topmanager::sitzungen::tops_by_sitzung,
+            topmanager::sitzungen::get_next_sitzung,
+            topmanager::sitzungen::delete_sitzung,
+            topmanager::sitzungen::update_sitzung,
+            topmanager::sitzungen::update_top,
+            topmanager::sitzungen::delete_top,
+            topmanager::anträge_by_top,
+            topmanager::get_current_tops_with_anträge,
+            topmanager::anträge_by_sitzung
+        ),
+        components(schemas(
+            doorstate::CreateDoorStateParams,
+            domain::Doorstate,
+            person::CreatePersonRoleParams,
+            person::GetPersonsByRoleParams,
+            person::CreatePersonParams,
+            person::UpdatePersonParams,
+            person::DeletePersonParams,
+            person::UpdatePersonRoleParams,
+            person::DeletePersonRoleParams,
+            domain::Person,
+            calendar::CalendarEvent,
+            domain::Abmeldung,
+            abmeldungen::CreatePersonAbmeldungParams,
+            topmanager::antrag::CreateAntragParams,
+            topmanager::antrag::UpdateAntragParams,
+            topmanager::antrag::DeleteAntragParams,
+            topmanager::antrag::CreateAntragTopMappingParams,
+            domain::Antrag,
+            domain::Top,
+            domain::PersonRoleMapping,
+            domain::Sitzung,
+            domain::Antragsstellende,
+            topmanager::TopWithAnträge,
+            topmanager::Person,
+            topmanager::CreateTopParams,
+            topmanager::sitzungen::CreateSitzungParams,
+            topmanager::sitzungen::DeleteSitzungParams,
+            topmanager::sitzungen::UpdateSitzungParams,
+            topmanager::sitzungen::UpdateTopParams,
+            topmanager::sitzungen::DeleteTopParams,
+        ))
+    )]
+    struct ApiDoc;
+
+    let openapi = ApiDoc::openapi();
+
     Ok(HttpServer::new(move || {
         App::new()
-            .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found).handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized))
+            .wrap(
+                ErrorHandlers::new()
+                    .handler(StatusCode::NOT_FOUND, not_found)
+                    .handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized),
+            )
             .service(web::calendar::service("/api/calendar"))
             .service(topmanager::service("/api/topmanager"))
             .service(doorstate::service("/api/doorstate"))
             .service(auth::service("/auth"))
+            .service(person::service("/api/person"))
+            .service(abmeldungen::service("/api/abmeldungen"))
+            .service(
+                SwaggerUi::new("/api/docs/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
+            )
+            .service(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
             .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))

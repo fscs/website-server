@@ -1,5 +1,8 @@
-use crate::domain::{Antrag, Doorstate, Sitzung, Top, TopManagerRepo};
-use chrono::NaiveDateTime;
+use crate::domain::{
+    Abmeldung, AbmeldungRepo, Antrag, AntragTopMapping, DoorStateRepo, Doorstate, Person,
+    PersonRepo, PersonRoleMapping, Sitzung, Top, TopManagerRepo,
+};
+use chrono::{NaiveDate, NaiveDateTime};
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgConnection, PgPool, Postgres, Transaction};
@@ -20,7 +23,7 @@ pub struct DatabaseTransaction<'a> {
 
 impl<'a> DerefMut for DatabaseTransaction<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut *self.transaction
+        &mut self.transaction
     }
 }
 
@@ -28,7 +31,7 @@ impl<'a> Deref for DatabaseTransaction<'a> {
     type Target = PgConnection;
 
     fn deref(&self) -> &Self::Target {
-        &*self.transaction
+        &self.transaction
     }
 }
 
@@ -91,6 +94,32 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         )
         .fetch_one(&mut **self)
         .await?)
+    }
+
+    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person> {
+        Ok(sqlx::query_as!(
+            Person,
+            "INSERT INTO person (name) VALUES ($1) ON CONFLICT(name) DO UPDATE SET name = $1 RETURNING *",
+            name
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn create_antragssteller(
+        &mut self,
+        antrag_id: Uuid,
+        person_id: Uuid,
+    ) -> anyhow::Result<()> {
+        sqlx::query_as!(
+            Antragssteller,
+            "INSERT INTO antragsstellende (antrags_id, person_id) VALUES ($1, $2)",
+            antrag_id,
+            person_id
+        )
+        .execute(&mut **self)
+        .await?;
+        Ok(())
     }
 
     async fn save_sitzung(&mut self, sitzung: Sitzung) -> anyhow::Result<Sitzung> {
@@ -192,7 +221,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         sitzung_id: Uuid,
         inhalt: Option<Value>,
     ) -> anyhow::Result<Top> {
-        let position = sqlx::query!(
+        let weight = sqlx::query!(
             "SELECT COUNT(*) FROM tops WHERE sitzung_id = $1",
             sitzung_id
         )
@@ -200,7 +229,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?
         .count;
 
-        Ok(sqlx::query_as!(Top, "INSERT INTO tops (name, sitzung_id, position, inhalt) VALUES ($1, $2, $3, $4) RETURNING name, position, inhalt, id", titel, sitzung_id, position, inhalt)
+        Ok(sqlx::query_as!(Top, "INSERT INTO tops (name, sitzung_id, weight, inhalt) VALUES ($1, $2, $3, $4) RETURNING name, weight, inhalt, id", titel, sitzung_id, weight, inhalt)
             .fetch_one(&mut **self)
             .await?)
     }
@@ -227,7 +256,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>> {
         Ok(sqlx::query_as!(
             Top,
-            "SELECT id, name, inhalt, position FROM tops WHERE sitzung_id = $1",
+            "SELECT id, name, inhalt, weight FROM tops WHERE sitzung_id = $1",
             sitzung_id
         )
         .fetch_all(&mut **self)
@@ -245,16 +274,104 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
+    async fn update_sitzung(
+        &mut self,
+        id: Uuid,
+        datum: NaiveDateTime,
+        name: &str,
+    ) -> anyhow::Result<Sitzung> {
+        Ok(sqlx::query_as!(
+            Sitzung,
+            "UPDATE sitzungen SET datum = $1, name = $2 WHERE id = $3 RETURNING *",
+            datum,
+            name,
+            id
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn delete_sitzung(&mut self, id: Uuid) -> anyhow::Result<()> {
+        sqlx::query!("DELETE FROM tops WHERE sitzung_id = $1", id)
+            .execute(&mut **self)
+            .await?;
+        sqlx::query!("DELETE FROM sitzungen WHERE id = $1", id)
+            .execute(&mut **self)
+            .await?;
+        Ok(())
+    }
+
+    async fn update_top(
+        &mut self,
+        sitzung_id: Uuid,
+        id: Uuid,
+        titel: &str,
+        inhalt: Option<Value>,
+    ) -> anyhow::Result<Top> {
+        Ok(sqlx::query_as!(
+            Top,
+            "UPDATE tops SET name = $1, inhalt = $2, sitzung_id = $3 WHERE id = $4 RETURNING name, inhalt, id, weight",
+            titel,
+            inhalt,
+            sitzung_id,
+            id,
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn delete_top(&mut self, id: Uuid) -> anyhow::Result<()> {
+        sqlx::query!("DELETE FROM antragstop WHERE top_id = $1", id)
+            .execute(&mut **self)
+            .await?;
+        sqlx::query!("DELETE FROM tops WHERE id = $1", id)
+            .execute(&mut **self)
+            .await?;
+        Ok(())
+    }
+
+    async fn create_antrag_top_mapping(
+        &mut self,
+        antrag_id: Uuid,
+        top_id: Uuid,
+    ) -> anyhow::Result<AntragTopMapping> {
+        Ok(sqlx::query_as!(
+            crate::domain::AntragTopMapping,
+            "INSERT INTO antragstop (antrag_id, top_id) VALUES ($1, $2) RETURNING *",
+            antrag_id,
+            top_id
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn delete_antrag_top_mapping(
+        &mut self,
+        antrag_id: Uuid,
+        top_id: Uuid,
+    ) -> anyhow::Result<()> {
+        sqlx::query!(
+            "DELETE FROM antragstop WHERE antrag_id = $1 AND top_id = $2",
+            antrag_id,
+            top_id
+        )
+        .execute(&mut **self)
+        .await?;
+        Ok(())
+    }
+}
+
+impl DoorStateRepo for DatabaseTransaction<'_> {
     async fn add_doorstate(
         &mut self,
         time: NaiveDateTime,
-        state: bool,
+        is_open: bool,
     ) -> anyhow::Result<Doorstate> {
         Ok(sqlx::query_as!(
             Doorstate,
-            "INSERT INTO doorstate (time, state) VALUES ($1, $2) RETURNING *",
+            "INSERT INTO doorstate (time, is_open) VALUES ($1, $2) RETURNING *",
             time,
-            state
+            is_open
         )
         .fetch_one(&mut **self)
         .await?)
@@ -268,5 +385,181 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         )
         .fetch_optional(&mut **self)
         .await?)
+    }
+}
+
+impl PersonRepo for DatabaseTransaction<'_> {
+    async fn patch_person(&mut self, id: Uuid, name: &str) -> anyhow::Result<Person> {
+        Ok(sqlx::query_as!(
+            Person,
+            "UPDATE person SET name = $1 WHERE id = $2 RETURNING *",
+            name,
+            id
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+    async fn add_person_role_mapping(
+        &mut self,
+        person_id: Uuid,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<PersonRoleMapping> {
+        Ok(sqlx::query_as!(
+            PersonRoleMapping,
+            "INSERT INTO rollen (person_id, rolle, anfangsdatum, ablaufdatum) VALUES ($1, $2, $3, $4) RETURNING *",
+            person_id,
+            rolle,
+            anfangsdatum,
+            ablaufdatum
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn update_person_role_mapping(
+        &mut self,
+        person_id: Uuid,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<PersonRoleMapping> {
+        Ok(sqlx::query_as!(
+            PersonRoleMapping,
+            "UPDATE rollen SET rolle = $1, anfangsdatum = $2, ablaufdatum = $3 WHERE person_id = $4 RETURNING *",
+            rolle,
+            anfangsdatum,
+            ablaufdatum,
+            person_id
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn delete_person_role_mapping(&mut self, person_id: Uuid) -> anyhow::Result<()> {
+        sqlx::query!("DELETE FROM rollen WHERE person_id = $1", person_id,)
+            .execute(&mut **self)
+            .await?;
+        Ok(())
+    }
+
+    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person> {
+        Ok(sqlx::query_as!(
+            Person,
+            "INSERT INTO person (name) VALUES ($1) ON CONFLICT(name) DO UPDATE SET name = $1 RETURNING *",
+            name
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn get_persons(&mut self) -> anyhow::Result<Vec<Person>> {
+        Ok(sqlx::query_as!(Person, "SELECT * FROM person")
+            .fetch_all(&mut **self)
+            .await?)
+    }
+    async fn get_person_by_role(
+        &mut self,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<Vec<Person>> {
+        Ok(sqlx::query_as!(
+            Person,
+            "SELECT id,name FROM person
+         JOIN public.rollen r on person.id = r.person_id
+         WHERE r.rolle = $1 AND anfangsdatum >= $2 AND ablaufdatum <= $3",
+            rolle,
+            anfangsdatum,
+            ablaufdatum
+        )
+        .fetch_all(&mut **self)
+        .await?)
+    }
+
+    async fn update_person(
+        &mut self,
+        person_id: Uuid,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<PersonRoleMapping> {
+        Ok(sqlx::query_as!(
+            PersonRoleMapping,
+            "UPDATE rollen SET rolle = $1, anfangsdatum = $2, ablaufdatum = $3 WHERE person_id = $4 RETURNING *",
+            rolle,
+            anfangsdatum,
+            ablaufdatum,
+            person_id
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn delete_person(&mut self, id: Uuid) -> anyhow::Result<()> {
+        sqlx::query!("DELETE FROM person WHERE id = $1", id)
+            .execute(&mut **self)
+            .await?;
+        Ok(())
+    }
+}
+
+impl AbmeldungRepo for DatabaseTransaction<'_> {
+    async fn add_person_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<Abmeldung> {
+        Ok(sqlx::query_as!(
+            Abmeldung,
+            "INSERT INTO abmeldungen (person_id, anfangsdatum, ablaufdatum) VALUES ($1, $2, $3) RETURNING *",
+            person_id,
+            anfangsdatum,
+            ablaufdatum
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn get_abmeldungen(&mut self) -> anyhow::Result<Vec<Abmeldung>> {
+        Ok(sqlx::query_as!(Abmeldung, "SELECT * FROM abmeldungen")
+            .fetch_all(&mut **self)
+            .await?)
+    }
+
+    async fn update_person_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<Abmeldung> {
+        Ok(sqlx::query_as!(
+            Abmeldung,
+            "UPDATE abmeldungen SET anfangsdatum = $1, ablaufdatum = $2 WHERE person_id = $3 RETURNING *",
+            anfangsdatum,
+            ablaufdatum,
+            person_id
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn delete_person_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<()> {
+        sqlx::query!(
+            "DELETE FROM abmeldungen WHERE person_id = $1 AND anfangsdatum = $2 AND ablaufdatum = $3",
+            person_id,
+            anfangsdatum,
+            ablaufdatum
+        )
+        .execute(&mut **self)
+        .await?;
+        Ok(())
     }
 }

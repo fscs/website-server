@@ -6,9 +6,10 @@ use icalendar::{Component, Event, EventLike};
 use lazy_static::lazy_static;
 use std::future::Future;
 use std::pin::Pin;
+use utoipa::{IntoParams, ToSchema};
 
-#[derive(serde::Serialize, Clone)]
-struct CalendarEvent {
+#[derive(serde::Serialize, Clone, IntoParams, ToSchema)]
+pub struct CalendarEvent {
     summary: Option<String>,
     location: Option<String>,
     description: Option<String>,
@@ -22,6 +23,13 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(get_branchen_events)
 }
 
+#[utoipa::path(
+    path = "/api/calendar/",
+    responses(
+        (status = 200, description = "Success", body = CalendarEvent),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[get("/")]
 async fn get_events() -> impl Responder {
     lazy_static! {
@@ -36,7 +44,14 @@ async fn get_events() -> impl Responder {
     Json(x)
 }
 
-#[get("/branchen")]
+#[utoipa::path(
+    path = "/api/calendar/branchen/",
+    responses(
+        (status = 200, description = "Success", body = CalendarEvent),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/branchen/")]
 async fn get_branchen_events() -> impl Responder {
     lazy_static! {
         static ref CACHE: TimedCache<Vec<CalendarEvent>> = TimedCache::with_generator(
@@ -50,7 +65,7 @@ async fn get_branchen_events() -> impl Responder {
     Json(x)
 }
 
-fn request_calendar<'a>(url: &str) -> Pin<Box<dyn Future<Output=Vec<CalendarEvent>> + 'a>> {
+fn request_calendar<'a>(url: &str) -> Pin<Box<dyn Future<Output = Vec<CalendarEvent>> + 'a>> {
     let url = url.to_owned();
     Box::pin((move || async { request_cal(url).await })())
 }
