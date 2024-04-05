@@ -16,6 +16,8 @@ use std::path::PathBuf;
 use std::pin::Pin;
 use std::str::FromStr;
 
+use self::auth::oauth_client;
+
 pub(crate) mod calendar;
 pub(crate) mod doorstate;
 pub(crate) mod topmanager;
@@ -113,13 +115,14 @@ impl FromRequest for DatabaseTransaction<'static> {
 pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Error> {
     Ok(HttpServer::new(move || {
         App::new()
-            .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found))
+            .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found).handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized))
             .service(web::calendar::service("/api/calendar"))
             .service(topmanager::service("/api/topmanager"))
             .service(doorstate::service("/api/doorstate"))
             .service(auth::service("/auth"))
             .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
             .app_data(Data::new(database.clone()))
+            .app_data(Data::new(oauth_client()))
     })
     .bind((ARGS.host.as_str(), ARGS.port))?
     .run()
