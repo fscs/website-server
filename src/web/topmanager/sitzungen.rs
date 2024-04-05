@@ -139,6 +139,7 @@ async fn create_sitzung(
 
 #[utoipa::path(
     path = "/api/topmanager/{sitzung_id}/top/",
+    params(("sitzung_id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Sitzung),
         (status = 400, description = "Bad Request"),
@@ -170,6 +171,7 @@ async fn create_top(
 
 #[utoipa::path(
     path = "/api/topmanager/{sitzung_id}/top/",
+    params(("sitzung_id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Top),
         (status = 400, description = "Bad Request"),
@@ -196,6 +198,7 @@ async fn update_top(db: Data<DatabasePool>, params: web::Json<UpdateTopParams>) 
 
 #[utoipa::path(
     path = "/api/topmanager/{sitzung_id}/top/",
+    params(("sitzung_id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Top),
         (status = 400, description = "Bad Request"),
