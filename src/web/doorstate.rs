@@ -6,6 +6,7 @@ use actix_web::{
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::types::chrono;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::{database::DatabasePool, domain::DoorStateRepo, web::RestStatus};
 
@@ -15,11 +16,19 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(get_doorstate)
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, IntoParams, ToSchema)]
 pub struct CreateDoorStateParams {
     pub state: bool,
 }
 
+#[utoipa::path(
+    path = "/api/doorstate/",
+    request_body = CreateDoorStateParams,
+    responses(
+        (status = 200, description = "Success", body = Doorstate),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[put("/")]
 async fn put_doorstate(
     db: Data<DatabasePool>,
@@ -41,6 +50,13 @@ async fn put_doorstate(
     RestStatus::ok_from_result(result)
 }
 
+#[utoipa::path(
+    path = "/api/doorstate/",
+    responses(
+        (status = 200, description = "Success", body = Doorstate),
+        (status = 400, description = "Bad Request"),
+    )
+)]
 #[get("/")]
 async fn get_doorstate(db: Data<DatabasePool>) -> impl Responder {
     let result = db

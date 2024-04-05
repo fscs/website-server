@@ -44,8 +44,11 @@ async fn main() -> anyhow::Result<()> {
     info!("Base Directory: {}", dir);
 
     let database_url = ARGS.database_url.clone().map_or(
-        std::env::var("DATABASE_URL").map_or("postgres://postgres:postgres@localhost/postgres".to_string(), identity),
-        identity
+        std::env::var("DATABASE_URL").map_or(
+            "postgres://postgres:postgres@localhost/postgres".to_string(),
+            identity,
+        ),
+        identity,
     );
 
     let database = DatabasePool::new(&database_url).await?;

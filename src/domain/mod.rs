@@ -1,16 +1,17 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use serde::Serialize;
 use sqlx::FromRow;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Sitzung {
     pub id: Uuid,
     pub datum: NaiveDateTime,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Top {
     pub id: Uuid,
     pub position: i64,
@@ -18,7 +19,7 @@ pub struct Top {
     pub inhalt: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Antrag {
     pub id: Uuid,
     pub titel: String,
@@ -26,13 +27,13 @@ pub struct Antrag {
     pub begründung: String,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Doorstate {
     pub time: NaiveDateTime,
     pub state: bool,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct PersonRoleMapping {
     pub person_id: Uuid,
     pub rolle: String,
@@ -40,19 +41,19 @@ pub struct PersonRoleMapping {
     pub ablaufdatum: NaiveDate,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Person {
     pub id: Uuid,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Antragsstellende {
     pub antrags_id: Uuid,
     pub person_id: Uuid,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Abmeldung {
     pub person_id: Uuid,
     pub anfangsdatum: NaiveDate,
@@ -114,6 +115,25 @@ pub trait TopManagerRepo {
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>>;
 
     async fn get_next_sitzung(&mut self) -> anyhow::Result<Option<Sitzung>>;
+
+    async fn update_sitzung(
+        &mut self,
+        id: Uuid,
+        datum: NaiveDateTime,
+        name: &str,
+    ) -> anyhow::Result<Sitzung>;
+
+    async fn delete_sitzung(&mut self, id: Uuid) -> anyhow::Result<()>;
+
+    async fn update_top(
+        &mut self,
+        sitzung_id: Uuid,
+        id: Uuid,
+        titel: &str,
+        inhalt: Option<serde_json::Value>,
+    ) -> anyhow::Result<Top>;
+
+    async fn delete_top(&mut self, id: Uuid) -> anyhow::Result<()>;
 }
 
 pub trait DoorStateRepo {
@@ -126,20 +146,37 @@ pub trait DoorStateRepo {
 }
 
 pub trait PersonRepo {
-    async fn add_person(
+    async fn patch_person(&mut self, id: Uuid, name: &str) -> anyhow::Result<Person>;
+
+    async fn add_person_role_mapping(
         &mut self,
         person_id: Uuid,
         rolle: &str,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<PersonRoleMapping>;
+
+    async fn update_person_role_mapping(
+        &mut self,
+        person_id: Uuid,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<PersonRoleMapping>;
+
+    async fn delete_person_role_mapping(&mut self, person_id: Uuid) -> anyhow::Result<()>;
+
+    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person>;
+
     async fn get_persons(&mut self) -> anyhow::Result<Vec<Person>>;
+
     async fn get_person_by_role(
         &mut self,
         rolle: &str,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<Vec<Person>>;
+
     async fn update_person(
         &mut self,
         person_id: Uuid,
@@ -147,6 +184,8 @@ pub trait PersonRepo {
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<PersonRoleMapping>;
+
+    async fn delete_person(&mut self, id: Uuid) -> anyhow::Result<()>;
 }
 
 pub trait AbmeldungRepo {
