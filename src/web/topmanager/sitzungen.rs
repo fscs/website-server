@@ -170,14 +170,14 @@ async fn create_top(
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/{sitzung_id}/top/",
+    path = "/api/topmanager/top/",
     params(("sitzung_id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Top),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[patch("/top/")]
+#[patch("/api/topmanager/top/")]
 async fn update_top(db: Data<DatabasePool>, params: web::Json<UpdateTopParams>) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| {
@@ -197,14 +197,14 @@ async fn update_top(db: Data<DatabasePool>, params: web::Json<UpdateTopParams>) 
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/{sitzung_id}/top/",
+    path = "/api/topmanager/sitzung/{sitzung_id}/top/",
     params(("sitzung_id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Top),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[delete("/top/")]
+#[delete("/sitzung/{sitzung_id}/top/")]
 async fn delete_top(db: Data<DatabasePool>, params: web::Json<DeleteTopParams>) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| {
@@ -217,14 +217,14 @@ async fn delete_top(db: Data<DatabasePool>, params: web::Json<DeleteTopParams>) 
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/sitzung/{id}/tops/",
-    params(("id" = Uuid, Path,)),
+    path = "/api/topmanager/sitzung/{sitzung_id}/tops/",
+    params(("sitzung_id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Sitzung),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[get("/sitzung/{id}/tops/")]
+#[get("/sitzung/{sitzung_id}/tops/")]
 async fn tops_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
     let tops = db
         .transaction(move |mut transaction| {
