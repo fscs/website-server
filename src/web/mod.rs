@@ -199,6 +199,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
     struct ApiDoc;
 
     let openapi = ApiDoc::openapi();
+
     Ok(HttpServer::new(move || {
         App::new()
             .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found))
@@ -207,6 +208,11 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             .service(doorstate::service("/api/doorstate"))
             .service(person::service("/api/person"))
             .service(abmeldungen::service("/api/abmeldungen"))
+            .service(Redoc::with_url_and_config(
+                "/redoc/",
+                openapi.clone(),
+                config,
+            ))
             .service(
                 SwaggerUi::new("/api/docs/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
             )

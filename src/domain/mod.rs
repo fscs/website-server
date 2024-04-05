@@ -140,7 +140,7 @@ pub trait TopManagerRepo {
     ) -> anyhow::Result<Top>;
 
     async fn delete_top(&mut self, id: Uuid) -> anyhow::Result<()>;
-
+  
     async fn create_antrag_top_mapping(
         &mut self,
         antrag_id: Uuid,
@@ -167,12 +167,23 @@ pub trait PersonRepo {
     async fn patch_person(&mut self, id: Uuid, name: &str) -> anyhow::Result<Person>;
 
     async fn add_person_role_mapping(
+
         &mut self,
         person_id: Uuid,
         rolle: &str,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<PersonRoleMapping>;
+
+    async fn update_person_role_mapping(
+
+        &mut self,
+        person_id: Uuid,
+        rolle: &str,
+        anfangsdatum: NaiveDate,
+        ablaufdatum: NaiveDate,
+    ) -> anyhow::Result<PersonRoleMapping>;
+
 
     async fn update_person_role_mapping(
         &mut self,
