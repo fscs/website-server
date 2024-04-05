@@ -140,7 +140,7 @@
             echo Initializing the Database
             ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
 
-            ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
+            ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR" start
 
             ${pkgs.sqlx-cli}/bin/sqlx migrate run --source ./migrations  --database-url $DATABASE_URL
 
