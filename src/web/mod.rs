@@ -22,7 +22,9 @@ use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
+use self::auth::oauth_client;
 pub(crate) mod abmeldungen;
+pub(crate) mod auth;
 pub(crate) mod calendar;
 pub(crate) mod doorstate;
 pub(crate) mod person;
@@ -202,10 +204,15 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
 
     Ok(HttpServer::new(move || {
         App::new()
-            .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found))
+            .wrap(
+                ErrorHandlers::new()
+                    .handler(StatusCode::NOT_FOUND, not_found)
+                    .handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized),
+            )
             .service(web::calendar::service("/api/calendar"))
             .service(topmanager::service("/api/topmanager"))
             .service(doorstate::service("/api/doorstate"))
+            .service(auth::service("/auth"))
             .service(person::service("/api/person"))
             .service(abmeldungen::service("/api/abmeldungen"))
             .service(
@@ -214,6 +221,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             .service(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
             .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
             .app_data(Data::new(database.clone()))
+            .app_data(Data::new(oauth_client()))
     })
     .bind((ARGS.host.as_str(), ARGS.port))?
     .run()

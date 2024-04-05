@@ -7,6 +7,8 @@ use uuid::Uuid;
 
 use crate::{database::DatabasePool, domain::AbmeldungRepo, web::RestStatus};
 
+use super::auth::User;
+
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
         .service(put_person_abmeldung)
@@ -30,6 +32,7 @@ pub struct CreatePersonAbmeldungParams {
 )]
 #[put("/")]
 async fn put_person_abmeldung(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
@@ -77,6 +80,7 @@ async fn get_abmeldungen(db: Data<DatabasePool>) -> impl Responder {
 )]
 #[patch("/")]
 async fn update_person_abmeldung(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
@@ -108,6 +112,7 @@ async fn update_person_abmeldung(
 )]
 #[delete("/")]
 async fn delete_person_abmeldung(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {

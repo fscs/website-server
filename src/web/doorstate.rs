@@ -8,7 +8,11 @@ use serde::Deserialize;
 use sqlx::types::chrono;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{database::DatabasePool, domain::DoorStateRepo, web::RestStatus};
+use crate::{
+    database::DatabasePool,
+    domain::DoorStateRepo,
+    web::{auth::User, RestStatus},
+};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
@@ -31,6 +35,7 @@ pub struct CreateDoorStateParams {
 )]
 #[put("/")]
 async fn put_doorstate(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateDoorStateParams>,
 ) -> impl Responder {

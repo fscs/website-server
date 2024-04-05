@@ -27,6 +27,7 @@ pub struct CreateAntragTopMappingParams {
 
 use crate::database::DatabasePool;
 use crate::domain::{Antragsstellende, TopManagerRepo};
+use crate::web::auth::User;
 use crate::web::topmanager::RestStatus;
 use actix_web::web::{Data, Query};
 use actix_web::{delete, get, patch, put, web, Responder};
@@ -46,6 +47,7 @@ use uuid::Uuid;
 )]
 #[patch("/antrag/")]
 async fn update_antrag(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<UpdateAntragParams>,
 ) -> impl Responder {
@@ -77,6 +79,7 @@ async fn update_antrag(
 )]
 #[put("/antrag/")]
 async fn create_antrag(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateAntragParams>,
 ) -> impl Responder {
@@ -158,7 +161,7 @@ async fn get_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Respond
     )
 )]
 #[delete("/antrag/{id}/")]
-async fn delete_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
+async fn delete_antrag(user: User, db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| {
             let id = id.clone();
@@ -178,6 +181,7 @@ async fn delete_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Resp
 )]
 #[put("/antrag/{id}/assoc/")]
 async fn put_antrag_top_mapping(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateAntragTopMappingParams>,
 ) -> impl Responder {
@@ -207,6 +211,7 @@ async fn put_antrag_top_mapping(
 )]
 #[delete("/antrag/{id}/assoc/")]
 async fn delete_antrag_top_mapping(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateAntragTopMappingParams>,
 ) -> impl Responder {

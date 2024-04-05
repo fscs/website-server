@@ -5,6 +5,7 @@ use sqlx::types::chrono;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
+use crate::web::auth::User;
 use crate::{database::DatabasePool, domain::PersonRepo, web::RestStatus};
 
 pub(crate) fn service(path: &'static str) -> Scope {
@@ -74,6 +75,7 @@ pub struct GetPersonsByRoleParams {
 )]
 #[put("/role-mapping/")]
 async fn put_person_role(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonRoleParams>,
 ) -> impl Responder {
@@ -107,6 +109,7 @@ async fn put_person_role(
 )]
 #[patch("/role-mapping/")]
 async fn update_person_role(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<UpdatePersonRoleParams>,
 ) -> impl Responder {
@@ -140,6 +143,7 @@ async fn update_person_role(
 )]
 #[delete("/role-mapping/")]
 async fn delete_person_role(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<DeletePersonRoleParams>,
 ) -> impl Responder {
@@ -187,6 +191,7 @@ async fn get_persons(db: Data<DatabasePool>) -> impl Responder {
 )]
 #[patch("/")]
 async fn patch_person(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<UpdatePersonParams>,
 ) -> impl Responder {
@@ -212,6 +217,7 @@ async fn patch_person(
 )]
 #[delete("/")]
 async fn delete_person(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<DeletePersonParams>,
 ) -> impl Responder {
@@ -235,6 +241,7 @@ async fn delete_person(
 )]
 #[put("/")]
 async fn create_person(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonParams>,
 ) -> impl Responder {
@@ -288,6 +295,7 @@ async fn get_person_by_role(
 )]
 #[patch("/role-mapping/")]
 async fn update_person(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonRoleParams>,
 ) -> impl Responder {

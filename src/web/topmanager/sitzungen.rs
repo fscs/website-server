@@ -1,5 +1,6 @@
 use crate::database::DatabasePool;
 use crate::domain::TopManagerRepo;
+use crate::web::auth::User;
 use crate::web::topmanager::{CreateTopParams, RestStatus};
 use actix_web::web::Data;
 use actix_web::{delete, get, patch, put, web, Responder};
@@ -66,6 +67,7 @@ async fn get_sitzungen(db: Data<DatabasePool>) -> impl Responder {
 )]
 #[patch("/sitzung/")]
 async fn update_sitzung(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<UpdateSitzungParams>,
 ) -> impl Responder {
@@ -95,6 +97,7 @@ async fn update_sitzung(
 )]
 #[delete("/sitzung/")]
 async fn delete_sitzung(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<DeleteSitzungParams>,
 ) -> impl Responder {
@@ -117,6 +120,7 @@ async fn delete_sitzung(
 )]
 #[put("/sitzung/")]
 async fn create_sitzung(
+    user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateSitzungParams>,
 ) -> impl Responder {
@@ -147,6 +151,7 @@ async fn create_sitzung(
 )]
 #[put("/sitzung/{sitzung_id}/top/")]
 async fn create_top(
+    user: User,
     db: Data<DatabasePool>,
     sitzung_id: web::Path<Uuid>,
     params: web::Json<CreateTopParams>,
@@ -178,7 +183,11 @@ async fn create_top(
     )
 )]
 #[patch("/api/topmanager/top/")]
-async fn update_top(db: Data<DatabasePool>, params: web::Json<UpdateTopParams>) -> impl Responder {
+async fn update_top(
+    user: User,
+    db: Data<DatabasePool>,
+    params: web::Json<UpdateTopParams>,
+) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| {
             let params = params.clone();
@@ -205,7 +214,11 @@ async fn update_top(db: Data<DatabasePool>, params: web::Json<UpdateTopParams>) 
     )
 )]
 #[delete("/sitzung/{sitzung_id}/top/")]
-async fn delete_top(db: Data<DatabasePool>, params: web::Json<DeleteTopParams>) -> impl Responder {
+async fn delete_top(
+    user: User,
+    db: Data<DatabasePool>,
+    params: web::Json<DeleteTopParams>,
+) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| {
             let params = params.clone();
