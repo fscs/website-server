@@ -251,5 +251,5 @@ async fn get_next_sitzung(db: Data<DatabasePool>) -> impl Responder {
         })
         .await;
 
-    RestStatus::ok_or_not_found_from_result(result)
+    RestStatus::ok_from_result(result)
 }
