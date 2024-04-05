@@ -148,6 +148,8 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             topmanager::antrag::delete_antrag,
             topmanager::antrag::get_anträge,
             topmanager::antrag::get_antrag,
+            topmanager::antrag::put_antrag_top_mapping,
+            topmanager::antrag::delete_antrag_top_mapping,
             topmanager::sitzungen::get_sitzungen,
             topmanager::sitzungen::create_sitzung,
             topmanager::sitzungen::create_top,
@@ -178,6 +180,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             topmanager::antrag::CreateAntragParams,
             topmanager::antrag::UpdateAntragParams,
             topmanager::antrag::DeleteAntragParams,
+            topmanager::antrag::CreateAntragTopMappingParams,
             domain::Antrag,
             domain::Top,
             domain::PersonRoleMapping,
@@ -196,58 +199,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
     struct ApiDoc;
 
     let openapi = ApiDoc::openapi();
-    let config = || {
-        json!({
-            "hideDownloadButton": true,
-            "expandResponses": "all",
-            "requiredPropsFirst": true,
-            "theme": {
-                "colors": {
-                    "primary": {
-                        "main": "#6EC5AB",
-                        "light": "#6EC5AB",
-                        "dark": "#6EC5AB",
-                    },
 
-                },
-                "typography": {
-                    "fontSize": "15px",
-                    "lineHeight": "1.5",
-                    "code": {
-                        "code": "#ff00ff",
-                        "backgroundColor": "#00ffff",
-                    },
-                },
-                "codeBlock": {
-                    "backgroundColor": "#1C212C",
-                    "tokens": {
-                        "comment": {
-                            "color": "#8C8E94",
-                        },
-                        "keyword": {
-                            "color": "#E6895B",
-                        },
-                        "number": {
-                            "color": "##9BCF6E",
-                        },
-                        "string": {
-                            "color": "#E6895B",
-                        },
-                    },
-                },
-                "menu": {
-                    "backgroundColor": "#1C212C",
-                    "textColor": "#FFFFFF",
-                },
-                "rightPanel": {
-                    "backgroundColor": "#1C212C",
-                    "textColor": "#FFFFFF",
-                },
-
-
-            }
-        })
-    };
     Ok(HttpServer::new(move || {
         App::new()
             .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found))

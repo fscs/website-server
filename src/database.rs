@@ -1,6 +1,6 @@
 use crate::domain::{
-    Abmeldung, AbmeldungRepo, Antrag, DoorStateRepo, Doorstate, Person, PersonRepo,
-    PersonRoleMapping, Sitzung, Top, TopManagerRepo,
+    Abmeldung, AbmeldungRepo, Antrag, AntragTopMapping, DoorStateRepo, Doorstate, Person,
+    PersonRepo, PersonRoleMapping, Sitzung, Top, TopManagerRepo,
 };
 use chrono::{NaiveDate, NaiveDateTime};
 use serde_json::Value;
@@ -96,6 +96,32 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
+    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person> {
+        Ok(sqlx::query_as!(
+            Person,
+            "INSERT INTO person (name) VALUES ($1) ON CONFLICT(name) DO UPDATE SET name = $1 RETURNING *",
+            name
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn create_antragssteller(
+        &mut self,
+        antrag_id: Uuid,
+        person_id: Uuid,
+    ) -> anyhow::Result<()> {
+        sqlx::query_as!(
+            Antragssteller,
+            "INSERT INTO antragsstellende (antrags_id, person_id) VALUES ($1, $2)",
+            antrag_id,
+            person_id
+        )
+        .execute(&mut **self)
+        .await?;
+        Ok(())
+    }
+
     async fn save_sitzung(&mut self, sitzung: Sitzung) -> anyhow::Result<Sitzung> {
         Ok(sqlx::query_as!(
             Sitzung,
@@ -160,32 +186,6 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         )
     }
 
-    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person> {
-        Ok(sqlx::query_as!(
-            Person,
-            "INSERT INTO person (name) VALUES ($1) ON CONFLICT(name) DO UPDATE SET name = $1 RETURNING *",
-            name
-        )
-        .fetch_one(&mut **self)
-        .await?)
-    }
-
-    async fn create_antragssteller(
-        &mut self,
-        antrag_id: Uuid,
-        person_id: Uuid,
-    ) -> anyhow::Result<()> {
-        sqlx::query_as!(
-            Antragssteller,
-            "INSERT INTO antragsstellende (antrags_id, person_id) VALUES ($1, $2)",
-            antrag_id,
-            person_id
-        )
-        .execute(&mut **self)
-        .await?;
-        Ok(())
-    }
-
     async fn get_anträge(&mut self) -> anyhow::Result<Vec<Antrag>> {
         Ok(sqlx::query_as!(Antrag, "SELECT * FROM anträge")
             .fetch_all(&mut **self)
@@ -221,7 +221,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         sitzung_id: Uuid,
         inhalt: Option<Value>,
     ) -> anyhow::Result<Top> {
-        let position = sqlx::query!(
+        let weight = sqlx::query!(
             "SELECT COUNT(*) FROM tops WHERE sitzung_id = $1",
             sitzung_id
         )
@@ -229,7 +229,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?
         .count;
 
-        Ok(sqlx::query_as!(Top, "INSERT INTO tops (name, sitzung_id, position, inhalt) VALUES ($1, $2, $3, $4) RETURNING name, position, inhalt, id", titel, sitzung_id, position, inhalt)
+        Ok(sqlx::query_as!(Top, "INSERT INTO tops (name, sitzung_id, weight, inhalt) VALUES ($1, $2, $3, $4) RETURNING name, weight, inhalt, id", titel, sitzung_id, weight, inhalt)
             .fetch_one(&mut **self)
             .await?)
     }
@@ -256,7 +256,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>> {
         Ok(sqlx::query_as!(
             Top,
-            "SELECT id, name, inhalt, position FROM tops WHERE sitzung_id = $1",
+            "SELECT id, name, inhalt, weight FROM tops WHERE sitzung_id = $1",
             sitzung_id
         )
         .fetch_all(&mut **self)
@@ -310,7 +310,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     ) -> anyhow::Result<Top> {
         Ok(sqlx::query_as!(
             Top,
-            "UPDATE tops SET name = $1, inhalt = $2, sitzung_id = $3 WHERE id = $4 RETURNING name, inhalt, id, position",
+            "UPDATE tops SET name = $1, inhalt = $2, sitzung_id = $3 WHERE id = $4 RETURNING name, inhalt, id, weight",
             titel,
             inhalt,
             sitzung_id,
@@ -329,19 +329,49 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
             .await?;
         Ok(())
     }
+
+    async fn create_antrag_top_mapping(
+        &mut self,
+        antrag_id: Uuid,
+        top_id: Uuid,
+    ) -> anyhow::Result<AntragTopMapping> {
+        Ok(sqlx::query_as!(
+            crate::domain::AntragTopMapping,
+            "INSERT INTO antragstop (antrag_id, top_id) VALUES ($1, $2) RETURNING *",
+            antrag_id,
+            top_id
+        )
+        .fetch_one(&mut **self)
+        .await?)
+    }
+
+    async fn delete_antrag_top_mapping(
+        &mut self,
+        antrag_id: Uuid,
+        top_id: Uuid,
+    ) -> anyhow::Result<()> {
+        sqlx::query!(
+            "DELETE FROM antragstop WHERE antrag_id = $1 AND top_id = $2",
+            antrag_id,
+            top_id
+        )
+        .execute(&mut **self)
+        .await?;
+        Ok(())
+    }
 }
 
 impl DoorStateRepo for DatabaseTransaction<'_> {
     async fn add_doorstate(
         &mut self,
         time: NaiveDateTime,
-        state: bool,
+        is_open: bool,
     ) -> anyhow::Result<Doorstate> {
         Ok(sqlx::query_as!(
             Doorstate,
-            "INSERT INTO doorstate (time, state) VALUES ($1, $2) RETURNING *",
+            "INSERT INTO doorstate (time, is_open) VALUES ($1, $2) RETURNING *",
             time,
-            state
+            is_open
         )
         .fetch_one(&mut **self)
         .await?)

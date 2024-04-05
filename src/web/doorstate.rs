@@ -18,7 +18,7 @@ pub(crate) fn service(path: &'static str) -> Scope {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, ToSchema)]
 pub struct CreateDoorStateParams {
-    pub state: bool,
+    pub is_open: bool,
 }
 
 #[utoipa::path(
@@ -40,7 +40,7 @@ async fn put_doorstate(
             async move {
                 let now = Utc::now();
                 let doorstate = transaction
-                    .add_doorstate(now.naive_utc(), params.state)
+                    .add_doorstate(now.naive_utc(), params.is_open)
                     .await?;
                 Ok((doorstate, transaction))
             }

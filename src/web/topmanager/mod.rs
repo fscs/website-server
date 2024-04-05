@@ -19,6 +19,8 @@ use utoipa::IntoParams;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+use self::antrag::delete_antrag_top_mapping;
+use self::antrag::put_antrag_top_mapping;
 use self::sitzungen::delete_sitzung;
 use self::sitzungen::delete_top;
 use self::sitzungen::update_top;
@@ -44,6 +46,8 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(delete_sitzung)
         .service(update_top)
         .service(delete_top)
+        .service(put_antrag_top_mapping)
+        .service(delete_antrag_top_mapping)
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
@@ -51,7 +55,7 @@ pub struct CreateTopParams {
     pub titel: String,
     pub sitzung_id: Uuid,
     pub inhalt: Option<serde_json::Value>,
-    pub position: i64,
+    pub weight: i64,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
@@ -63,7 +67,7 @@ pub struct Person {
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct TopWithAnträge {
     pub id: Uuid,
-    pub position: i64,
+    pub weight: i64,
     pub name: String,
     pub anträge: Vec<Antrag>,
     pub inhalt: Option<serde_json::Value>,
@@ -115,7 +119,7 @@ async fn get_current_tops_with_anträge(db: Data<DatabasePool>) -> impl Responde
                 let anträge = transaction.anträge_by_top(top.id).await?;
                 let top_with_anträge = TopWithAnträge {
                     id: top.id,
-                    position: top.position,
+                    weight: top.weight,
                     name: top.name,
                     anträge,
                     inhalt: top.inhalt,
