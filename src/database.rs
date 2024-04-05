@@ -221,7 +221,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         sitzung_id: Uuid,
         inhalt: Option<Value>,
     ) -> anyhow::Result<Top> {
-        let position = sqlx::query!(
+        let weight = sqlx::query!(
             "SELECT COUNT(*) FROM tops WHERE sitzung_id = $1",
             sitzung_id
         )
@@ -229,7 +229,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?
         .count;
 
-        Ok(sqlx::query_as!(Top, "INSERT INTO tops (name, sitzung_id, position, inhalt) VALUES ($1, $2, $3, $4) RETURNING name, position, inhalt, id", titel, sitzung_id, position, inhalt)
+        Ok(sqlx::query_as!(Top, "INSERT INTO tops (name, sitzung_id, weight, inhalt) VALUES ($1, $2, $3, $4) RETURNING name, weight, inhalt, id", titel, sitzung_id, weight, inhalt)
             .fetch_one(&mut **self)
             .await?)
     }
@@ -256,7 +256,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>> {
         Ok(sqlx::query_as!(
             Top,
-            "SELECT id, name, inhalt, position FROM tops WHERE sitzung_id = $1",
+            "SELECT id, name, inhalt, weight FROM tops WHERE sitzung_id = $1",
             sitzung_id
         )
         .fetch_all(&mut **self)
@@ -310,7 +310,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     ) -> anyhow::Result<Top> {
         Ok(sqlx::query_as!(
             Top,
-            "UPDATE tops SET name = $1, inhalt = $2, sitzung_id = $3 WHERE id = $4 RETURNING name, inhalt, id, position",
+            "UPDATE tops SET name = $1, inhalt = $2, sitzung_id = $3 WHERE id = $4 RETURNING name, inhalt, id, weight",
             titel,
             inhalt,
             sitzung_id,
@@ -335,13 +335,13 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
     async fn add_doorstate(
         &mut self,
         time: NaiveDateTime,
-        state: bool,
+        is_open: bool,
     ) -> anyhow::Result<Doorstate> {
         Ok(sqlx::query_as!(
             Doorstate,
-            "INSERT INTO doorstate (time, state) VALUES ($1, $2) RETURNING *",
+            "INSERT INTO doorstate (time, is_open) VALUES ($1, $2) RETURNING *",
             time,
-            state
+            is_open
         )
         .fetch_one(&mut **self)
         .await?)

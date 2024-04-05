@@ -51,7 +51,7 @@ pub struct CreateTopParams {
     pub titel: String,
     pub sitzung_id: Uuid,
     pub inhalt: Option<serde_json::Value>,
-    pub position: i64,
+    pub weight: i64,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
@@ -63,7 +63,7 @@ pub struct Person {
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct TopWithAnträge {
     pub id: Uuid,
-    pub position: i64,
+    pub weight: i64,
     pub name: String,
     pub anträge: Vec<Antrag>,
     pub inhalt: Option<serde_json::Value>,
@@ -115,7 +115,7 @@ async fn get_current_tops_with_anträge(db: Data<DatabasePool>) -> impl Responde
                 let anträge = transaction.anträge_by_top(top.id).await?;
                 let top_with_anträge = TopWithAnträge {
                     id: top.id,
-                    position: top.position,
+                    weight: top.weight,
                     name: top.name,
                     anträge,
                     inhalt: top.inhalt,

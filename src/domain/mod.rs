@@ -14,7 +14,7 @@ pub struct Sitzung {
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Top {
     pub id: Uuid,
-    pub position: i64,
+    pub weight: i64,
     pub name: String,
     pub inhalt: Option<serde_json::Value>,
 }
@@ -30,7 +30,7 @@ pub struct Antrag {
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Doorstate {
     pub time: NaiveDateTime,
-    pub state: bool,
+    pub is_open: bool,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
