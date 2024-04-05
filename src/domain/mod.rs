@@ -60,6 +60,12 @@ pub struct Abmeldung {
     pub ablaufdatum: NaiveDate,
 }
 
+#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
+pub struct AntragTopMapping {
+    pub antrag_id: Uuid,
+    pub top_id: Uuid,
+}
+
 pub trait TopManagerRepo {
     async fn create_sitzung(
         &mut self,
@@ -134,6 +140,18 @@ pub trait TopManagerRepo {
     ) -> anyhow::Result<Top>;
 
     async fn delete_top(&mut self, id: Uuid) -> anyhow::Result<()>;
+
+    async fn create_antrag_top_mapping(
+        &mut self,
+        antrag_id: Uuid,
+        top_id: Uuid,
+    ) -> anyhow::Result<(AntragTopMapping)>;
+
+    async fn delete_antrag_top_mapping(
+        &mut self,
+        antrag_id: Uuid,
+        top_id: Uuid,
+    ) -> anyhow::Result<()>;
 }
 
 pub trait DoorStateRepo {

@@ -19,6 +19,8 @@ use utoipa::IntoParams;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+use self::antrag::delete_antrag_top_mapping;
+use self::antrag::put_antrag_top_mapping;
 use self::sitzungen::delete_sitzung;
 use self::sitzungen::delete_top;
 use self::sitzungen::update_top;
@@ -44,6 +46,8 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(delete_sitzung)
         .service(update_top)
         .service(delete_top)
+        .service(put_antrag_top_mapping)
+        .service(delete_antrag_top_mapping)
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]

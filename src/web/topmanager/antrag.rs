@@ -19,6 +19,12 @@ pub struct DeleteAntragParams {
     pub id: Uuid,
 }
 
+#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
+pub struct CreateAntragTopMappingParams {
+    pub antrag_id: Uuid,
+    pub top_id: Uuid,
+}
+
 use crate::database::DatabasePool;
 use crate::domain::{Antragsstellende, TopManagerRepo};
 use crate::web::topmanager::RestStatus;
@@ -161,4 +167,62 @@ async fn delete_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Resp
         .await;
 
     RestStatus::ok_from_result(result)
+}
+
+#[utoipa::path(
+    path = "/api/topmanager/antrag/{id}/assoc/",
+    responses(
+        (status = 200, description = "Success", body = AntragTopMapping),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[put("/antrag/{id}/assoc/")]
+async fn put_antrag_top_mapping(
+    db: Data<DatabasePool>,
+    params: web::Json<CreateAntragTopMappingParams>,
+) -> impl Responder {
+    let antrag = db
+        .transaction(move |mut transaction| {
+            let params = params.clone();
+            async move {
+                Ok((
+                    transaction
+                        .create_antrag_top_mapping(params.antrag_id, params.top_id)
+                        .await?,
+                    transaction,
+                ))
+            }
+        })
+        .await;
+
+    RestStatus::ok_from_result(antrag)
+}
+
+#[utoipa::path(
+    path = "/api/topmanager/antrag/{id}/assoc/",
+    responses(
+        (status = 200, description = "Success", body = AntragTopMapping),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[delete("/antrag/{id}/assoc/")]
+async fn delete_antrag_top_mapping(
+    db: Data<DatabasePool>,
+    params: web::Json<CreateAntragTopMappingParams>,
+) -> impl Responder {
+    let antrag = db
+        .transaction(move |mut transaction| {
+            let params = params.clone();
+            async move {
+                Ok((
+                    transaction
+                        .delete_antrag_top_mapping(params.antrag_id, params.top_id)
+                        .await?,
+                    transaction,
+                ))
+            }
+        })
+        .await;
+
+    RestStatus::ok_from_result(antrag)
 }
