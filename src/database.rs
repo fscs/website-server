@@ -408,7 +408,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
     ) -> anyhow::Result<PersonRoleMapping> {
         Ok(sqlx::query_as!(
             PersonRoleMapping,
-            "INSERT INTO rollen (person_id, rolle, anfangsdatum, ablaufdatum) VALUES ($1, $2, $3, $4) RETURNING *",
+            "INSERT INTO rollen (person_id, rolle, anfangsdatum, ablaufdatum) VALUES ($1, $2, $3, $4) ON CONFLICT(person_id) DO UPDATE SET rolle = $2, anfangsdatum = $3, ablaufdatum = $4 RETURNING *",
             person_id,
             rolle,
             anfangsdatum,
