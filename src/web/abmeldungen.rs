@@ -13,6 +13,7 @@ pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
         .service(put_person_abmeldung)
         .service(get_abmeldungen)
+        .service(get_abmeldungen_next_sitzungen)
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, ToSchema)]
@@ -54,7 +55,7 @@ async fn put_person_abmeldung(
 #[utoipa::path(
     path = "/api/abmeldungen/",
     responses(
-        (status = 200, description = "Success", body = Abmeldung),
+        (status = 200, description = "Success", body = Vec<Abmeldung>),
         (status = 400, description = "Bad Request"),
     )
 )]
@@ -63,6 +64,25 @@ async fn get_abmeldungen(db: Data<DatabasePool>) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| async move {
             let person = transaction.get_abmeldungen().await?;
+            Ok((person, transaction))
+        })
+        .await;
+
+    RestStatus::ok_from_result(result)
+}
+
+#[utoipa::path(
+    path = "/api/abmeldungen/next_sitzung",
+    responses(
+        (status = 200, description = "Success", body = Abmeldung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/next_sitzung/")]
+async fn get_abmeldungen_next_sitzungen(db: Data<DatabasePool>) -> impl Responder {
+    let result = db
+        .transaction(move |mut transaction| async move {
+            let person = transaction.get_abmeldungen_next_sitzung().await?;
             Ok((person, transaction))
         })
         .await;

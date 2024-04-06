@@ -562,4 +562,23 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
         .await?;
         Ok(())
     }
+
+    async fn get_abmeldungen_next_sitzung(&mut self) -> anyhow::Result<Vec<Abmeldung>> {
+        let now = chrono::Utc::now();
+        let sitzung = sqlx::query_as!(
+            Sitzung,
+            "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC LIMIT 1",
+            now.naive_utc()
+        )
+        .fetch_one(&mut **self)
+        .await?;
+        Ok(sqlx::query_as!(
+            Abmeldung,
+            "SELECT * FROM abmeldungen WHERE anfangsdatum <= $1 AND ablaufdatum >= $2",
+            sitzung.datum.date(),
+            sitzung.datum.date()
+        )
+        .fetch_all(&mut **self)
+        .await?)
+    }
 }

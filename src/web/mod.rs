@@ -145,6 +145,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             abmeldungen::put_person_abmeldung,
             abmeldungen::update_person_abmeldung,
             abmeldungen::delete_person_abmeldung,
+            abmeldungen::get_abmeldungen_next_sitzungen,
             topmanager::antrag::create_antrag,
             topmanager::antrag::update_antrag,
             topmanager::antrag::delete_antrag,

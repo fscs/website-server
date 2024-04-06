@@ -229,4 +229,6 @@ pub trait AbmeldungRepo {
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
     ) -> anyhow::Result<()>;
+
+    async fn get_abmeldungen_next_sitzung(&mut self) -> anyhow::Result<Vec<Abmeldung>>;
 }
