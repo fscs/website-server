@@ -156,13 +156,9 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     }
 
     async fn get_sitzungen(&mut self) -> anyhow::Result<Vec<Sitzung>> {
-        Ok(sqlx::query_as!(
-            Sitzung,
-            "SELECT sitzungen.id, sitzungen.datum, sitzungen.name 
-                FROM sitzungen JOIN tops ON sitzungen.id = tops.sitzung_id"
-        )
-        .fetch_all(&mut **self)
-        .await?)
+        Ok(sqlx::query_as!(Sitzung, "SELECT * FROM sitzungen")
+            .fetch_all(&mut **self)
+            .await?)
     }
 
     async fn create_antrag(

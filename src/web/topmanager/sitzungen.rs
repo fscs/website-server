@@ -142,7 +142,7 @@ async fn create_sitzung(
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/{sitzung_id}/top/",
+    path = "/api/topmanager/sitzung/{sitzung_id}/top/",
     params(("sitzung_id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Sitzung),
