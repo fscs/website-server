@@ -156,9 +156,13 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     }
 
     async fn get_sitzungen(&mut self) -> anyhow::Result<Vec<Sitzung>> {
-        Ok(sqlx::query_as!(Sitzung, "SELECT sitzungen.id, sitzungen.datum, sitzungen.name FROM sitzungen JOIN tops ON sitzungen.id = tops.sitzung_id")
-            .fetch_all(&mut **self)
-            .await?)
+        Ok(sqlx::query_as!(
+            Sitzung,
+            "SELECT sitzungen.id, sitzungen.datum, sitzungen.name 
+                FROM sitzungen JOIN tops ON sitzungen.id = tops.sitzung_id"
+        )
+        .fetch_all(&mut **self)
+        .await?)
     }
 
     async fn create_antrag(
@@ -229,9 +233,17 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?
         .count;
 
-        Ok(sqlx::query_as!(Top, "INSERT INTO tops (name, sitzung_id, weight, inhalt) VALUES ($1, $2, $3, $4) RETURNING name, weight, inhalt, id", titel, sitzung_id, weight, inhalt)
-            .fetch_one(&mut **self)
-            .await?)
+        Ok(sqlx::query_as!(
+            Top,
+            "INSERT INTO tops (name, sitzung_id, weight, inhalt)
+                VALUES ($1, $2, $3, $4) RETURNING name, weight, inhalt, id",
+            titel,
+            sitzung_id,
+            weight,
+            inhalt
+        )
+        .fetch_one(&mut **self)
+        .await?)
     }
 
     async fn add_antrag_to_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> anyhow::Result<()> {
@@ -408,7 +420,9 @@ impl PersonRepo for DatabaseTransaction<'_> {
     ) -> anyhow::Result<PersonRoleMapping> {
         Ok(sqlx::query_as!(
             PersonRoleMapping,
-            "INSERT INTO rollen (person_id, rolle, anfangsdatum, ablaufdatum) VALUES ($1, $2, $3, $4) ON CONFLICT(person_id) DO UPDATE SET rolle = $2, anfangsdatum = $3, ablaufdatum = $4 RETURNING *",
+            "INSERT INTO rollen (person_id, rolle, anfangsdatum, ablaufdatum) 
+                VALUES ($1, $2, $3, $4) ON CONFLICT(person_id) DO UPDATE SET 
+                rolle = $2, anfangsdatum = $3, ablaufdatum = $4 RETURNING *",
             person_id,
             rolle,
             anfangsdatum,
@@ -468,8 +482,8 @@ impl PersonRepo for DatabaseTransaction<'_> {
         Ok(sqlx::query_as!(
             Person,
             "SELECT id,name FROM person
-         JOIN public.rollen r on person.id = r.person_id
-         WHERE r.rolle = $1 AND anfangsdatum >= $2 AND ablaufdatum <= $3",
+                JOIN public.rollen r on person.id = r.person_id
+                WHERE r.rolle = $1 AND anfangsdatum >= $2 AND ablaufdatum <= $3",
             rolle,
             anfangsdatum,
             ablaufdatum

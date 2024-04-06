@@ -72,7 +72,7 @@ async fn get_abmeldungen(db: Data<DatabasePool>) -> impl Responder {
 }
 
 #[utoipa::path(
-    path = "/api/abmeldungen/next_sitzung",
+    path = "/api/abmeldungen/next_sitzung/",
     responses(
         (status = 200, description = "Success", body = Abmeldung),
         (status = 400, description = "Bad Request"),
