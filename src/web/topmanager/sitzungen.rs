@@ -42,7 +42,7 @@ pub struct DeleteTopParams {
 #[utoipa::path(
     path = "/api/topmanager/sitzungen/",
     responses(
-        (status = 201, description = "Created", body = Sitzung),
+        (status = 201, description = "Created", body = Vec<Sitzung>),
         (status = 400, description = "Bad Request"),
     )
 )]
@@ -57,6 +57,25 @@ async fn get_sitzungen(db: Data<DatabasePool>) -> impl Responder {
     RestStatus::ok_from_result(result)
 }
 
+#[utoipa::path(
+    path = "/api/topmanager/sitzung/{sitzung_id}/",
+    params(("sitzung_id" = Uuid, Path,)),
+    responses(
+        (status = 201, description = "Created", body = Sitzung),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/sitzung/{sitzung_id}/")]
+async fn get_sitzung(db: Data<DatabasePool>, sitzung_id: web::Path<Uuid>) -> impl Responder {
+    let result = db
+        .transaction(move |mut transaction| {
+            let sitzung_id = sitzung_id.clone();
+            async move { Ok((transaction.get_sitzung(sitzung_id).await?, transaction)) }
+        })
+        .await;
+
+    RestStatus::created_from_result(result)
+}
 #[utoipa::path(
     path = "/api/topmanager/sitzung/",
     request_body = UpdateSitzungParams,
@@ -176,13 +195,12 @@ async fn create_top(
 
 #[utoipa::path(
     path = "/api/topmanager/top/",
-    params(("sitzung_id" = Uuid, Path,)),
     responses(
         (status = 200, description = "Success", body = Top),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[patch("/api/topmanager/top/")]
+#[patch("/top/")]
 async fn update_top(
     user: User,
     db: Data<DatabasePool>,
@@ -206,14 +224,13 @@ async fn update_top(
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/sitzung/{sitzung_id}/top/",
-    params(("sitzung_id" = Uuid, Path,)),
+    path = "/api/topmanager/top/",
     responses(
         (status = 200, description = "Success", body = Top),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[delete("/sitzung/{sitzung_id}/top/")]
+#[delete("/top/")]
 async fn delete_top(
     user: User,
     db: Data<DatabasePool>,

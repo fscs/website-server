@@ -147,6 +147,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             abmeldungen::delete_person_abmeldung,
             abmeldungen::get_abmeldungen_next_sitzungen,
             topmanager::antrag::create_antrag,
+            topmanager::antrag::create_antrag_for_top,
             topmanager::antrag::update_antrag,
             topmanager::antrag::delete_antrag,
             topmanager::antrag::get_anträge,
@@ -154,6 +155,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             topmanager::antrag::put_antrag_top_mapping,
             topmanager::antrag::delete_antrag_top_mapping,
             topmanager::sitzungen::get_sitzungen,
+            topmanager::sitzungen::get_sitzung,
             topmanager::sitzungen::create_sitzung,
             topmanager::sitzungen::create_top,
             topmanager::sitzungen::tops_by_sitzung,
@@ -164,7 +166,8 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             topmanager::sitzungen::delete_top,
             topmanager::anträge_by_top,
             topmanager::get_current_tops_with_anträge,
-            topmanager::anträge_by_sitzung
+            topmanager::anträge_by_sitzung,
+            topmanager::get_top,
         ),
         components(schemas(
             doorstate::CreateDoorStateParams,

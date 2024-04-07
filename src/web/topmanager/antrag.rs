@@ -34,6 +34,7 @@ use actix_web::{delete, get, patch, put, web, Responder};
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
+use sqlx::Transaction;
 use utoipa::{IntoParams, Path, ToSchema};
 use uuid::Uuid;
 
@@ -116,6 +117,46 @@ async fn create_antrag(
 }
 
 #[utoipa::path(
+    path = "/api/topmanager/top/{top_id}/antrag/",
+    params(("top_id" = Uuid, Path,)),
+    request_body = CreateAntragParams,
+    responses(
+        (status = 200, description = "Success", body = Antrag),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[put("/top/{top_id}/antrag/")]
+async fn create_antrag_for_top(
+    user: User,
+    db: Data<DatabasePool>,
+    top_id: web::Path<Uuid>,
+    params: web::Json<CreateAntragParams>,
+) -> impl Responder {
+    let result = db
+        .transaction(move |mut transaction| {
+            let params = params.clone();
+            let top_id = top_id.clone();
+            async move {
+                let antrag = transaction
+                    .create_antrag(&params.titel, &params.antragstext, &params.begründung)
+                    .await?;
+
+                let person = transaction.create_person(&params.antragssteller).await?;
+                transaction
+                    .create_antragssteller(antrag.id, person.id)
+                    .await?;
+
+                transaction.add_antrag_to_top(antrag.id, top_id).await?;
+
+                Ok((antrag, transaction))
+            }
+        })
+        .await;
+
+    RestStatus::created_from_result(result)
+}
+
+#[utoipa::path(
     path = "/api/topmanager/antrag/",
     responses(
         (status = 200, description = "Success", body = Vec<Antrag>),
@@ -173,13 +214,13 @@ async fn delete_antrag(user: User, db: Data<DatabasePool>, id: web::Path<Uuid>) 
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/antrag/{id}/assoc/",
+    path = "/api/topmanager/antrag/assoc/",
     responses(
         (status = 200, description = "Success", body = AntragTopMapping),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[put("/antrag/{id}/assoc/")]
+#[put("/antrag/assoc/")]
 async fn put_antrag_top_mapping(
     user: User,
     db: Data<DatabasePool>,
@@ -203,13 +244,13 @@ async fn put_antrag_top_mapping(
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/antrag/{id}/assoc/",
+    path = "/api/topmanager/antrag/assoc/",
     responses(
         (status = 200, description = "Success", body = AntragTopMapping),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[delete("/antrag/{id}/assoc/")]
+#[delete("/antrag/assoc/")]
 async fn delete_antrag_top_mapping(
     user: User,
     db: Data<DatabasePool>,

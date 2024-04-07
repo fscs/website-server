@@ -197,6 +197,10 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
             .execute(&mut **self)
             .await?;
 
+        sqlx::query!("DELETE FROM antragsstellende WHERE antrags_id = $1", uuid)
+            .execute(&mut **self)
+            .await?;
+
         sqlx::query!("DELETE FROM anträge WHERE id = $1", uuid)
             .execute(&mut **self)
             .await?;
@@ -366,6 +370,14 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .execute(&mut **self)
         .await?;
         Ok(())
+    }
+
+    async fn get_sitzung(&mut self, id: Uuid) -> anyhow::Result<Option<Sitzung>> {
+        Ok(
+            sqlx::query_as!(Sitzung, "SELECT * FROM sitzungen WHERE id = $1", id)
+                .fetch_optional(&mut **self)
+                .await?,
+        )
     }
 }
 

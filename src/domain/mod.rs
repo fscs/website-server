@@ -152,6 +152,8 @@ pub trait TopManagerRepo {
         antrag_id: Uuid,
         top_id: Uuid,
     ) -> anyhow::Result<()>;
+
+    async fn get_sitzung(&mut self, top_id: Uuid) -> anyhow::Result<Option<Sitzung>>;
 }
 
 pub trait DoorStateRepo {

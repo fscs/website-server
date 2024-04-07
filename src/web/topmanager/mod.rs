@@ -1,5 +1,6 @@
 use crate::database::DatabasePool;
 use crate::domain::Antrag;
+use crate::domain::Top;
 use crate::domain::TopManagerRepo;
 use crate::web::topmanager::antrag::{create_antrag, delete_antrag, get_anträge, update_antrag};
 use crate::web::topmanager::sitzungen::{
@@ -19,10 +20,13 @@ use utoipa::IntoParams;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+use self::antrag::create_antrag_for_top;
 use self::antrag::delete_antrag_top_mapping;
+use self::antrag::get_antrag;
 use self::antrag::put_antrag_top_mapping;
 use self::sitzungen::delete_sitzung;
 use self::sitzungen::delete_top;
+use self::sitzungen::get_sitzung;
 use self::sitzungen::update_top;
 
 pub mod antrag;
@@ -33,6 +37,7 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(create_antrag)
         .service(update_antrag)
         .service(get_anträge)
+        .service(get_antrag)
         .service(delete_antrag)
         .service(get_sitzungen)
         .service(tops_by_sitzung)
@@ -42,20 +47,21 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(create_top)
         .service(get_current_tops_with_anträge)
         .service(get_next_sitzung)
+        .service(get_sitzung)
         .service(update_sitzung)
         .service(delete_sitzung)
         .service(update_top)
         .service(delete_top)
         .service(put_antrag_top_mapping)
         .service(delete_antrag_top_mapping)
+        .service(get_top)
+        .service(create_antrag_for_top)
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct CreateTopParams {
     pub titel: String,
-    pub sitzung_id: Uuid,
     pub inhalt: Option<serde_json::Value>,
-    pub weight: i64,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
@@ -92,6 +98,26 @@ async fn anträge_by_top(db: Data<DatabasePool>, topid: web::Path<Uuid>) -> impl
     match anträge {
         Ok(anträge) => HttpResponse::Ok().json(anträge),
         Err(e) => HttpResponse::NotFound().json(format!("Failed to get Anträge: {:?}", e)),
+    }
+}
+
+#[utoipa::path(
+    path = "/api/topmanager/tops/{topid}/",
+    params(("topid" = Uuid,Path,)),
+    responses(
+        (status = 201, description = "Created", body = TopWithAnträge),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/tops/{topid}/")]
+async fn get_top(db: Data<DatabasePool>, topid: web::Path<Uuid>) -> impl Responder {
+    let top = sqlx::query_as::<_, Top>("SELECT * From tops WHERE id = $1")
+        .bind(*topid)
+        .fetch_optional(db.pool())
+        .await;
+    match top {
+        Ok(top) => HttpResponse::Ok().json(top),
+        Err(e) => HttpResponse::NotFound().json(format!("Failed to get Top: {:?}", e)),
     }
 }
 
