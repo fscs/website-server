@@ -489,7 +489,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
             Person,
             "SELECT id,name FROM person
                 JOIN public.rollen r on person.id = r.person_id
-                WHERE r.rolle = $1 AND anfangsdatum >= $2 AND ablaufdatum <= $3",
+                WHERE r.rolle = $1 AND anfangsdatum <= $2 AND ablaufdatum >= $3",
             rolle,
             anfangsdatum,
             ablaufdatum
