@@ -1,26 +1,24 @@
-use std::{borrow::Cow, collections::HashMap, pin::Pin};
+use std::{borrow::Cow, collections::HashMap, pin::Pin, str::FromStr, sync::Arc};
 
-use actix_web::{
-    cookie::{Cookie, SameSite},
-    dev::ServiceResponse,
-    error::ErrorInternalServerError,
-    get,
-    middleware::ErrorHandlerResponse,
-    web::{self, Data},
-    FromRequest, HttpRequest, HttpResponse, Responder,
+use actix_utils::future::{ready, Ready};
+use actix_web::{cookie::{Cookie, CookieJar, Key, SameSite}, dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, error::{ErrorBadRequest, ErrorInternalServerError}, get, middleware::ErrorHandlerResponse, web::{self, Data}, FromRequest, HttpRequest, HttpResponse, Responder
 };
-use log::error;
+
+
+use async_std::fs::write;
+use chrono::Utc;
+use log::{debug};
 use oauth2::{
-    basic::BasicClient, http::HeaderValue, reqwest::async_http_client, AuthUrl, AuthorizationCode,
-    ClientId, ClientSecret, CsrfToken, RedirectUrl, TokenResponse, TokenUrl,
+    basic::BasicClient, http::HeaderValue, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl
 };
-use reqwest::header::LOCATION;
+use reqwest::header::{self, LOCATION};
 use serde::Deserialize;
 use std::future::Future;
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 pub(crate) struct User {
     pub(crate) username: String,
+    exp: i64,
     userinfo: HashMap<String, serde_json::Value>,
 }
 
@@ -36,38 +34,216 @@ impl User {
             .send()
             .await
             .map_err(|e| {
-                error!("{:?}", e);
+                log::error!("{:?}", e);
                 actix_web::error::ErrorUnauthorized("Internal Error")
             })?
             .json::<HashMap<String, serde_json::Value>>()
             .await
             .map_err(|e| {
-                error!("{:?}", e);
+                log::error!("{:?}", e);
                 actix_web::error::ErrorUnauthorized("Internal Error")
             })?;
 
+        debug!("{:?}", userinfo);
         Ok(User {
             username: userinfo
                 .get("preferred_username")
                 .map(|a| a.to_string())
-                .ok_or(ErrorInternalServerError("Internal Error"))?,
+                .ok_or_else(|| {
+                    debug!("Could not access preferred_username");
+                    ErrorInternalServerError("Internal Error")
+                })?,
+            exp: Utc::now().timestamp() + 300,
             userinfo,
         })
     }
 }
 
+#[derive(serde::Deserialize)]
+struct UserExp {
+    exp: i64
+}
+
+pub struct AuthMiddle;
+
+impl<S, B> Transform<S, ServiceRequest> for AuthMiddle
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = actix_web::Error> + 'static,
+    S::Future: 'static,
+    B: 'static,
+{
+    type Response = ServiceResponse<B>;
+    type Error = actix_web::Error;
+    type InitError = ();
+    type Transform = AuthMiddleware<S>;
+    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+
+    fn new_transform(&self, service: S) -> Self::Future {
+        ready(Ok(AuthMiddleware { service: Arc::from(service) }))
+    }
+}
+
+pub struct AuthMiddleware<S> {
+    service: Arc<S>,
+}
+
+impl<S, B> Service<ServiceRequest> for AuthMiddleware<S>
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = actix_web::Error> + 'static,
+    S::Future: 'static,
+    B: 'static,
+{
+    type Response = ServiceResponse<B>;
+    type Error = actix_web::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+
+    forward_ready!(service);
+
+    fn call(&self, mut req: ServiceRequest) -> Self::Future {
+        let service = self.service.clone();
+        let mut updated_cookies = false;
+        Box::pin(async move {
+            let mut jar = req.extract::<AuthCookieJar>().await?;
+        let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
+
+        if jar.jar.signed(&jar.key).get("user_info")
+            .is_some_and(|u| serde_json::from_str::<UserExp>(u.value())
+                .map_or(0, |u| u.exp) - 30 > Utc::now().timestamp()) {
+                let Some(refresh) = jar.refresh_token() else {
+                    return Err(ErrorBadRequest("No refresh Token"));
+                };
+
+                let Ok(token) = oauth_client.client.exchange_refresh_token(&RefreshToken::new(refresh.to_owned())).request_async(async_http_client).await else {
+                    return Err(ErrorInternalServerError("Could not refresh token"))
+                };
+
+                jar.set_refresh_token(token.refresh_token().map_or("/", |a| a.secret()));
+                jar.set_access_token(token.access_token().secret());
+
+                let Ok(user) = User::from_token(token.access_token().secret(), &oauth_client).await else {
+                    return Err(ErrorInternalServerError("Could not access user info"));
+                };
+                jar.set_user_info(&user);
+
+                let cookie_header = req.headers_mut()
+                    .get_mut(header::COOKIE)
+                    .unwrap();
+
+                let Ok(cookie_header_str) = cookie_header.to_str() else {
+                    return Err(ErrorBadRequest("Invalid Cookies"));
+                };
+
+                *cookie_header = HeaderValue::from_str(
+                    &cookie_header_str.split(";")
+                        .map(|c| {
+                            match c.split_once("=") {
+                                Some(("refresh_token", _)) => format!("refresh_token={}", jar.refresh_token().unwrap()),
+                                Some(("access_token", _)) => format!("access_token={}", jar.access_token().unwrap()),
+                                Some(("user_info", _)) => format!("user_info={}", serde_json::to_string(&user).unwrap()),
+                                _ => c.to_owned()
+                            }
+                        }).fold("".to_owned(), |a, b| a + ";" + &b)
+                ).unwrap();
+                updated_cookies = true;
+            }
+
+            // authorized ? continue to the next middleware/ErrorHandlerResponse
+            match service.call(req).await {
+                Ok(mut res) if updated_cookies => {
+                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("refresh_token={}", jar.refresh_token().unwrap())).unwrap());
+                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("access_token={}", jar.access_token().unwrap())).unwrap());
+                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("user={}", serde_json::to_string(&jar.user_info().unwrap()).unwrap())).unwrap());
+                    Ok(res)
+                },
+                c => c,
+            }
+            })
+    }
+}
+
+
 pub(crate) struct OauthClient {
     client: BasicClient,
     reqwest_client: reqwest::Client,
     user_info: String,
+    singning_key: Key
 }
 
-#[derive(Debug, Deserialize)]
-struct UserInfo {
-    // The TIMESTAMP at which the token expires
-    exp: u64,
-    // The TIMESTAMP at which the token was issued
-    iat: u64,
+struct AuthCookieJar {
+    jar: CookieJar,
+    key: Key
+}
+
+impl AuthCookieJar {
+
+    fn access_token(&self) -> Option<&str> {
+        self.jar.get("access_token").map(|c| c.value())
+    }
+
+    fn set_access_token(&mut self, value: &str) {
+        let mut cookie = Cookie::new("access_token", value.to_string());
+        cookie.set_path("/");
+        cookie.set_same_site(SameSite::None);
+        self.jar.add(cookie)
+    }
+
+    fn refresh_token(&self) -> Option<&str> {
+        self.jar.get("refresh_token").map(|c| c.value())
+    }
+
+    fn set_refresh_token(&mut self, value: &str) {
+        let mut cookie = Cookie::new("refresh_token", value.to_string());
+        cookie.set_path("/");
+        cookie.set_same_site(SameSite::None);
+        self.jar.add(cookie);
+    }
+
+    fn user_info(&self) -> Option<User> {
+        self.jar.signed(&self.key).get("user")
+            .map_or(None, |c|{
+                debug!("{}", c);
+                serde_json::from_str::<User>(&c.value()).ok()
+            })
+            .filter(|u| u.exp > Utc::now().timestamp())
+    }
+
+    fn set_user_info(&mut self, user: &User) {
+        let mut cookie = Cookie::new("user", serde_json::to_string(&user).unwrap());
+        cookie.set_path("/");
+        cookie.set_same_site(SameSite::None);
+        self.jar.signed_mut(&self.key).add(cookie);
+    }
+
+    fn delta<'a>(&'a self) -> impl Iterator<Item=&Cookie<'static>> {
+        self.jar.delta().into_iter()
+    }
+}
+
+impl FromRequest for AuthCookieJar {
+    type Error = actix_web::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+
+    fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
+        let req = req.clone();
+        
+        Box::pin(async move {
+            let key = &req.app_data::<Data<OauthClient>>().unwrap().singning_key;
+            let mut jar = CookieJar::new();
+
+            let Ok(cookies) = req.cookies() else {
+                return Err(actix_web::error::ErrorBadRequest("Can not Access Cookies"));
+            };
+
+            for c in cookies.iter() {
+                jar.add_original(c.clone())
+            }
+
+            Ok(AuthCookieJar {
+                jar,
+                key: key.clone()
+            })
+        })
+    }
 }
 
 impl FromRequest for User {
@@ -76,15 +252,17 @@ impl FromRequest for User {
 
     fn from_request(
         req: &actix_web::HttpRequest,
-        payload: &mut actix_web::dev::Payload,
+        _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
         let req = req.clone();
         Box::pin(async move {
-            let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
+            let jar = AuthCookieJar::extract(&req).await?;
 
-            match req.cookie("access_token") {
-                Some(access_token) => User::from_token(access_token.value(), &*oauth_client).await,
-                None => Err(actix_web::error::ErrorUnauthorized("missing access_token")),
+            if let Some(user) = jar.user_info() {
+                Ok(user)
+            } else {
+                debug!("Could not access user info");
+                Err(actix_web::error::ErrorUnauthorized("Could not access user info"))
             }
         })
     }
@@ -100,6 +278,7 @@ struct AuthRequest {
 pub(crate) fn oauth_client() -> OauthClient {
     let client_id = std::env::var("CLIENT_ID").expect("No CLIENT ID set");
     let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+    let singning_key = std::env::var("SINGNING_KEY").expect("No SINGNING_KEY set");
 
     OauthClient {
         client: BasicClient::new(ClientId::new(client_id),
@@ -107,7 +286,8 @@ pub(crate) fn oauth_client() -> OauthClient {
             AuthUrl::new("https://login.inphima.de/auth/realms/FSCS-Intern/protocol/openid-connect/auth".to_string()).unwrap(),
             Some(TokenUrl::new("https://login.inphima.de/auth/realms/FSCS-Intern/protocol/openid-connect/token".to_string()).unwrap())),
             reqwest_client: reqwest::Client::new(),
-            user_info: "https://login.inphima.de/auth/realms/FSCS-Intern/protocol/openid-connect/userinfo".to_string()
+            user_info: "https://login.inphima.de/auth/realms/FSCS-Intern/protocol/openid-connect/userinfo".to_string(),
+            singning_key: Key::from(singning_key.as_bytes())
         }
 }
 
@@ -173,10 +353,12 @@ async fn logout() -> impl Responder {
 async fn callback(
     oauth_client: web::Data<OauthClient>,
     query: web::Query<AuthRequest>,
+    mut auth_jar: AuthCookieJar,
     request: HttpRequest,
 ) -> impl Responder {
     let code = AuthorizationCode::new(query.code.clone());
     let state = query.state.clone();
+    
     let Some(csrf_token) = request.cookie("csrf") else {
         return HttpResponse::Unauthorized().body("missing csrf token");
     };
@@ -195,21 +377,34 @@ async fn callback(
         .request_async(async_http_client)
         .await
     else {
-        return HttpResponse::Unauthorized().body("Could not get token from Provider");
+        return HttpResponse::InternalServerError().body("Could not get token from Provider");
     };
 
     let access_token = token.access_token().secret();
+    let refresh_token = match token.refresh_token()  {
+        Some(refresh_token) => refresh_token.secret(),
+        None => "",
+    };
 
-    HttpResponse::Found()
-        .append_header((actix_web::http::header::LOCATION, path))
-        .cookie(
-            actix_web::cookie::Cookie::build("access_token", access_token)
-                .expires(None)
-                .same_site(SameSite::Lax)
-                .path("/")
-                .finish(),
-        )
-        .finish()
+    auth_jar.set_access_token(&access_token);
+    auth_jar.set_refresh_token(&refresh_token);
+
+    let Ok(user) = User::from_token(access_token, &oauth_client).await else {
+        return HttpResponse::InternalServerError().body("Could not access user info");
+    };
+    auth_jar.set_user_info(&user);
+
+        
+
+    let mut ressponse_builder = HttpResponse::Found();
+    ressponse_builder.append_header((actix_web::http::header::LOCATION, path));
+
+    //info!("{:?}", auth_jar.delta());
+    for cookie in auth_jar.delta() {
+        ressponse_builder.cookie(cookie.clone());
+    }
+
+    ressponse_builder.finish()
 }
 
 pub fn not_authorized<B>(

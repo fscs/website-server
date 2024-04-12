@@ -1,4 +1,5 @@
 use crate::database::{DatabasePool, DatabaseTransaction};
+use crate::web::auth::AuthMiddle;
 use crate::{domain, get_base_dir, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
@@ -9,20 +10,20 @@ use actix_web::web::Data;
 use actix_web::{App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
 use serde::Serialize;
-use serde_json::json;
+
 use std::fs::File;
 use std::future::Future;
 use std::io::Read;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::str::FromStr;
-use utoipa::openapi::Server;
+
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
-use utoipa_redoc::{Redoc, Servable};
-use utoipa_swagger_ui::SwaggerUi;
 
+use utoipa_swagger_ui::SwaggerUi;
 use self::auth::oauth_client;
+
 pub(crate) mod abmeldungen;
 pub(crate) mod auth;
 pub(crate) mod calendar;
@@ -213,6 +214,7 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
                     .handler(StatusCode::NOT_FOUND, not_found)
                     .handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized),
             )
+            .wrap(AuthMiddle)
             .service(web::calendar::service("/api/calendar"))
             .service(topmanager::service("/api/topmanager"))
             .service(doorstate::service("/api/doorstate"))
