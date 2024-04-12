@@ -15,7 +15,7 @@ use reqwest::header::{self, LOCATION};
 use serde::Deserialize;
 use std::future::Future;
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub(crate) struct User {
     pub(crate) username: String,
     exp: i64,
@@ -106,9 +106,8 @@ where
             let mut jar = req.extract::<AuthCookieJar>().await?;
         let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
 
-        if jar.jar.signed(&jar.key).get("user")
-            .is_some_and(|u| serde_json::from_str::<UserExp>(u.value())
-                .map_or(0, |u| u.exp) - 30 > Utc::now().timestamp()) || (jar.refresh_token().is_some() && jar.jar.signed(&jar.key).get("user").is_none())  {
+        if jar.user_info().is_some_and(|u| u.exp + 30 < Utc::now().timestamp()) || (jar.refresh_token().is_some() && jar.jar.signed(&jar.key).get("user").is_none())  {
+                debug!("Refreshing user {:?}", jar.user_info());
                 let Some(refresh) = jar.refresh_token() else {
                     return Err(ErrorBadRequest("No refresh Token"));
                 };
@@ -120,9 +119,10 @@ where
                 jar.set_refresh_token(token.refresh_token().map_or("/", |a| a.secret()));
                 jar.set_access_token(token.access_token().secret());
 
-                let Ok(user) = User::from_token(token.access_token().secret(), &oauth_client).await else {
-                    return Err(ErrorInternalServerError("Could not access user info"));
-                };
+                let user = User::from_token(token.access_token().secret(), &oauth_client).await.map_err(|err| {
+                    debug!("{}", err);
+                    ErrorInternalServerError("Could not access user info")
+                })?;
                 jar.set_user_info(&user);
 
                 let cookie_header = req.headers_mut()
@@ -139,7 +139,7 @@ where
                             match c.split_once("=") {
                                 Some(("refresh_token", _)) => format!("refresh_token={}", jar.refresh_token().unwrap()),
                                 Some(("access_token", _)) => format!("access_token={}", jar.access_token().unwrap()),
-                                Some(("user", _)) => format!("user={}", serde_json::to_string(&user).unwrap()),
+                                Some(("user", _)) => format!("user={}", jar.jar.get("user").unwrap().value()),
                                 _ => c.to_owned()
                             }
                         }).fold("".to_owned(), |a, b| a + ";" + &b)
@@ -150,9 +150,9 @@ where
             // authorized ? continue to the next middleware/ErrorHandlerResponse
             match service.call(req).await {
                 Ok(mut res) if updated_cookies => {
-                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("refresh_token={}", jar.refresh_token().unwrap())).unwrap());
-                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("access_token={}", jar.access_token().unwrap())).unwrap());
-                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("user={}", serde_json::to_string(&jar.user_info().unwrap()).unwrap())).unwrap());
+                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("refresh_token={}; SameSite=None; Path=/", jar.refresh_token().unwrap())).unwrap());
+                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("access_token={}; SameSite=None; Path=/", jar.access_token().unwrap())).unwrap());
+                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("user={}; SameSite=None; Path=/", jar.jar.get("user").unwrap().value())).unwrap());
                     Ok(res)
                 },
                 c => c,
