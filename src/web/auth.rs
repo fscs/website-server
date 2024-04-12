@@ -1,7 +1,7 @@
 use std::{borrow::Cow, collections::HashMap, pin::Pin, sync::Arc};
 
 use actix_utils::future::{ready, Ready};
-use actix_web::{cookie::{Cookie, CookieJar, Key, SameSite}, dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, error::{ErrorBadRequest, ErrorInternalServerError}, get, middleware::ErrorHandlerResponse, web::{self, Data}, FromRequest, HttpRequest, HttpResponse, Responder
+use actix_web::{cookie::{Cookie, CookieJar, Key, SameSite}, dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, error::{ErrorBadRequest, ErrorInternalServerError}, get, middleware::ErrorHandlerResponse, web::{self, Data}, FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder
 };
 
 
@@ -128,33 +128,38 @@ where
                 jar.set_user_info(&user);
 
                 let cookie_header = req.headers_mut()
-                    .get_mut(header::COOKIE)
-                    .unwrap();
+                    .get_mut(header::COOKIE).unwrap();
 
                 let Ok(cookie_header_str) = cookie_header.to_str() else {
                     return Err(ErrorBadRequest("Invalid Cookies"));
                 };
 
-                *cookie_header = HeaderValue::from_str(
-                    &cookie_header_str.split(";")
-                        .map(|c| {
+                let cookie_header = HeaderValue::from_str(
+                    &(cookie_header_str.split(";")
+                        .filter_map(|c| {
                             match c.split_once("=") {
-                                Some(("refresh_token", _)) => format!("refresh_token={}", jar.refresh_token().unwrap()),
-                                Some(("access_token", _)) => format!("access_token={}", jar.access_token().unwrap()),
-                                Some(("user", _)) => format!("user={}", jar.jar.get("user").unwrap().value()),
-                                _ => c.to_owned()
+                                Some((c, _)) if c.contains("refresh_token") => None,
+                                Some((c, _)) if c.contains("access_token") => None,
+                                Some((c, _)) if c.contains("user") => None,
+                                _ => Some(c.to_owned())
                             }
-                        }).fold("".to_owned(), |a, b| a + ";" + &b)
+                        }).fold( format!("refresh_token={}; access_token={}; user={}", jar.refresh_token().unwrap(), jar.access_token().unwrap(), jar.jar.get("user").unwrap().value()), |a, b| a + ";" + &b) + ";")
                 ).unwrap();
+
+                
+                req.headers_mut().insert(header::COOKIE, cookie_header);
+
+                let _ = req.extensions_mut().clear();
+                
                 updated_cookies = true;
             }
 
             // authorized ? continue to the next middleware/ErrorHandlerResponse
             match service.call(req).await {
                 Ok(mut res) if updated_cookies => {
-                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("refresh_token={}; SameSite=None; Path=/", jar.refresh_token().unwrap())).unwrap());
-                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("access_token={}; SameSite=None; Path=/", jar.access_token().unwrap())).unwrap());
-                    res.headers_mut().insert(header::SET_COOKIE, HeaderValue::from_str(&format!("user={}; SameSite=None; Path=/", jar.jar.get("user").unwrap().value())).unwrap());
+                    res.headers_mut().append(header::SET_COOKIE, HeaderValue::from_str(&format!("refresh_token={}; SameSite=None; Path=/", jar.refresh_token().unwrap())).unwrap());
+                    res.headers_mut().append(header::SET_COOKIE, HeaderValue::from_str(&format!("access_token={}; SameSite=None; Path=/", jar.access_token().unwrap())).unwrap());
+                    res.headers_mut().append(header::SET_COOKIE, HeaderValue::from_str(&format!("user={}; SameSite=None; Path=/", jar.jar.get("user").unwrap().value())).unwrap());
                     Ok(res)
                 },
                 c => c,
