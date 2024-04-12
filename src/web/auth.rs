@@ -106,9 +106,9 @@ where
             let mut jar = req.extract::<AuthCookieJar>().await?;
         let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
 
-        if jar.jar.signed(&jar.key).get("user_info")
+        if jar.jar.signed(&jar.key).get("user")
             .is_some_and(|u| serde_json::from_str::<UserExp>(u.value())
-                .map_or(0, |u| u.exp) - 30 > Utc::now().timestamp()) {
+                .map_or(0, |u| u.exp) - 30 > Utc::now().timestamp()) || (jar.refresh_token().is_some() && jar.jar.signed(&jar.key).get("user").is_none())  {
                 let Some(refresh) = jar.refresh_token() else {
                     return Err(ErrorBadRequest("No refresh Token"));
                 };
@@ -139,7 +139,7 @@ where
                             match c.split_once("=") {
                                 Some(("refresh_token", _)) => format!("refresh_token={}", jar.refresh_token().unwrap()),
                                 Some(("access_token", _)) => format!("access_token={}", jar.access_token().unwrap()),
-                                Some(("user_info", _)) => format!("user_info={}", serde_json::to_string(&user).unwrap()),
+                                Some(("user", _)) => format!("user={}", serde_json::to_string(&user).unwrap()),
                                 _ => c.to_owned()
                             }
                         }).fold("".to_owned(), |a, b| a + ";" + &b)
