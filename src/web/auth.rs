@@ -1,13 +1,12 @@
-use std::{borrow::Cow, collections::HashMap, pin::Pin, str::FromStr, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, pin::Pin, sync::Arc};
 
 use actix_utils::future::{ready, Ready};
 use actix_web::{cookie::{Cookie, CookieJar, Key, SameSite}, dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, error::{ErrorBadRequest, ErrorInternalServerError}, get, middleware::ErrorHandlerResponse, web::{self, Data}, FromRequest, HttpRequest, HttpResponse, Responder
 };
 
 
-use async_std::fs::write;
 use chrono::Utc;
-use log::{debug};
+use log::debug;
 use oauth2::{
     basic::BasicClient, http::HeaderValue, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl
 };
@@ -104,9 +103,11 @@ where
         let mut updated_cookies = false;
         Box::pin(async move {
             let mut jar = req.extract::<AuthCookieJar>().await?;
-        let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
+            let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
 
-        if jar.user_info().is_some_and(|u| u.exp - 30 < Utc::now().timestamp()) || (jar.refresh_token().is_some() && jar.jar.signed(&jar.key).get("user").is_none())  {
+            let user_info = jar.user_info();
+
+            if  (jar.refresh_token().is_some() && user_info.is_none()) || user_info.is_some_and(|u| u.exp - 30 < Utc::now().timestamp())  {
                 debug!("Refreshing user {:?}", jar.user_info());
                 let Some(refresh) = jar.refresh_token() else {
                     return Err(ErrorBadRequest("No refresh Token"));
@@ -202,7 +203,6 @@ impl AuthCookieJar {
     fn user_info(&self) -> Option<User> {
         self.jar.signed(&self.key).get("user")
             .map_or(None, |c|{
-                debug!("{}", c);
                 serde_json::from_str::<User>(&c.value()).ok()
             })
             .filter(|u| u.exp > Utc::now().timestamp())
