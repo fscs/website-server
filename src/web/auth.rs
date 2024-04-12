@@ -106,15 +106,16 @@ where
             let mut jar = req.extract::<AuthCookieJar>().await?;
         let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
 
-        if jar.user_info().is_some_and(|u| u.exp + 30 < Utc::now().timestamp()) || (jar.refresh_token().is_some() && jar.jar.signed(&jar.key).get("user").is_none())  {
+        if jar.user_info().is_some_and(|u| u.exp - 30 < Utc::now().timestamp()) || (jar.refresh_token().is_some() && jar.jar.signed(&jar.key).get("user").is_none())  {
                 debug!("Refreshing user {:?}", jar.user_info());
                 let Some(refresh) = jar.refresh_token() else {
                     return Err(ErrorBadRequest("No refresh Token"));
                 };
 
-                let Ok(token) = oauth_client.client.exchange_refresh_token(&RefreshToken::new(refresh.to_owned())).request_async(async_http_client).await else {
-                    return Err(ErrorInternalServerError("Could not refresh token"))
-                };
+                let token = oauth_client.client.exchange_refresh_token(&RefreshToken::new(refresh.to_owned())).request_async(async_http_client).await.map_err(|err| {
+                    debug!("{}",err);
+                    ErrorInternalServerError("Could not refresh token")
+                })?;
 
                 jar.set_refresh_token(token.refresh_token().map_or("/", |a| a.secret()));
                 jar.set_access_token(token.access_token().secret());
