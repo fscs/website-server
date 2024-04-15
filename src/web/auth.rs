@@ -104,12 +104,12 @@ where
         let mut updated_cookies = false;
         Box::pin(async move {
             let mut jar = req.extract::<AuthCookieJar>().await?;
-            let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
-
+            
             let user_info = jar.user_info();
 
             if (jar.refresh_token().is_some() && user_info.is_none()) || user_info.is_some_and(|u| u.exp - 30 < Utc::now().timestamp()) {
-                updated_cookies = refresh_authentication(&mut jar, &oauth_client, &mut req).await.is_ok();
+                updated_cookies = refresh_authentication(&mut jar, &mut req).await.is_ok();
+                
             }
 
             // authorized ? continue to the next middleware/ErrorHandlerResponse
@@ -126,9 +126,10 @@ where
     }
 }
 
-async fn refresh_authentication(jar: &mut AuthCookieJar, oauth_client: &OauthClient, req: &mut ServiceRequest) -> anyhow::Result<()> {
+async fn refresh_authentication(jar: &mut AuthCookieJar, req: &mut ServiceRequest) -> anyhow::Result<()> {
     debug!("Refreshing user {:?}", jar.user_info());
     let refresh = jar.refresh_token().ok_or(anyhow!("Could not access refresh token"))?;
+    let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
 
     let token = oauth_client.client.exchange_refresh_token(&RefreshToken::new(refresh.to_owned())).request_async(async_http_client).await?;
 
@@ -159,10 +160,9 @@ async fn refresh_authentication(jar: &mut AuthCookieJar, oauth_client: &OauthCli
                     jar.jar.get("user").ok_or(anyhow!("Could not access user"))?.value()), |a, b| a + ";" + &b) + ";")
             )?;
 
-                
     req.headers_mut().insert(header::COOKIE, cookie_header);
-
     let _ = req.extensions_mut().clear();
+    
 
     Ok(())
 }
