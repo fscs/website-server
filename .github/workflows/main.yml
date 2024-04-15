@@ -26,7 +26,6 @@ jobs:
             [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
             echo IMAGE_ID=$IMAGE_ID
             echo VERSION=$VERSION
-            docker tag $IMAGE_NAME
             docker tag fscs-website:latest $IMAGE_ID:$VERSION
             docker push $IMAGE_ID:$VERSION
 
