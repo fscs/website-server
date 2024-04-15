@@ -268,7 +268,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>> {
         Ok(sqlx::query_as!(
             Top,
-            "SELECT id, name, inhalt, weight FROM tops WHERE sitzung_id = $1 SORT BY weight",
+            "SELECT id, name, inhalt, weight FROM tops WHERE sitzung_id = $1 ORDER BY weight",
             sitzung_id
         )
         .fetch_all(&mut **self)
