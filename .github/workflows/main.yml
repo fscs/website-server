@@ -18,6 +18,7 @@ jobs:
           script: |
             # Runs hello from a local flake.nix
             nix build .#docker
+            docker load < result
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
             IMAGE_NAME=website-server
             # Uses docker from the nixpkgs registry (see https://raw.githubusercontent.com/NixOS/flake-registry/master/flake-registry.json)
