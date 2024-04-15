@@ -14,6 +14,7 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(put_person_abmeldung)
         .service(get_abmeldungen)
         .service(get_abmeldungen_next_sitzungen)
+        .service(delete_person_abmeldung)
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, ToSchema)]
