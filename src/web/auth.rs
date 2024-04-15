@@ -1,7 +1,7 @@
 use std::{borrow::Cow, collections::HashMap, pin::Pin, sync::Arc};
 
 use actix_utils::future::{ready, Ready};
-use actix_web::{cookie::{Cookie, CookieJar, Key, SameSite}, dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, error::{ErrorBadRequest, ErrorInternalServerError}, get, middleware::ErrorHandlerResponse, web::{self, Data}, FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder
+use actix_web::{cookie::{Cookie, CookieJar, Key, SameSite}, dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized}, get, middleware::ErrorHandlerResponse, web::{self, Data}, FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder
 };
 
 
@@ -109,7 +109,7 @@ where
             let user_info = jar.user_info();
 
             if (jar.refresh_token().is_some() && user_info.is_none()) || user_info.is_some_and(|u| u.exp - 30 < Utc::now().timestamp()) {
-                updated_cookies = refresh_token(&mut jar, &oauth_client, &mut req).await.is_ok();
+                updated_cookies = refresh_authentication(&mut jar, &oauth_client, &mut req).await.is_ok();
             }
 
             // authorized ? continue to the next middleware/ErrorHandlerResponse
@@ -125,7 +125,8 @@ where
             })
     }
 }
-async fn refresh_token(jar: &mut AuthCookieJar, oauth_client: &OauthClient, req: &mut ServiceRequest) -> anyhow::Result<()> {
+
+async fn refresh_authentication(jar: &mut AuthCookieJar, oauth_client: &OauthClient, req: &mut ServiceRequest) -> anyhow::Result<()> {
     debug!("Refreshing user {:?}", jar.user_info());
     let refresh = jar.refresh_token().ok_or(anyhow!("Could not access refresh token"))?;
 
@@ -264,6 +265,11 @@ impl FromRequest for User {
 
             if let Some(user) = jar.user_info() {
                 Ok(user)
+            } else if let Some(access_token) = jar.access_token() {
+                let oauth_client = req.app_data::<Data<OauthClient>>().ok_or(actix_web::error::ErrorInternalServerError("Broken config please Contact an Admin"))?;
+                User::from_token(access_token, oauth_client).
+                    await.
+                    map_err(|e| {debug!("{:?}" , e); ErrorUnauthorized("Invalid access_token")})
             } else {
                 debug!("Could not access user info");
                 Err(actix_web::error::ErrorUnauthorized("Could not access user info"))
