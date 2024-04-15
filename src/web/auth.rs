@@ -5,6 +5,7 @@ use actix_web::{cookie::{Cookie, CookieJar, Key, SameSite}, dev::{forward_ready,
 };
 
 
+use anyhow::anyhow;
 use chrono::Utc;
 use log::debug;
 use oauth2::{
@@ -107,51 +108,8 @@ where
 
             let user_info = jar.user_info();
 
-            if  (jar.refresh_token().is_some() && user_info.is_none()) || user_info.is_some_and(|u| u.exp - 30 < Utc::now().timestamp())  {
-                debug!("Refreshing user {:?}", jar.user_info());
-                let Some(refresh) = jar.refresh_token() else {
-                    return Err(ErrorBadRequest("No refresh Token"));
-                };
-
-                let token = oauth_client.client.exchange_refresh_token(&RefreshToken::new(refresh.to_owned())).request_async(async_http_client).await.map_err(|err| {
-                    debug!("{}",err);
-                    ErrorInternalServerError("Could not refresh token")
-                })?;
-
-                jar.set_refresh_token(token.refresh_token().map_or("/", |a| a.secret()));
-                jar.set_access_token(token.access_token().secret());
-
-                let user = User::from_token(token.access_token().secret(), &oauth_client).await.map_err(|err| {
-                    debug!("{}", err);
-                    ErrorInternalServerError("Could not access user info")
-                })?;
-                jar.set_user_info(&user);
-
-                let cookie_header = req.headers_mut()
-                    .get_mut(header::COOKIE).unwrap();
-
-                let Ok(cookie_header_str) = cookie_header.to_str() else {
-                    return Err(ErrorBadRequest("Invalid Cookies"));
-                };
-
-                let cookie_header = HeaderValue::from_str(
-                    &(cookie_header_str.split(";")
-                        .filter_map(|c| {
-                            match c.split_once("=") {
-                                Some((c, _)) if c.contains("refresh_token") => None,
-                                Some((c, _)) if c.contains("access_token") => None,
-                                Some((c, _)) if c.contains("user") => None,
-                                _ => Some(c.to_owned())
-                            }
-                        }).fold( format!("refresh_token={}; access_token={}; user={}", jar.refresh_token().unwrap(), jar.access_token().unwrap(), jar.jar.get("user").unwrap().value()), |a, b| a + ";" + &b) + ";")
-                ).unwrap();
-
-                
-                req.headers_mut().insert(header::COOKIE, cookie_header);
-
-                let _ = req.extensions_mut().clear();
-                
-                updated_cookies = true;
+            if (jar.refresh_token().is_some() && user_info.is_none()) || user_info.is_some_and(|u| u.exp - 30 < Utc::now().timestamp()) {
+                updated_cookies = refresh_token(&mut jar, &oauth_client, &mut req).await.is_ok();
             }
 
             // authorized ? continue to the next middleware/ErrorHandlerResponse
@@ -166,6 +124,46 @@ where
             }
             })
     }
+}
+async fn refresh_token(jar: &mut AuthCookieJar, oauth_client: &OauthClient, req: &mut ServiceRequest) -> anyhow::Result<()> {
+    debug!("Refreshing user {:?}", jar.user_info());
+    let refresh = jar.refresh_token().ok_or(anyhow!("Could not access refresh token"))?;
+
+    let token = oauth_client.client.exchange_refresh_token(&RefreshToken::new(refresh.to_owned())).request_async(async_http_client).await?;
+
+    jar.set_refresh_token(token.refresh_token().map_or("/", |a| a.secret()));
+    jar.set_access_token(token.access_token().secret());
+
+    let user = User::from_token(token.access_token().secret(), &oauth_client).await.map_err(|e| anyhow!("{:?}", e))?;
+    jar.set_user_info(&user);
+
+    let cookie_header = req.headers_mut()
+        .get_mut(header::COOKIE).ok_or(anyhow!("Could not read Cookies"))?;
+
+    let cookie_header_str = cookie_header.to_str()?;
+
+    let cookie_header = HeaderValue::from_str(
+        &(cookie_header_str.split(";")
+            .filter_map(|c| {
+                match c.split_once("=") {
+                    Some((c, _)) if c.contains("refresh_token") => None,
+                    Some((c, _)) if c.contains("access_token") => None,
+                    Some((c, _)) if c.contains("user") => None,
+                    _ => Some(c.to_owned())
+                }
+            }).fold(
+                format!("refresh_token={}; access_token={}; user={}", 
+                    jar.refresh_token().ok_or(anyhow!("Could not access refresh_token"))?, 
+                    jar.access_token().ok_or(anyhow!("Could not access access_token"))?, 
+                    jar.jar.get("user").ok_or(anyhow!("Could not access user"))?.value()), |a, b| a + ";" + &b) + ";")
+            )?;
+
+                
+    req.headers_mut().insert(header::COOKIE, cookie_header);
+
+    let _ = req.extensions_mut().clear();
+
+    Ok(())
 }
 
 
