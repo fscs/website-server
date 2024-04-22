@@ -9,6 +9,8 @@ use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
 use actix_web::{App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
+use log::error;
+use oauth2::HttpResponse;
 use serde::Serialize;
 
 use std::fs::File;
@@ -64,6 +66,7 @@ impl RestStatus {
             Ok(Some(antrag)) => match serde_json::to_value(antrag) {
                 Ok(value) => RestStatus::Ok(value),
                 Err(e) => RestStatus::Error(anyhow::Error::from(e)),
+       
             },
             Ok(None) => RestStatus::NotFound,
             Err(e) => RestStatus::Error(anyhow::Error::from(e)),
@@ -89,6 +92,24 @@ impl Responder for RestStatus {
                 log::error!("{:?}", error);
                 HttpResponse::InternalServerError().body("Internal Server Error")
             }
+        }
+    }
+}
+
+impl DatabaseTransaction<'_> {
+
+    pub(crate) async fn rest_ok<T: Serialize>(self, result: anyhow::Result<T>) -> RestStatus {
+        match result {
+            Ok(r) => match self.commit().await {
+                Ok(()) => match serde_json::to_value(r) {
+                    Ok(v) => RestStatus::Ok(v),
+                    Err(e) => RestStatus::Error(e.into())
+                },
+                Err(e) => {
+                    RestStatus::Error(e)
+                }
+            }
+            Err(e) => RestStatus::Error(e)
         }
     }
 }

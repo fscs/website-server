@@ -3,6 +3,8 @@ use serde::Serialize;
 use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+#[cfg(test)]
+use mockall::automock;
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Sitzung {
@@ -66,6 +68,7 @@ pub struct AntragTopMapping {
     pub top_id: Uuid,
 }
 
+#[cfg_attr(test, automock)]
 pub trait TopManagerRepo {
     async fn create_sitzung(
         &mut self,
@@ -156,6 +159,7 @@ pub trait TopManagerRepo {
     async fn get_sitzung(&mut self, top_id: Uuid) -> anyhow::Result<Option<Sitzung>>;
 }
 
+#[cfg_attr(test, automock)]
 pub trait DoorStateRepo {
     async fn add_doorstate(
         &mut self,
@@ -165,6 +169,7 @@ pub trait DoorStateRepo {
     async fn get_doorstate(&mut self, time: NaiveDateTime) -> anyhow::Result<Option<Doorstate>>;
 }
 
+#[cfg_attr(test, automock)]
 pub trait PersonRepo {
     async fn patch_person(&mut self, id: Uuid, name: &str) -> anyhow::Result<Person>;
 
@@ -208,6 +213,7 @@ pub trait PersonRepo {
     async fn delete_person(&mut self, id: Uuid) -> anyhow::Result<()>;
 }
 
+#[cfg_attr(test, automock)]
 pub trait AbmeldungRepo {
     async fn add_person_abmeldung(
         &mut self,

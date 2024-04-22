@@ -1,11 +1,12 @@
 use actix_web::{delete, web};
-use actix_web::{get, patch, put, web::Data, Responder, Scope};
+use actix_web::{get, patch, put, Responder, Scope};
 use serde::Deserialize;
 use sqlx::types::chrono;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::{database::DatabasePool, domain::AbmeldungRepo, web::RestStatus};
+use crate::database::DatabaseTransaction;
+use crate::domain::AbmeldungRepo;
 
 use super::auth::User;
 
@@ -35,22 +36,12 @@ pub struct CreatePersonAbmeldungParams {
 #[put("/")]
 async fn put_person_abmeldung(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                let person = transaction
-                    .add_person_abmeldung(params.person_id, params.anfangsdatum, params.ablaufdatum)
-                    .await?;
-                Ok((person, transaction))
-            }
-        })
-        .await;
+    let result = transaction.add_person_abmeldung(params.person_id, params.anfangsdatum, params.ablaufdatum).await;
 
-    RestStatus::ok_from_result(result)
+    transaction.rest_ok(result).await
 }
 
 #[utoipa::path(
@@ -61,15 +52,10 @@ async fn put_person_abmeldung(
     )
 )]
 #[get("/")]
-async fn get_abmeldungen(db: Data<DatabasePool>) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| async move {
-            let person = transaction.get_abmeldungen().await?;
-            Ok((person, transaction))
-        })
-        .await;
+async fn get_abmeldungen(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+    let result = transaction.get_abmeldungen().await;
 
-    RestStatus::ok_from_result(result)
+    transaction.rest_ok(result).await 
 }
 
 #[utoipa::path(
@@ -80,15 +66,10 @@ async fn get_abmeldungen(db: Data<DatabasePool>) -> impl Responder {
     )
 )]
 #[get("/next_sitzung/")]
-async fn get_abmeldungen_next_sitzungen(db: Data<DatabasePool>) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| async move {
-            let person = transaction.get_abmeldungen_next_sitzung().await?;
-            Ok((person, transaction))
-        })
-        .await;
+async fn get_abmeldungen_next_sitzungen(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+    let result = transaction.get_abmeldungen_next_sitzung().await;
 
-    RestStatus::ok_from_result(result)
+    transaction.rest_ok(result).await
 }
 
 #[utoipa::path(
@@ -102,25 +83,16 @@ async fn get_abmeldungen_next_sitzungen(db: Data<DatabasePool>) -> impl Responde
 #[patch("/")]
 async fn update_person_abmeldung(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                let person = transaction
-                    .update_person_abmeldung(
-                        params.person_id,
-                        params.anfangsdatum,
-                        params.ablaufdatum,
-                    )
-                    .await?;
-                Ok((person, transaction))
-            }
-        })
-        .await;
-    RestStatus::ok_from_result(result)
+    let result = transaction.update_person_abmeldung(
+        params.person_id,
+        params.anfangsdatum,
+        params.ablaufdatum)
+    .await;
+
+    transaction.rest_ok(result).await
 }
 
 #[utoipa::path(
@@ -134,23 +106,15 @@ async fn update_person_abmeldung(
 #[delete("/")]
 async fn delete_person_abmeldung(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                transaction
-                    .delete_person_abmeldung(
-                        params.person_id,
-                        params.anfangsdatum,
-                        params.ablaufdatum,
-                    )
-                    .await?;
-                Ok(((), transaction))
-            }
-        })
-        .await;
-    RestStatus::ok_from_result(result)
+    let result = transaction
+        .delete_person_abmeldung(
+            params.person_id,
+            params.anfangsdatum,
+            params.ablaufdatum,
+    ).await;
+
+    transaction.rest_ok(result).await
 }
