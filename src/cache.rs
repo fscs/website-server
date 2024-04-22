@@ -69,3 +69,34 @@ impl<T: Sync> TimedCache<T> {
         }
     }
 }
+
+impl<T: Sync, E: Sync> TimedCache<Result<T,E>> {
+
+    pub(crate) async fn try_get(&self) -> impl Deref<Target = Result<T,E>> + '_ {
+        let data = self.data_last_updated.read().await;
+        if data.iter()
+            .filter(|d| d.data.is_ok())
+            .any(|d| d.last_updated + self.duration < SystemTime::now())
+        {
+            ReadWrapper(data)
+        } else {
+            drop(data);
+            let mut write = self.data_last_updated.write().await;
+            // Write only needed if not already updated
+            if (*write).is_none()
+                || (*write)
+                    .iter()
+                    .any(|d| d.last_updated + self.duration < SystemTime::now())
+            {
+                let data = (*self.generator)().await;
+
+                *write = Some(DataLastUpdate {
+                    data,
+                    last_updated: SystemTime::now(),
+                });
+            }
+            let data = RwLockWriteGuard::downgrade(write);
+            ReadWrapper(data)
+        }
+    }
+}

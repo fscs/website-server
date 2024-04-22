@@ -1,9 +1,12 @@
 use crate::cache::TimedCache;
+use actix_web::error::ErrorInternalServerError;
 use actix_web::web::Json;
-use actix_web::{get, web, Responder, Scope};
+use actix_web::{get, web, HttpResponseBuilder, Responder, Scope};
+use anyhow::anyhow;
 use chrono::{DateTime, NaiveTime, Utc};
 use icalendar::{Component, Event, EventLike};
 use lazy_static::lazy_static;
+use reqwest::StatusCode;
 use std::future::Future;
 use std::pin::Pin;
 use utoipa::{IntoParams, ToSchema};
@@ -33,15 +36,19 @@ pub(crate) fn service(path: &'static str) -> Scope {
 #[get("/")]
 async fn get_events() -> impl Responder {
     lazy_static! {
-        static ref CACHE: TimedCache<Vec<CalendarEvent>> = TimedCache::with_generator(
+        static ref CACHE: TimedCache<anyhow::Result<Vec<CalendarEvent>>> = TimedCache::with_generator(
             || {
                 request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CAx5MEp7cGrQ6cEe?export")
             },
             std::time::Duration::from_secs(60 * 60 * 4)
         );
     }
-    let x = (*CACHE.get().await).clone();
-    Json(x)
+    let Ok(ref x) = *CACHE.get().await else {
+        return HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR)
+            .body("Could not access Calendar")
+    };
+    HttpResponseBuilder::new(StatusCode::OK)
+        .json(Json(x.clone()))
 }
 
 #[utoipa::path(
@@ -54,27 +61,30 @@ async fn get_events() -> impl Responder {
 #[get("/branchen/")]
 async fn get_branchen_events() -> impl Responder {
     lazy_static! {
-        static ref CACHE: TimedCache<Vec<CalendarEvent>> = TimedCache::with_generator(
+        static ref CACHE: TimedCache<anyhow::Result<Vec<CalendarEvent>>> = TimedCache::with_generator(
             || {
                 request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CKpykNdtKHkA6Z9B?export")
             },
-            std::time::Duration::from_secs(60 * 60 * 4)
+            std::time::Duration::from_secs(60 * 60)
         );
     }
-    let x = (*CACHE.get().await).clone();
-    Json(x)
+    let Ok(ref x) = *CACHE.try_get().await else {
+        return HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR)
+            .body("Could not access Calendar")
+    };
+    HttpResponseBuilder::new(StatusCode::OK).json(Json(x.clone()))
 }
 
-fn request_calendar<'a>(url: &str) -> Pin<Box<dyn Future<Output = Vec<CalendarEvent>> + 'a>> {
+fn request_calendar<'a>(url: &str) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<CalendarEvent>>> + 'a>> {
     let url = url.to_owned();
     Box::pin((move || async { request_cal(url).await })())
 }
 
-async fn request_cal(url: String) -> Vec<CalendarEvent> {
-    let calendar = reqwest::get(&url).await.unwrap().text().await.unwrap();
+async fn request_cal(url: String) -> anyhow::Result<Vec<CalendarEvent>> {
+    let calendar = reqwest::get(&url).await?.text().await?;
 
     let calendar = icalendar::parser::unfold(&calendar);
-    let calendar = icalendar::parser::read_calendar(&calendar).unwrap();
+    let calendar = icalendar::parser::read_calendar(&calendar).map_err(|e| anyhow!("{:?}", e))?;
 
     let mut events = icalendar::Calendar::from(calendar)
         .components
@@ -98,7 +108,7 @@ async fn request_cal(url: String) -> Vec<CalendarEvent> {
         .collect::<Vec<_>>();
 
     events.sort_by(|a, b| a.start.cmp(&b.start));
-    events
+    Ok(events)
 }
 
 fn dpt_to_date_time(date_perhaps_time: icalendar::DatePerhapsTime) -> Option<DateTime<Utc>> {
