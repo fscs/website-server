@@ -26,16 +26,16 @@ pub struct CreateAntragTopMappingParams {
 }
 
 use crate::database::DatabasePool;
-use crate::domain::{Antragsstellende, TopManagerRepo};
+use crate::domain::{TopManagerRepo};
 use crate::web::auth::User;
 use crate::web::topmanager::RestStatus;
-use actix_web::web::{Data, Query};
+use actix_web::web::{Data};
 use actix_web::{delete, get, patch, put, web, Responder};
 use chrono::Utc;
 use serde::Deserialize;
-use serde_json::Value;
-use sqlx::Transaction;
-use utoipa::{IntoParams, Path, ToSchema};
+
+
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 #[utoipa::path(
@@ -48,7 +48,7 @@ use uuid::Uuid;
 )]
 #[patch("/antrag/")]
 async fn update_antrag(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<UpdateAntragParams>,
 ) -> impl Responder {
@@ -80,7 +80,7 @@ async fn update_antrag(
 )]
 #[put("/antrag/")]
 async fn create_antrag(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateAntragParams>,
 ) -> impl Responder {
@@ -127,7 +127,7 @@ async fn create_antrag(
 )]
 #[put("/top/{top_id}/antrag/")]
 async fn create_antrag_for_top(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     top_id: web::Path<Uuid>,
     params: web::Json<CreateAntragParams>,
@@ -202,7 +202,7 @@ async fn get_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Respond
     )
 )]
 #[delete("/antrag/{id}/")]
-async fn delete_antrag(user: User, db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
+async fn delete_antrag(_user: User, db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
     let result = db
         .transaction(move |mut transaction| {
             let id = id.clone();
@@ -222,7 +222,7 @@ async fn delete_antrag(user: User, db: Data<DatabasePool>, id: web::Path<Uuid>) 
 )]
 #[put("/antrag/assoc/")]
 async fn put_antrag_top_mapping(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateAntragTopMappingParams>,
 ) -> impl Responder {
@@ -252,7 +252,7 @@ async fn put_antrag_top_mapping(
 )]
 #[delete("/antrag/assoc/")]
 async fn delete_antrag_top_mapping(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateAntragTopMappingParams>,
 ) -> impl Responder {

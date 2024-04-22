@@ -34,7 +34,7 @@ pub struct CreatePersonAbmeldungParams {
 )]
 #[put("/")]
 async fn put_person_abmeldung(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
@@ -101,7 +101,7 @@ async fn get_abmeldungen_next_sitzungen(db: Data<DatabasePool>) -> impl Responde
 )]
 #[patch("/")]
 async fn update_person_abmeldung(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
@@ -133,7 +133,7 @@ async fn update_person_abmeldung(
 )]
 #[delete("/")]
 async fn delete_person_abmeldung(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {

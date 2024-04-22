@@ -35,7 +35,7 @@ pub struct CreateDoorStateParams {
 )]
 #[put("/")]
 async fn put_doorstate(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateDoorStateParams>,
 ) -> impl Responder {

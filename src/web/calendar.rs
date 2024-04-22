@@ -1,5 +1,5 @@
 use crate::cache::TimedCache;
-use actix_web::error::ErrorInternalServerError;
+
 use actix_web::web::Json;
 use actix_web::{get, web, HttpResponseBuilder, Responder, Scope};
 use anyhow::anyhow;

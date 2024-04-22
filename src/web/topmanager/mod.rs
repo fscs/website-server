@@ -7,12 +7,11 @@ use crate::web::topmanager::sitzungen::{
     create_sitzung, create_top, get_next_sitzung, get_sitzungen, tops_by_sitzung, update_sitzung,
 };
 use crate::web::RestStatus;
-use actix_web::body::BoxBody;
-use actix_web::web::delete;
+
+
 use actix_web::{
     get,
-    web::{self, Data},
-    HttpRequest, HttpResponse, Responder, Scope,
+    web::{self, Data}, HttpResponse, Responder, Scope,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;

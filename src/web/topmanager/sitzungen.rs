@@ -86,7 +86,7 @@ async fn get_sitzung(db: Data<DatabasePool>, sitzung_id: web::Path<Uuid>) -> imp
 )]
 #[patch("/sitzung/")]
 async fn update_sitzung(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<UpdateSitzungParams>,
 ) -> impl Responder {
@@ -116,7 +116,7 @@ async fn update_sitzung(
 )]
 #[delete("/sitzung/")]
 async fn delete_sitzung(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<DeleteSitzungParams>,
 ) -> impl Responder {
@@ -139,7 +139,7 @@ async fn delete_sitzung(
 )]
 #[put("/sitzung/")]
 async fn create_sitzung(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<CreateSitzungParams>,
 ) -> impl Responder {
@@ -170,7 +170,7 @@ async fn create_sitzung(
 )]
 #[put("/sitzung/{sitzung_id}/top/")]
 async fn create_top(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     sitzung_id: web::Path<Uuid>,
     params: web::Json<CreateTopParams>,
@@ -202,7 +202,7 @@ async fn create_top(
 )]
 #[patch("/top/")]
 async fn update_top(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<UpdateTopParams>,
 ) -> impl Responder {
@@ -232,7 +232,7 @@ async fn update_top(
 )]
 #[delete("/top/")]
 async fn delete_top(
-    user: User,
+    _user: User,
     db: Data<DatabasePool>,
     params: web::Json<DeleteTopParams>,
 ) -> impl Responder {

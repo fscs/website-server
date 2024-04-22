@@ -145,7 +145,7 @@ pub trait TopManagerRepo {
         &mut self,
         antrag_id: Uuid,
         top_id: Uuid,
-    ) -> anyhow::Result<(AntragTopMapping)>;
+    ) -> anyhow::Result<AntragTopMapping>;
 
     async fn delete_antrag_top_mapping(
         &mut self,
