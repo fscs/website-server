@@ -114,7 +114,7 @@ pub trait TopManagerRepo {
         &mut self,
         titel: &str,
         sitzung_id: Uuid,
-        inhalt: Option<serde_json::Value>,
+        inhalt: &Option<serde_json::Value>,
     ) -> anyhow::Result<Top>;
 
     async fn add_antrag_to_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> anyhow::Result<()>;
@@ -139,7 +139,7 @@ pub trait TopManagerRepo {
         sitzung_id: Uuid,
         id: Uuid,
         titel: &str,
-        inhalt: Option<serde_json::Value>,
+        inhalt: &Option<serde_json::Value>,
     ) -> anyhow::Result<Top>;
 
     async fn delete_top(&mut self, id: Uuid) -> anyhow::Result<()>;

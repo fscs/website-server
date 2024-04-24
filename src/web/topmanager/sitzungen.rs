@@ -1,4 +1,4 @@
-use crate::database::DatabasePool;
+use crate::database::DatabaseTransaction;
 use crate::domain::TopManagerRepo;
 use crate::web::auth::User;
 use crate::web::topmanager::{CreateTopParams, RestStatus};
@@ -47,14 +47,10 @@ pub struct DeleteTopParams {
     )
 )]
 #[get("/sitzungen/")]
-async fn get_sitzungen(db: Data<DatabasePool>) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| async move {
-            Ok((transaction.get_sitzungen().await?, transaction))
-        })
-        .await;
+async fn get_sitzungen(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+    let result = transaction.get_sitzungen().await;
 
-    RestStatus::ok_from_result(result)
+    transaction.rest_ok(result).await
 }
 
 #[utoipa::path(
@@ -66,15 +62,10 @@ async fn get_sitzungen(db: Data<DatabasePool>) -> impl Responder {
     )
 )]
 #[get("/sitzung/{sitzung_id}/")]
-async fn get_sitzung(db: Data<DatabasePool>, sitzung_id: web::Path<Uuid>) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let sitzung_id = sitzung_id.clone();
-            async move { Ok((transaction.get_sitzung(sitzung_id).await?, transaction)) }
-        })
-        .await;
+async fn get_sitzung(mut transaction: DatabaseTransaction<'_>, sitzung_id: web::Path<Uuid>) -> impl Responder {
+    let result = transaction.get_sitzung(*sitzung_id).await;
 
-    RestStatus::created_from_result(result)
+    transaction.rest_ok(result).await
 }
 #[utoipa::path(
     path = "/api/topmanager/sitzung/",
@@ -87,23 +78,11 @@ async fn get_sitzung(db: Data<DatabasePool>, sitzung_id: web::Path<Uuid>) -> imp
 #[patch("/sitzung/")]
 async fn update_sitzung(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     params: web::Json<UpdateSitzungParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                Ok((
-                    transaction
-                        .update_sitzung(params.id, params.datum, params.name.as_str())
-                        .await?,
-                    transaction,
-                ))
-            }
-        })
-        .await;
-    RestStatus::created_from_result(result)
+    let result = transaction.update_sitzung(params.id, params.datum, params.name.as_str()).await;
+    transaction.rest_created(result).await
 }
 
 #[utoipa::path(
@@ -117,16 +96,11 @@ async fn update_sitzung(
 #[delete("/sitzung/")]
 async fn delete_sitzung(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     params: web::Json<DeleteSitzungParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move { Ok((transaction.delete_sitzung(params.id).await?, transaction)) }
-        })
-        .await;
-    RestStatus::created_from_result(result)
+    let result = transaction.delete_sitzung(params.id).await;
+    transaction.rest_created(result).await
 }
 
 #[utoipa::path(
@@ -140,24 +114,12 @@ async fn delete_sitzung(
 #[put("/sitzung/")]
 async fn create_sitzung(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     params: web::Json<CreateSitzungParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                Ok((
-                    transaction
-                        .create_sitzung(params.datum, params.name.as_str())
-                        .await?,
-                    transaction,
-                ))
-            }
-        })
-        .await;
+    let result = transaction.create_sitzung(params.datum, params.name.as_str()).await;
 
-    RestStatus::created_from_result(result)
+    transaction.rest_created(result).await
 }
 
 #[utoipa::path(
@@ -171,26 +133,12 @@ async fn create_sitzung(
 #[put("/sitzung/{sitzung_id}/top/")]
 async fn create_top(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     sitzung_id: web::Path<Uuid>,
     params: web::Json<CreateTopParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            let sitzung_id = sitzung_id.clone();
-            async move {
-                Ok((
-                    transaction
-                        .create_top(&params.titel, sitzung_id, params.inhalt)
-                        .await?,
-                    transaction,
-                ))
-            }
-        })
-        .await;
-
-    RestStatus::created_from_result(result)
+    let result = transaction.create_top(&params.titel, *sitzung_id, &params.inhalt).await;
+    transaction.rest_created(result).await
 }
 
 #[utoipa::path(
@@ -203,24 +151,12 @@ async fn create_top(
 #[patch("/top/")]
 async fn update_top(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     params: web::Json<UpdateTopParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                Ok((
-                    transaction
-                        .update_top(params.sitzung_id, params.id, &params.titel, params.inhalt)
-                        .await?,
-                    transaction,
-                ))
-            }
-        })
-        .await;
+    let result = transaction.update_top(params.sitzung_id, params.id, &params.titel, &params.inhalt).await;
 
-    RestStatus::created_from_result(result)
+    transaction.rest_ok(result).await
 }
 
 #[utoipa::path(
@@ -233,17 +169,12 @@ async fn update_top(
 #[delete("/top/")]
 async fn delete_top(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     params: web::Json<DeleteTopParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move { Ok((transaction.delete_top(params.id).await?, transaction)) }
-        })
-        .await;
+    let result = transaction.delete_top(params.id).await;
 
-    RestStatus::created_from_result(result)
+    transaction.rest_ok(result).await
 }
 
 #[utoipa::path(
@@ -255,15 +186,10 @@ async fn delete_top(
     )
 )]
 #[get("/sitzung/{sitzung_id}/tops/")]
-async fn tops_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
-    let tops = db
-        .transaction(move |mut transaction| {
-            let id = id.clone();
-            async move { Ok((transaction.tops_by_sitzung(id.clone()).await?, transaction)) }
-        })
-        .await;
+async fn tops_by_sitzung(mut transaction: DatabaseTransaction<'_>, id: web::Path<Uuid>) -> impl Responder {
+    let tops = transaction.tops_by_sitzung(id.clone()).await;
 
-    RestStatus::ok_from_result(tops)
+    transaction.rest_ok(tops).await
 }
 
 #[utoipa::path(
@@ -274,12 +200,8 @@ async fn tops_by_sitzung(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Re
     )
 )]
 #[get("/next_sitzung/")]
-async fn get_next_sitzung(db: Data<DatabasePool>) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| async move {
-            Ok((transaction.get_next_sitzung().await?, transaction))
-        })
-        .await;
+async fn get_next_sitzung(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+    let result = transaction.get_next_sitzung().await;
 
-    RestStatus::ok_from_result(result)
+    transaction.rest_ok(result).await
 }

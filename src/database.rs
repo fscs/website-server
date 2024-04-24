@@ -2,7 +2,7 @@ use crate::domain::{
     Abmeldung, AbmeldungRepo, Antrag, AntragTopMapping, DoorStateRepo, Doorstate, Person,
     PersonRepo, PersonRoleMapping, Sitzung, Top, TopManagerRepo,
 };
-use actix_web::Responder;
+
 use chrono::{NaiveDate, NaiveDateTime};
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
@@ -224,7 +224,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         &mut self,
         titel: &str,
         sitzung_id: Uuid,
-        inhalt: Option<Value>,
+        inhalt: &Option<Value>,
     ) -> anyhow::Result<Top> {
         let weight = sqlx::query!(
             "SELECT COUNT(*) FROM tops WHERE sitzung_id = $1",
@@ -241,7 +241,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
             titel,
             sitzung_id,
             weight,
-            inhalt
+            *inhalt
         )
         .fetch_one(&mut **self)
         .await?)
@@ -319,13 +319,13 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         sitzung_id: Uuid,
         id: Uuid,
         titel: &str,
-        inhalt: Option<Value>,
+        inhalt: &Option<Value>,
     ) -> anyhow::Result<Top> {
         Ok(sqlx::query_as!(
             Top,
             "UPDATE tops SET name = $1, inhalt = $2, sitzung_id = $3 WHERE id = $4 RETURNING name, inhalt, id, weight",
             titel,
-            inhalt,
+            *inhalt,
             sitzung_id,
             id,
         )

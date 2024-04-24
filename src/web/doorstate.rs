@@ -9,9 +9,9 @@ use sqlx::types::chrono;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    database::DatabasePool,
+    database::DatabaseTransaction,
     domain::DoorStateRepo,
-    web::{auth::User, RestStatus},
+    web::auth::User,
 };
 
 pub(crate) fn service(path: &'static str) -> Scope {
@@ -36,23 +36,13 @@ pub struct CreateDoorStateParams {
 #[put("/")]
 async fn put_doorstate(
     _user: User,
-    db: Data<DatabasePool>,
+    mut transaction: DatabaseTransaction<'_>,
     params: web::Json<CreateDoorStateParams>,
 ) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                let now = Utc::now();
-                let doorstate = transaction
-                    .add_doorstate(now.naive_utc(), params.is_open)
-                    .await?;
-                Ok((doorstate, transaction))
-            }
-        })
-        .await;
+    let now = Utc::now();
+    let result = transaction.add_doorstate(now.naive_utc(), params.is_open).await;
 
-    RestStatus::ok_from_result(result)
+    transaction.rest_ok(result).await
 }
 
 #[utoipa::path(
@@ -63,14 +53,9 @@ async fn put_doorstate(
     )
 )]
 #[get("/")]
-async fn get_doorstate(db: Data<DatabasePool>) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| async move {
-            let now = Utc::now();
-            let doorstate = transaction.get_doorstate(now.naive_utc()).await?;
-            Ok((doorstate, transaction))
-        })
-        .await;
+async fn get_doorstate(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+    let now = Utc::now();
+    let result = transaction.get_doorstate(now.naive_utc()).await;
 
-    RestStatus::ok_from_result(result)
+    transaction.rest_ok(result).await
 }
