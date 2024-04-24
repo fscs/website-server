@@ -9,8 +9,6 @@ use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
 use actix_web::{App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
-use log::error;
-use oauth2::HttpResponse;
 use serde::Serialize;
 
 use std::fs::File;
