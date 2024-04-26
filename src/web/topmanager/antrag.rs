@@ -104,7 +104,7 @@ async fn create_antrag(
                 };
 
                 let top = transaction
-                    .create_top(&antrag.titel, sitzung.id, None)
+                    .create_top(&antrag.titel, sitzung.id, &None)
                     .await?;
                 transaction.add_antrag_to_top(antrag.id, top.id).await?;
 
