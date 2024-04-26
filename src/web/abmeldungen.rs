@@ -52,7 +52,7 @@ async fn put_person_abmeldung(
     )
 )]
 #[get("/")]
-async fn get_abmeldungen(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+async fn get_abmeldungen(mut transaction: DatabaseTransaction<'_>, _user: User) -> impl Responder {
     let result = transaction.get_abmeldungen().await;
 
     transaction.rest_ok(result).await 
