@@ -21,8 +21,8 @@ use std::str::FromStr;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-use utoipa_swagger_ui::SwaggerUi;
 use self::auth::oauth_client;
+use utoipa_swagger_ui::SwaggerUi;
 
 pub(crate) mod abmeldungen;
 pub(crate) mod auth;
@@ -64,7 +64,6 @@ impl RestStatus {
             Ok(Some(antrag)) => match serde_json::to_value(antrag) {
                 Ok(value) => RestStatus::Ok(value),
                 Err(e) => RestStatus::Error(anyhow::Error::from(e)),
-       
             },
             Ok(None) => RestStatus::NotFound,
             Err(e) => RestStatus::Error(anyhow::Error::from(e)),
@@ -95,19 +94,16 @@ impl Responder for RestStatus {
 }
 
 impl DatabaseTransaction<'_> {
-
     pub(crate) async fn rest_ok<T: Serialize>(self, result: anyhow::Result<T>) -> RestStatus {
         match result {
             Ok(r) => match self.commit().await {
                 Ok(()) => match serde_json::to_value(r) {
                     Ok(v) => RestStatus::Ok(v),
-                    Err(e) => RestStatus::Error(e.into())
+                    Err(e) => RestStatus::Error(e.into()),
                 },
-                Err(e) => {
-                    RestStatus::Error(e)
-                }
-            }
-            Err(e) => RestStatus::Error(e)
+                Err(e) => RestStatus::Error(e),
+            },
+            Err(e) => RestStatus::Error(e),
         }
     }
 
@@ -116,16 +112,13 @@ impl DatabaseTransaction<'_> {
             Ok(r) => match self.commit().await {
                 Ok(()) => match serde_json::to_value(r) {
                     Ok(v) => RestStatus::Created(v),
-                    Err(e) => RestStatus::Error(e.into())
+                    Err(e) => RestStatus::Error(e.into()),
                 },
-                Err(e) => {
-                    RestStatus::Error(e)
-                }
-            }
-            Err(e) => RestStatus::Error(e)
+                Err(e) => RestStatus::Error(e),
+            },
+            Err(e) => RestStatus::Error(e),
         }
     }
-
 }
 
 impl FromRequest for DatabaseTransaction<'static> {
@@ -135,7 +128,7 @@ impl FromRequest for DatabaseTransaction<'static> {
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
         let req = req.clone();
         Box::pin(async move {
-            if let Some(pool) = req.app_data::<DatabasePool>() {
+            if let Some(pool) = req.app_data::<Data<DatabasePool>>() {
                 match pool.start_transaction().await {
                     Ok(transaction) => Ok(transaction),
                     Err(err) => {
