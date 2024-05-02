@@ -409,11 +409,11 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
     }
 
     async fn get_doorstate_history(&mut self) -> anyhow::Result<Option<Vec<Doorstate>>> {
-        Ok(
-            sqlx::query_as!(Vec<Doorstate>, "SELECT * FROM doorstate ORDER BY time DESC")
-                .fetch_optional(&mut **self)
+        Ok(Some(
+            sqlx::query_as!(Doorstate, "SELECT * FROM doorstate")
+                .fetch_all(&mut **self)
                 .await?,
-        )
+        ))
     }
 }
 
