@@ -1,10 +1,10 @@
 use chrono::{NaiveDate, NaiveDateTime};
+#[cfg(test)]
+use mockall::automock;
 use serde::Serialize;
 use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
-#[cfg(test)]
-use mockall::automock;
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Sitzung {
@@ -167,6 +167,7 @@ pub trait DoorStateRepo {
         state: bool,
     ) -> anyhow::Result<Doorstate>;
     async fn get_doorstate(&mut self, time: NaiveDateTime) -> anyhow::Result<Option<Doorstate>>;
+    async fn get_doorstate_history(&mut self) -> anyhow::Result<Option<Vec<Doorstate>>>;
 }
 
 #[cfg_attr(test, automock)]

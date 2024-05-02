@@ -8,16 +8,13 @@ use serde::Deserialize;
 use sqlx::types::chrono;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{
-    database::DatabaseTransaction,
-    domain::DoorStateRepo,
-    web::auth::User,
-};
+use crate::{database::DatabaseTransaction, domain::DoorStateRepo, web::auth::User};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
         .service(put_doorstate)
         .service(get_doorstate)
+        .service(get_doorstate_history)
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, ToSchema)]
@@ -40,7 +37,9 @@ async fn put_doorstate(
     params: web::Json<CreateDoorStateParams>,
 ) -> impl Responder {
     let now = Utc::now();
-    let result = transaction.add_doorstate(now.naive_utc(), params.is_open).await;
+    let result = transaction
+        .add_doorstate(now.naive_utc(), params.is_open)
+        .await;
 
     transaction.rest_ok(result).await
 }
@@ -56,6 +55,20 @@ async fn put_doorstate(
 async fn get_doorstate(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
     let now = Utc::now();
     let result = transaction.get_doorstate(now.naive_utc()).await;
+
+    transaction.rest_ok(result).await
+}
+
+#[utoipa::path(
+    path = "/api/doorstate_history/",
+    responses(
+        (status = 200, description = "Success", body = Vec<Doorstate>),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/")]
+async fn get_doorstate_history(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+    let result = transaction.get_doorstate_history().await;
 
     transaction.rest_ok(result).await
 }
