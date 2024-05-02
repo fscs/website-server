@@ -60,13 +60,13 @@ async fn get_doorstate(mut transaction: DatabaseTransaction<'_>) -> impl Respond
 }
 
 #[utoipa::path(
-    path = "/api/doorstate_history/",
+    path = "/api/doorstate/history/",
     responses(
         (status = 200, description = "Success", body = Vec<Doorstate>),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[get("/")]
+#[get("/history/")]
 async fn get_doorstate_history(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
     let result = transaction.get_doorstate_history().await;
 
