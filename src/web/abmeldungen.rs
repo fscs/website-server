@@ -39,7 +39,9 @@ async fn put_person_abmeldung(
     mut transaction: DatabaseTransaction<'_>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
-    let result = transaction.add_person_abmeldung(params.person_id, params.anfangsdatum, params.ablaufdatum).await;
+    let result = transaction
+        .add_person_abmeldung(params.person_id, params.anfangsdatum, params.ablaufdatum)
+        .await;
 
     transaction.rest_ok(result).await
 }
@@ -55,7 +57,7 @@ async fn put_person_abmeldung(
 async fn get_abmeldungen(mut transaction: DatabaseTransaction<'_>, _user: User) -> impl Responder {
     let result = transaction.get_abmeldungen().await;
 
-    transaction.rest_ok(result).await 
+    transaction.rest_ok(result).await
 }
 
 #[utoipa::path(
@@ -66,7 +68,9 @@ async fn get_abmeldungen(mut transaction: DatabaseTransaction<'_>, _user: User) 
     )
 )]
 #[get("/next_sitzung/")]
-async fn get_abmeldungen_next_sitzungen(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+async fn get_abmeldungen_next_sitzungen(
+    mut transaction: DatabaseTransaction<'_>,
+) -> impl Responder {
     let result = transaction.get_abmeldungen_next_sitzung().await;
 
     transaction.rest_ok(result).await
@@ -86,11 +90,9 @@ async fn update_person_abmeldung(
     mut transaction: DatabaseTransaction<'_>,
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
-    let result = transaction.update_person_abmeldung(
-        params.person_id,
-        params.anfangsdatum,
-        params.ablaufdatum)
-    .await;
+    let result = transaction
+        .update_person_abmeldung(params.person_id, params.anfangsdatum, params.ablaufdatum)
+        .await;
 
     transaction.rest_ok(result).await
 }
@@ -110,11 +112,8 @@ async fn delete_person_abmeldung(
     params: web::Json<CreatePersonAbmeldungParams>,
 ) -> impl Responder {
     let result = transaction
-        .delete_person_abmeldung(
-            params.person_id,
-            params.anfangsdatum,
-            params.ablaufdatum,
-    ).await;
+        .delete_person_abmeldung(params.person_id, params.anfangsdatum, params.ablaufdatum)
+        .await;
 
     transaction.rest_ok(result).await
 }
