@@ -275,7 +275,7 @@ fn not_found<B>(
 
     let (req, res) = res.into_parts();
     let path =
-        PathBuf::from_str(format!("/{}/de/static/404.html", get_base_dir().unwrap()).as_str())
+        PathBuf::from_str(format!("/{}/static/de/404.html", get_base_dir().unwrap()).as_str())
             .unwrap();
     let mut file = File::open(path).unwrap();
 
