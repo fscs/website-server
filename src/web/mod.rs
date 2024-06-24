@@ -3,7 +3,7 @@ use crate::web::auth::AuthMiddle;
 use crate::{domain, get_base_dir, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
-use actix_web::dev::{Payload, ServiceResponse};
+use actix_web::dev::{Payload, ServiceRequest, ServiceResponse};
 use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
@@ -253,7 +253,21 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
                 SwaggerUi::new("/api/docs/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
             )
             .service(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
-            .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
+            .service(
+                actix_files::Files::new("/", dir.clone() + "/static/")
+                    .prefer_utf8(true)
+                    .index_file("index.html")
+                    .default_handler(|req: ServiceRequest| {
+                        let (http_req, _payload) = req.into_parts();
+                        async {
+                            let response = actix_files::NamedFile::open(
+                                format!("/{}/static/de/404.html", get_base_dir().unwrap()).as_str(),
+                            )?
+                            .into_response(&http_req);
+                            Ok(ServiceResponse::new(http_req, response))
+                        }
+                    }),
+            )
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
     })
@@ -277,6 +291,9 @@ fn not_found<B>(
     let path =
         PathBuf::from_str(format!("/{}/static/de/404.html", get_base_dir().unwrap()).as_str())
             .unwrap();
+
+    log::info!("Test");
+
     let mut file = File::open(path).unwrap();
 
     let mut content = String::new();
