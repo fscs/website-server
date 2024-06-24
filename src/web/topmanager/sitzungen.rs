@@ -7,6 +7,7 @@ use actix_web::{delete, get, patch, put, web, Responder};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+use crate::web::topmanager::TopWithAnträge;
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct CreateSitzungParams {
@@ -181,7 +182,7 @@ async fn delete_top(
     path = "/api/topmanager/sitzung/{sitzung_id}/tops/",
     params(("sitzung_id" = Uuid, Path,)),
     responses(
-        (status = 200, description = "Success", body = Sitzung),
+        (status = 200, description = "Success", body = Vec<TopWithAnträge>),
         (status = 400, description = "Bad Request"),
     )
 )]

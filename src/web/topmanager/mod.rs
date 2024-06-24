@@ -123,7 +123,7 @@ async fn get_top(db: Data<DatabasePool>, topid: web::Path<Uuid>) -> impl Respond
 #[utoipa::path(
     path = "/api/topmanager/current_tops/",
     responses(
-        (status = 201, description = "Created", body = Vec<TopWithAnträge>>),
+        (status = 201, description = "Created", body = Vec<TopWithAnträge>),
         (status = 400, description = "Bad Request"),
     )
 )]
