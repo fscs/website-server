@@ -103,6 +103,8 @@
             postInstall = ''
               ${pkgs.postgresql}/bin/pg_ctl -D ./db stop
               cp -r migrations $out/bin/migrations
+              cp -r static $out/bin/static
+              cp -r static_auth $out/bin/static_auth
             '';
 
             # Additional environment variables can be set directly

@@ -4,10 +4,11 @@ use crate::{domain, get_base_dir, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceRequest, ServiceResponse};
+use actix_web::guard::GuardContext;
 use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
-use actix_web::{App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{guard, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
 use serde::Serialize;
 
@@ -254,9 +255,9 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             )
             .service(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
             .service(
-                actix_files::Files::new("/", dir.clone() + "/static/")
-                    .prefer_utf8(true)
+                fs::Files::new("/", dir.clone() + "/static_auth/")
                     .index_file("index.html")
+                    .guard(guard::fn_guard(check_if_signed_in))
                     .default_handler(|req: ServiceRequest| {
                         let (http_req, _payload) = req.into_parts();
                         async {
@@ -268,12 +269,27 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
                         }
                     }),
             )
+            .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
     })
     .bind((ARGS.host.as_str(), ARGS.port))?
     .run()
     .await?)
+}
+
+fn check_if_signed_in(req: &GuardContext) -> bool {
+    //ckeck if the access token cookie is set
+    let cookie = req.head().headers().get("access_token");
+    if cookie.is_none() {
+        return false;
+    }
+    let cookie = cookie.unwrap();
+    let cookie = cookie.to_str().unwrap();
+    if cookie.is_empty() {
+        return false;
+    }
+    true
 }
 
 fn not_found<B>(
