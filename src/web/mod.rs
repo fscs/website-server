@@ -280,13 +280,20 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
 
 fn check_if_signed_in(req: &GuardContext) -> bool {
     //ckeck if the access token cookie is set
-    let cookie = req.head().headers().get("access_token");
+    let cookie = req.head().headers().get("Cookie");
     if cookie.is_none() {
         return false;
     }
     let cookie = cookie.unwrap();
     let cookie = cookie.to_str().unwrap();
-    if cookie.is_empty() {
+    let cookie = cookie.split(';').collect::<Vec<&str>>();
+    let mut found = false;
+    for c in cookie {
+        if c.contains("access_token") {
+            found = true;
+        }
+    }
+    if !found {
         return false;
     }
     true
@@ -307,8 +314,6 @@ fn not_found<B>(
     let path =
         PathBuf::from_str(format!("/{}/static/de/404.html", get_base_dir().unwrap()).as_str())
             .unwrap();
-
-    log::info!("Test");
 
     let mut file = File::open(path).unwrap();
 
