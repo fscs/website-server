@@ -122,7 +122,7 @@
 
             config = {
               Env = ["SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"];
-              Cmd = ["${defaultPackage}/bin/fscs-website-backend" "--host" "0.0.0.0" "--port" "8080" "--log_level" "debug"];
+              Cmd = ["${defaultPackage}/bin/fscs-website-backend" "--host" "0.0.0.0" "--port" "8080"];
               ExposedPorts = {
                 "8080/tcp" = {};
               };
