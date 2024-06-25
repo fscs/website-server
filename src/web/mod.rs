@@ -262,6 +262,18 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
                         let (http_req, _payload) = req.into_parts();
                         async {
                             let response = actix_files::NamedFile::open(
+                                format!("/{}/static_auth/de/404.html", get_base_dir().unwrap()).as_str(),
+                            )?
+                            .into_response(&http_req);
+                            Ok(ServiceResponse::new(http_req, response))
+                        }
+                    }),
+            )
+            .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html")
+                     .default_handler(|req: ServiceRequest| {
+                        let (http_req, _payload) = req.into_parts();
+                        async {
+                            let response = actix_files::NamedFile::open(
                                 format!("/{}/static/de/404.html", get_base_dir().unwrap()).as_str(),
                             )?
                             .into_response(&http_req);
@@ -269,7 +281,6 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
                         }
                     }),
             )
-            .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html"))
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
     })
