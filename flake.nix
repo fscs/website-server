@@ -174,7 +174,7 @@
             fi
 
             echo Starting the server
-            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --use-executable-dir
+            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL
 
             if [ "$ALREADY_RUNNING" = false ]; then
               echo Stopping the Database

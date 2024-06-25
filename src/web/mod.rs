@@ -4,12 +4,15 @@ use crate::{domain, get_base_dir, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceRequest, ServiceResponse};
+use actix_web::error::ErrorUnauthorized;
 use actix_web::guard::GuardContext;
+use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
-use actix_web::{guard, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{get, guard, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
+use futures_util::FutureExt;
 use serde::Serialize;
 
 use std::fs::File;
@@ -22,8 +25,8 @@ use std::str::FromStr;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-use self::auth::oauth_client;
-use utoipa_swagger_ui::SwaggerUi;
+use self::auth::{oauth_client, OauthClient, User};
+use utoipa_swagger_ui::{oauth, SwaggerUi};
 
 pub(crate) mod abmeldungen;
 pub(crate) mod auth;
@@ -254,23 +257,11 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
                 SwaggerUi::new("/api/docs/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
             )
             .service(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
+            .service(serve_files)
             .service(
-                fs::Files::new("/", dir.clone() + "/static_auth/")
+                fs::Files::new("/", dir.clone() + "/static/")
                     .index_file("index.html")
-                    .guard(guard::fn_guard(check_if_signed_in))
                     .default_handler(|req: ServiceRequest| {
-                        let (http_req, _payload) = req.into_parts();
-                        async {
-                            let response = actix_files::NamedFile::open(
-                                format!("/{}/static_auth/de/404.html", get_base_dir().unwrap()).as_str(),
-                            )?
-                            .into_response(&http_req);
-                            Ok(ServiceResponse::new(http_req, response))
-                        }
-                    }),
-            )
-            .service(fs::Files::new("/", dir.clone() + "/static/").index_file("index.html")
-                     .default_handler(|req: ServiceRequest| {
                         let (http_req, _payload) = req.into_parts();
                         async {
                             let response = actix_files::NamedFile::open(
@@ -289,25 +280,27 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
     .await?)
 }
 
-fn check_if_signed_in(req: &GuardContext) -> bool {
-    //ckeck if the access token cookie is set
-    let cookie = req.head().headers().get("Cookie");
-    if cookie.is_none() {
-        return false;
+#[get("/{filename:.*}")]
+async fn serve_files(
+    req: HttpRequest,
+    user: Option<User>,
+) -> Result<fs::NamedFile, actix_web::Error> {
+    let mut dir = match user {
+        Some(_) => PathBuf::from("static_auth"),
+        None => PathBuf::from("static"),
+    };
+    let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
+    dir.push(path);
+    if dir.is_dir() {
+        dir.push("index.html");
     }
-    let cookie = cookie.unwrap();
-    let cookie = cookie.to_str().unwrap();
-    let cookie = cookie.split(';').collect::<Vec<&str>>();
-    let mut found = false;
-    for c in cookie {
-        if c.contains("access_token") {
-            found = true;
-        }
-    }
-    if !found {
-        return false;
-    }
-    true
+    let file = fs::NamedFile::open(dir)?;
+    Ok(file
+        .use_last_modified(true)
+        .set_content_disposition(ContentDisposition {
+            disposition: DispositionType::Inline,
+            parameters: vec![],
+        }))
 }
 
 fn not_found<B>(
