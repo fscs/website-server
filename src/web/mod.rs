@@ -276,14 +276,14 @@ async fn serve_files(
         None => PathBuf::from(get_base_dir().unwrap() + "/static"),
     };
     let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
-    let path2 = dir.join(&path).canonicalize().unwrap();
+    let mut path2 = dir.join(&path).canonicalize().unwrap();
     log::error!("{:?}", path.to_str());
     log::error!("{:?}", path2.to_str());
     if path2.starts_with(&dir) {
-        if dir.is_dir() {
-            dir.push("index.html");
+        if path2.is_dir() {
+            path2.push("index.html");
         }
-        let file = fs::NamedFile::open(dir)?;
+        let file = fs::NamedFile::open(path2)?;
         Ok(file
             .use_last_modified(true)
             .set_content_disposition(ContentDisposition {
