@@ -4,7 +4,7 @@ use crate::{domain, get_base_dir, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceRequest, ServiceResponse};
-use actix_web::error::ErrorUnauthorized;
+use actix_web::error::{ErrorNotFound, ErrorUnauthorized};
 use actix_web::guard::GuardContext;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::http::StatusCode;
@@ -258,20 +258,6 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
             )
             .service(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
             .service(serve_files)
-            .service(
-                fs::Files::new("/", dir.clone() + "/static/")
-                    .index_file("index.html")
-                    .default_handler(|req: ServiceRequest| {
-                        let (http_req, _payload) = req.into_parts();
-                        async {
-                            let response = actix_files::NamedFile::open(
-                                format!("/{}/static/de/404.html", get_base_dir().unwrap()).as_str(),
-                            )?
-                            .into_response(&http_req);
-                            Ok(ServiceResponse::new(http_req, response))
-                        }
-                    }),
-            )
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
     })
@@ -286,21 +272,27 @@ async fn serve_files(
     user: Option<User>,
 ) -> Result<fs::NamedFile, actix_web::Error> {
     let mut dir = match user {
-        Some(_) => PathBuf::from("static_auth"),
-        None => PathBuf::from("static"),
+        Some(_) => PathBuf::from(get_base_dir().unwrap() + "/static_auth"),
+        None => PathBuf::from(get_base_dir().unwrap() + "/static"),
     };
     let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
-    dir.push(path);
-    if dir.is_dir() {
-        dir.push("index.html");
+    let path2 = dir.join(&path).canonicalize().unwrap();
+    log::error!("{:?}", path.to_str());
+    log::error!("{:?}", path2.to_str());
+    if path2.starts_with(&dir) {
+        if dir.is_dir() {
+            dir.push("index.html");
+        }
+        let file = fs::NamedFile::open(dir)?;
+        Ok(file
+            .use_last_modified(true)
+            .set_content_disposition(ContentDisposition {
+                disposition: DispositionType::Inline,
+                parameters: vec![],
+            }))
+    } else {
+        Err(ErrorNotFound("not found").into())
     }
-    let file = fs::NamedFile::open(dir)?;
-    Ok(file
-        .use_last_modified(true)
-        .set_content_disposition(ContentDisposition {
-            disposition: DispositionType::Inline,
-            parameters: vec![],
-        }))
 }
 
 fn not_found<B>(

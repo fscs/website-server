@@ -414,9 +414,20 @@ async fn login(
 
 #[get("/logout/")]
 async fn logout() -> impl Responder {
-    let mut cookie = Cookie::build("access_token", "").path("/").finish();
-    cookie.make_removal();
-    HttpResponse::Ok().cookie(cookie).finish()
+    //rmove cookies and redirect to /
+    let mut cookie_at = Cookie::build("access_token", "").path("/").finish();
+    let mut cookie_rt = Cookie::build("refresh_token", "").path("/").finish();
+    let mut cookie_u = Cookie::build("user", "").path("/").finish();
+    cookie_at.make_removal();
+    cookie_rt.make_removal();
+    cookie_u.make_removal();
+
+    HttpResponse::Found()
+        .cookie(cookie_u)
+        .cookie(cookie_at)
+        .cookie(cookie_rt)
+        .append_header((actix_web::http::header::LOCATION, "/"))
+        .finish()
 }
 
 #[get("/callback/")]
