@@ -6,13 +6,17 @@ use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceRequest, ServiceResponse};
 use actix_web::error::{ErrorNotFound, ErrorUnauthorized};
 use actix_web::guard::GuardContext;
-use actix_web::http::header::{ContentDisposition, DispositionType};
+use actix_web::http::header::{self, ContentDisposition, ContentType, DispositionType};
 use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
-use actix_web::{get, guard, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    get, guard, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer,
+    Responder,
+};
 use anyhow::Error;
 use futures_util::FutureExt;
+use reqwest::Body;
 use serde::Serialize;
 
 use std::fs::File;
@@ -271,14 +275,15 @@ async fn serve_files(
     req: HttpRequest,
     user: Option<User>,
 ) -> Result<fs::NamedFile, actix_web::Error> {
-    let mut dir = match user {
+    let dir = match user {
         Some(_) => PathBuf::from(get_base_dir().unwrap() + "/static_auth"),
         None => PathBuf::from(get_base_dir().unwrap() + "/static"),
     };
     let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
+    if !path.is_dir() {
+        return Err(ErrorNotFound("").into());
+    }
     let mut path2 = dir.join(&path).canonicalize().unwrap();
-    log::error!("{:?}", path.to_str());
-    log::error!("{:?}", path2.to_str());
     if path2.starts_with(&dir) {
         if path2.is_dir() {
             path2.push("index.html");
@@ -298,14 +303,6 @@ async fn serve_files(
 fn not_found<B>(
     res: actix_web::dev::ServiceResponse<B>,
 ) -> actix_web::Result<actix_web::middleware::ErrorHandlerResponse<B>> {
-    if res.headers().get("content-type")
-        != Some(&actix_web::http::header::HeaderValue::from_static(
-            "text/html",
-        ))
-    {
-        return Ok(ErrorHandlerResponse::Response(res.map_into_left_body()));
-    };
-
     let (req, res) = res.into_parts();
     let path =
         PathBuf::from_str(format!("/{}/static/de/404.html", get_base_dir().unwrap()).as_str())
@@ -316,11 +313,13 @@ fn not_found<B>(
     let mut content = String::new();
     file.read_to_string(&mut content).unwrap();
 
-    let res = res.set_body(content);
+    let status = res.status();
 
-    let res = ServiceResponse::new(req, res)
-        .map_into_boxed_body()
-        .map_into_right_body();
+    let new_response = HttpResponseBuilder::new(status)
+        .insert_header(ContentType::html())
+        .body(content);
 
-    Ok(ErrorHandlerResponse::Response(res))
+    Ok(ErrorHandlerResponse::Response(
+        ServiceResponse::new(req, new_response).map_into_right_body(),
+    ))
 }
