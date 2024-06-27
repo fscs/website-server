@@ -1,2 +1,2 @@
 alter table sitzungen
-    add column location text not NULL;
+    add column location text not NULL DEFAULT '';
