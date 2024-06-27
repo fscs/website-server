@@ -1,5 +1,5 @@
 use crate::database::{DatabasePool, DatabaseTransaction};
-use crate::web::auth::AuthMiddle;
+use crate::web::auth::{AuthMiddle, Rat};
 use crate::{domain, get_base_dir, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
@@ -273,14 +273,14 @@ pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Err
 #[get("/{filename:.*}")]
 async fn serve_files(
     req: HttpRequest,
-    user: Option<User>,
+    user: Option<Rat>,
 ) -> Result<fs::NamedFile, actix_web::Error> {
     let dir = match user {
         Some(_) => PathBuf::from(get_base_dir().unwrap() + "/static_auth"),
         None => PathBuf::from(get_base_dir().unwrap() + "/static"),
     };
     let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
-    println!("{:?}",dir.join(&path));
+    println!("{:?}", dir.join(&path));
     if !(dir.join(&path).is_dir() || dir.join(&path).is_file()) {
         return Err(ErrorNotFound("").into());
     }
