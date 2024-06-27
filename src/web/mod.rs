@@ -280,7 +280,6 @@ async fn serve_files(
         None => PathBuf::from(get_base_dir().unwrap() + "/static"),
     };
     let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
-    println!("{:?}", dir.join(&path));
     if !(dir.join(&path).is_dir() || dir.join(&path).is_file()) {
         return Err(ErrorNotFound("").into());
     }

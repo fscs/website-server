@@ -70,26 +70,42 @@ impl User {
             userinfo,
         })
     }
+}
 
-    pub async fn is_rat(self) -> Result<Rat, actix_web::Error> {
-        if self
-            .userinfo
-            .get("roles")
-            .map(|a| {
-                a.as_array()
-                    .unwrap()
-                    .contains(&serde_json::Value::String("Rat".to_string()))
-            })
-            .unwrap_or(false)
-        {
-            Ok(Rat {
-                username: self.username,
-                exp: self.exp,
-                userinfo: self.userinfo,
-            })
-        } else {
-            Err(ErrorUnauthorized("Not Authorized"))
-        }
+impl Rat {
+    pub async fn from_token(
+        access_token: &str,
+        oauth_client: &OauthClient,
+    ) -> Result<User, actix_web::Error> {
+        let userinfo = oauth_client
+            .reqwest_client
+            .get(oauth_client.user_info.to_owned())
+            .bearer_auth(access_token)
+            .send()
+            .await
+            .map_err(|e| {
+                log::error!("{:?}", e);
+                actix_web::error::ErrorUnauthorized("Internal Error")
+            })?
+            .json::<HashMap<String, serde_json::Value>>()
+            .await
+            .map_err(|e| {
+                log::error!("{:?}", e);
+                actix_web::error::ErrorUnauthorized("Internal Error")
+            })?;
+
+        debug!("{:?}", userinfo);
+        Ok(User {
+            username: userinfo
+                .get("preferred_username")
+                .map(|a| a.to_string())
+                .ok_or_else(|| {
+                    debug!("Could not access preferred_username");
+                    ErrorInternalServerError("Internal Error")
+                })?,
+            exp: Utc::now().timestamp() + 300,
+            userinfo,
+        })
     }
 }
 
@@ -290,14 +306,6 @@ impl AuthCookieJar {
             .filter(|u| u.exp > Utc::now().timestamp())
     }
 
-    fn rat_info(&self) -> Option<Rat> {
-        self.jar
-            .signed(&self.key)
-            .get("user")
-            .map_or(None, |c| serde_json::from_str::<Rat>(&c.value()).ok())
-            .filter(|u| u.exp > Utc::now().timestamp())
-    }
-
     fn set_user_info(&mut self, user: &User) {
         let mut cookie = Cookie::new("user", serde_json::to_string(&user).unwrap());
         cookie.set_path("/");
@@ -347,32 +355,21 @@ impl FromRequest for Rat {
     ) -> Self::Future {
         let req = req.clone();
         Box::pin(async move {
-            let jar = AuthCookieJar::extract(&req).await?;
+            let user = User::extract(&req).await?;
 
-            if let Some(user) = jar.rat_info() {
-                Ok(user)
-            } else if let Some(access_token) = jar.access_token() {
-                let oauth_client = req.app_data::<Data<OauthClient>>().ok_or(
-                    actix_web::error::ErrorInternalServerError(
-                        "Broken config please Contact an Admin",
-                    ),
-                )?;
-                let user = User::from_token(access_token, oauth_client)
-                    .await
-                    .map_err(|e| {
-                        debug!("{:?}", e);
-                        ErrorUnauthorized("Invalid access_token")
-                    });
-                if let Ok(user) = user {
-                    user.is_rat().await
-                } else {
-                    Err(ErrorUnauthorized("Invalid access_token"))
-                }
+            if user.userinfo.get("realm_access").map_or(false, |r| {
+                r.get("roles").map_or(false, |r| {
+                    r.as_array().map_or(false, |r| r.contains(&"Rat".into()))
+                })
+            }) {
+                Ok(Rat {
+                    username: user.username,
+                    exp: user.exp,
+                    userinfo: user.userinfo,
+                })
             } else {
-                debug!("Could not access user info");
-                Err(actix_web::error::ErrorUnauthorized(
-                    "Could not access user info",
-                ))
+                debug!("User is not a rat");
+                Err(actix_web::error::ErrorUnauthorized("User is not a rat"))
             }
         })
     }
