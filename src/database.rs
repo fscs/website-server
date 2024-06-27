@@ -294,13 +294,15 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         &mut self,
         id: Uuid,
         datum: NaiveDateTime,
+        location: &str,
         name: &str,
     ) -> anyhow::Result<Sitzung> {
         Ok(sqlx::query_as!(
             Sitzung,
-            "UPDATE sitzungen SET datum = $1, name = $2 WHERE id = $3 RETURNING *",
+            "UPDATE sitzungen SET datum = $1, name = $2, location = $3 WHERE id = $4 RETURNING *",
             datum,
             name,
+            location,
             id
         )
         .fetch_one(&mut **self)

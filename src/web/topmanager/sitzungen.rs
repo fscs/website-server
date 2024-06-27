@@ -88,7 +88,7 @@ async fn update_sitzung(
     params: web::Json<UpdateSitzungParams>,
 ) -> impl Responder {
     let result = transaction
-        .update_sitzung(params.id, params.datum, params.name.as_str())
+        .update_sitzung(params.id, params.datum, params.name.as_str(), params.location.as_str())
         .await;
     transaction.rest_created(result).await
 }

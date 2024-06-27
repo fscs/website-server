@@ -132,6 +132,7 @@ pub trait TopManagerRepo {
         id: Uuid,
         datum: NaiveDateTime,
         name: &str,
+        location: &str
     ) -> anyhow::Result<Sitzung>;
 
     async fn delete_sitzung(&mut self, id: Uuid) -> anyhow::Result<()>;
