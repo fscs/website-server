@@ -11,6 +11,7 @@ pub struct Sitzung {
     pub id: Uuid,
     pub datum: NaiveDateTime,
     pub name: String,
+    pub location: String,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
@@ -74,6 +75,7 @@ pub trait TopManagerRepo {
         &mut self,
         date_time: NaiveDateTime,
         name: &str,
+        location: &str,
     ) -> anyhow::Result<Sitzung>;
 
     async fn create_person(&mut self, name: &str) -> anyhow::Result<Person>;

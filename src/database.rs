@@ -86,12 +86,14 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         &mut self,
         date_time: NaiveDateTime,
         name: &str,
+        location: &str,
     ) -> anyhow::Result<Sitzung> {
         Ok(sqlx::query_as!(
             Sitzung,
-            "INSERT INTO sitzungen (datum, name) VALUES ($1, $2) RETURNING *",
+            "INSERT INTO sitzungen (datum, name, location) VALUES ($1, $2, $3) RETURNING *",
             date_time,
-            name
+            name,
+            location
         )
         .fetch_one(&mut **self)
         .await?)
@@ -126,9 +128,10 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     async fn save_sitzung(&mut self, sitzung: Sitzung) -> anyhow::Result<Sitzung> {
         Ok(sqlx::query_as!(
             Sitzung,
-            "UPDATE sitzungen SET datum = $1, name = $2 WHERE id = $3 RETURNING *",
+            "UPDATE sitzungen SET datum = $1, name = $2, location = $3 WHERE id = $4 RETURNING *",
             sitzung.datum,
             sitzung.name,
+            sitzung.location,
             sitzung.id
         )
         .fetch_one(&mut **self)

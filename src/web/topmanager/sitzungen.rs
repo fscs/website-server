@@ -1,18 +1,19 @@
 use crate::database::DatabaseTransaction;
 use crate::domain::TopManagerRepo;
 use crate::web::auth::User;
+use crate::web::topmanager::TopWithAnträge;
 use crate::web::topmanager::{CreateTopParams, RestStatus};
 use actix_web::web::Data;
 use actix_web::{delete, get, patch, put, web, Responder};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
-use crate::web::topmanager::TopWithAnträge;
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct CreateSitzungParams {
     pub datum: chrono::NaiveDateTime,
     pub name: String,
+    pub location: String,
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
@@ -20,6 +21,7 @@ pub struct UpdateSitzungParams {
     pub id: Uuid,
     pub datum: chrono::NaiveDateTime,
     pub name: String,
+    pub location: String,
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
@@ -63,7 +65,10 @@ async fn get_sitzungen(mut transaction: DatabaseTransaction<'_>) -> impl Respond
     )
 )]
 #[get("/sitzung/{sitzung_id}/")]
-async fn get_sitzung(mut transaction: DatabaseTransaction<'_>, sitzung_id: web::Path<Uuid>) -> impl Responder {
+async fn get_sitzung(
+    mut transaction: DatabaseTransaction<'_>,
+    sitzung_id: web::Path<Uuid>,
+) -> impl Responder {
     let result = transaction.get_sitzung(*sitzung_id).await;
 
     transaction.rest_ok(result).await
@@ -82,7 +87,9 @@ async fn update_sitzung(
     mut transaction: DatabaseTransaction<'_>,
     params: web::Json<UpdateSitzungParams>,
 ) -> impl Responder {
-    let result = transaction.update_sitzung(params.id, params.datum, params.name.as_str()).await;
+    let result = transaction
+        .update_sitzung(params.id, params.datum, params.name.as_str())
+        .await;
     transaction.rest_created(result).await
 }
 
@@ -118,7 +125,9 @@ async fn create_sitzung(
     mut transaction: DatabaseTransaction<'_>,
     params: web::Json<CreateSitzungParams>,
 ) -> impl Responder {
-    let result = transaction.create_sitzung(params.datum, params.name.as_str()).await;
+    let result = transaction
+        .create_sitzung(params.datum, params.name.as_str(), params.location.as_str())
+        .await;
 
     transaction.rest_created(result).await
 }
@@ -138,7 +147,9 @@ async fn create_top(
     sitzung_id: web::Path<Uuid>,
     params: web::Json<CreateTopParams>,
 ) -> impl Responder {
-    let result = transaction.create_top(&params.titel, *sitzung_id, &params.inhalt).await;
+    let result = transaction
+        .create_top(&params.titel, *sitzung_id, &params.inhalt)
+        .await;
     transaction.rest_created(result).await
 }
 
@@ -155,7 +166,9 @@ async fn update_top(
     mut transaction: DatabaseTransaction<'_>,
     params: web::Json<UpdateTopParams>,
 ) -> impl Responder {
-    let result = transaction.update_top(params.sitzung_id, params.id, &params.titel, &params.inhalt).await;
+    let result = transaction
+        .update_top(params.sitzung_id, params.id, &params.titel, &params.inhalt)
+        .await;
 
     transaction.rest_ok(result).await
 }
@@ -187,7 +200,10 @@ async fn delete_top(
     )
 )]
 #[get("/sitzung/{sitzung_id}/tops/")]
-async fn tops_by_sitzung(mut transaction: DatabaseTransaction<'_>, id: web::Path<Uuid>) -> impl Responder {
+async fn tops_by_sitzung(
+    mut transaction: DatabaseTransaction<'_>,
+    id: web::Path<Uuid>,
+) -> impl Responder {
     let tops = transaction.tops_by_sitzung(id.clone()).await;
 
     transaction.rest_ok(tops).await
