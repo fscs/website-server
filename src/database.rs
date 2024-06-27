@@ -294,8 +294,8 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         &mut self,
         id: Uuid,
         datum: NaiveDateTime,
-        location: &str,
         name: &str,
+        location: &str,
     ) -> anyhow::Result<Sitzung> {
         Ok(sqlx::query_as!(
             Sitzung,
