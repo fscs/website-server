@@ -4,6 +4,7 @@ pub struct CreateAntragParams {
     pub antragstext: String,
     pub begründung: String,
     pub antragssteller: String,
+    pub top_type: String,
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
@@ -26,14 +27,13 @@ pub struct CreateAntragTopMappingParams {
 }
 
 use crate::database::DatabasePool;
-use crate::domain::{TopManagerRepo};
+use crate::domain::TopManagerRepo;
 use crate::web::auth::User;
 use crate::web::topmanager::RestStatus;
-use actix_web::web::{Data};
+use actix_web::web::Data;
 use actix_web::{delete, get, patch, put, web, Responder};
 use chrono::Utc;
 use serde::Deserialize;
-
 
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -104,7 +104,7 @@ async fn create_antrag(
                 };
 
                 let top = transaction
-                    .create_top(&antrag.titel, sitzung.id, &None)
+                    .create_top(&antrag.titel, sitzung.id, &params.top_type, &None)
                     .await?;
                 transaction.add_antrag_to_top(antrag.id, top.id).await?;
 

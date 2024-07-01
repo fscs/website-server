@@ -227,11 +227,13 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         &mut self,
         titel: &str,
         sitzung_id: Uuid,
+        top_type: &str,
         inhalt: &Option<Value>,
     ) -> anyhow::Result<Top> {
         let weight = sqlx::query!(
-            "SELECT COUNT(*) FROM tops WHERE sitzung_id = $1",
-            sitzung_id
+            "SELECT COUNT(*) FROM tops WHERE sitzung_id = $1 and top_type = $2",
+            sitzung_id,
+            top_type
         )
         .fetch_one(&mut **self)
         .await?
@@ -239,11 +241,12 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
 
         Ok(sqlx::query_as!(
             Top,
-            "INSERT INTO tops (name, sitzung_id, weight, inhalt)
-                VALUES ($1, $2, $3, $4) RETURNING name, weight, inhalt, id",
+            "INSERT INTO tops (name, sitzung_id, weight, top_type, inhalt)
+                VALUES ($1, $2, $3, $4 ,$5) RETURNING name, weight, top_type, inhalt, id",
             titel,
             sitzung_id,
             weight,
+            top_type,
             *inhalt
         )
         .fetch_one(&mut **self)
@@ -272,7 +275,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>> {
         Ok(sqlx::query_as!(
             Top,
-            "SELECT id, name, inhalt, weight FROM tops WHERE sitzung_id = $1 ORDER BY weight",
+            "SELECT id, name, inhalt, weight, top_type FROM tops WHERE sitzung_id = $1 ORDER BY weight",
             sitzung_id
         )
         .fetch_all(&mut **self)
@@ -324,14 +327,16 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         sitzung_id: Uuid,
         id: Uuid,
         titel: &str,
+        top_type: &str,
         inhalt: &Option<Value>,
     ) -> anyhow::Result<Top> {
         Ok(sqlx::query_as!(
             Top,
-            "UPDATE tops SET name = $1, inhalt = $2, sitzung_id = $3 WHERE id = $4 RETURNING name, inhalt, id, weight",
+            "UPDATE tops SET name = $1, inhalt = $2, sitzung_id = $3, top_type = $4 WHERE id = $5 RETURNING name, inhalt, id, weight, top_type",
             titel,
             *inhalt,
             sitzung_id,
+            top_type,
             id,
         )
         .fetch_one(&mut **self)

@@ -35,6 +35,7 @@ pub struct UpdateTopParams {
     pub sitzung_id: Uuid,
     pub titel: String,
     pub inhalt: Option<serde_json::Value>,
+    pub top_type: String,
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
@@ -88,7 +89,12 @@ async fn update_sitzung(
     params: web::Json<UpdateSitzungParams>,
 ) -> impl Responder {
     let result = transaction
-        .update_sitzung(params.id, params.datum, params.name.as_str(), params.location.as_str())
+        .update_sitzung(
+            params.id,
+            params.datum,
+            params.name.as_str(),
+            params.location.as_str(),
+        )
         .await;
     transaction.rest_created(result).await
 }
@@ -148,7 +154,7 @@ async fn create_top(
     params: web::Json<CreateTopParams>,
 ) -> impl Responder {
     let result = transaction
-        .create_top(&params.titel, *sitzung_id, &params.inhalt)
+        .create_top(&params.titel, *sitzung_id, &params.top_type, &params.inhalt)
         .await;
     transaction.rest_created(result).await
 }
@@ -167,7 +173,13 @@ async fn update_top(
     params: web::Json<UpdateTopParams>,
 ) -> impl Responder {
     let result = transaction
-        .update_top(params.sitzung_id, params.id, &params.titel, &params.inhalt)
+        .update_top(
+            params.sitzung_id,
+            params.id,
+            &params.titel,
+            &params.top_type,
+            &params.inhalt,
+        )
         .await;
 
     transaction.rest_ok(result).await

@@ -20,6 +20,7 @@ pub struct Top {
     pub weight: i64,
     pub name: String,
     pub inhalt: Option<serde_json::Value>,
+    pub top_type: String,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
@@ -116,6 +117,7 @@ pub trait TopManagerRepo {
         &mut self,
         titel: &str,
         sitzung_id: Uuid,
+        top_type: &str,
         inhalt: &Option<serde_json::Value>,
     ) -> anyhow::Result<Top>;
 
@@ -132,7 +134,7 @@ pub trait TopManagerRepo {
         id: Uuid,
         datum: NaiveDateTime,
         name: &str,
-        location: &str
+        location: &str,
     ) -> anyhow::Result<Sitzung>;
 
     async fn delete_sitzung(&mut self, id: Uuid) -> anyhow::Result<()>;
@@ -142,6 +144,7 @@ pub trait TopManagerRepo {
         sitzung_id: Uuid,
         id: Uuid,
         titel: &str,
+        top_type: &str,
         inhalt: &Option<serde_json::Value>,
     ) -> anyhow::Result<Top>;
 

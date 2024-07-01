@@ -8,10 +8,10 @@ use crate::web::topmanager::sitzungen::{
 };
 use crate::web::RestStatus;
 
-
 use actix_web::{
     get,
-    web::{self, Data}, HttpResponse, Responder, Scope,
+    web::{self, Data},
+    HttpResponse, Responder, Scope,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
@@ -61,6 +61,7 @@ pub(crate) fn service(path: &'static str) -> Scope {
 pub struct CreateTopParams {
     pub titel: String,
     pub inhalt: Option<serde_json::Value>,
+    pub top_type: String,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
