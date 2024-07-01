@@ -77,6 +77,7 @@ pub struct TopWithAnträge {
     pub name: String,
     pub anträge: Vec<Antrag>,
     pub inhalt: Option<serde_json::Value>,
+    pub top_type: String,
 }
 
 #[utoipa::path(
@@ -149,6 +150,7 @@ async fn get_current_tops_with_anträge(db: Data<DatabasePool>) -> impl Responde
                     name: top.name,
                     anträge,
                     inhalt: top.inhalt,
+                    top_type: top.top_type,
                 };
                 tops_with_anträge.push(top_with_anträge);
             }
