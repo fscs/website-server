@@ -150,10 +150,13 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         &mut self,
         date_time: NaiveDateTime,
     ) -> anyhow::Result<Option<Sitzung>> {
+        let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
+
+        let offset_int = now.time() - chrono::Utc::now().time();
         Ok(sqlx::query_as!(
             Sitzung,
             "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC",
-            date_time
+            date_time + offset_int
         )
         .fetch_optional(&mut **self)
         .await?)
@@ -283,11 +286,14 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     }
 
     async fn get_next_sitzung(&mut self) -> anyhow::Result<Option<Sitzung>> {
-        let now = chrono::Utc::now();
+        let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
+
+        let offset_int = now.time() - chrono::Utc::now().time();
+
         Ok(sqlx::query_as!(
             Sitzung,
             "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC",
-            now.naive_utc()
+            now.naive_utc() + offset_int
         )
         .fetch_optional(&mut **self)
         .await?)
@@ -603,11 +609,13 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
     }
 
     async fn get_abmeldungen_next_sitzung(&mut self) -> anyhow::Result<Vec<Abmeldung>> {
-        let now = chrono::Utc::now();
+        let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
+
+        let offset_int = now.time() - chrono::Utc::now().time();
         let sitzung = sqlx::query_as!(
             Sitzung,
             "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC LIMIT 1",
-            now.naive_utc()
+            now.naive_utc() + offset_int
         )
         .fetch_one(&mut **self)
         .await?;
