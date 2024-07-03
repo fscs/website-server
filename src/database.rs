@@ -152,7 +152,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     ) -> anyhow::Result<Option<Sitzung>> {
         Ok(sqlx::query_as!(
             Sitzung,
-            "SELECT * FROM sitzungen WHERE datum > $1",
+            "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC",
             date_time
         )
         .fetch_optional(&mut **self)
