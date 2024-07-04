@@ -356,7 +356,7 @@ struct AuthRequest {
 pub(crate) fn oauth_client() -> OauthClient {
     let client_id = std::env::var("CLIENT_ID").expect("No CLIENT ID set");
     let client_secret = std::env::var("CLIENT_SECRET").unwrap();
-    let singning_key = std::env::var("SIGNING_KEY").expect("No SINGNING_KEY set");
+    let singning_key = std::env::var("SIGNING_KEY").expect("No SIGNING_KEY set");
 
     OauthClient {
         client: BasicClient::new(ClientId::new(client_id),
