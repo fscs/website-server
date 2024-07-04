@@ -112,6 +112,9 @@
         checks = {
           inherit my-crate;
         };
+
+        formatter = pkgs.alejandra;
+
         # For `nix build` & `nix run`:
         defaultPackage = my-crate;
 
@@ -122,7 +125,17 @@
 
             config = {
               Env = ["SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"];
-              Cmd = ["${defaultPackage}/bin/fscs-website-backend" "--host" "0.0.0.0" "--port" "8080"];
+              Cmd = [
+                "${defaultPackage}/bin/fscs-website-backend"
+                "--host"
+                "0.0.0.0"
+                "--port"
+                "8080"
+                "--content-dir"
+                "static"
+                "--private-content-dir"
+                "static_auth"
+              ];
               ExposedPorts = {
                 "8080/tcp" = {};
               };
@@ -174,7 +187,7 @@
             fi
 
             echo Starting the server
-            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL
+            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --content-dir static --private-content-dir static_auth
 
             if [ "$ALREADY_RUNNING" = false ]; then
               echo Stopping the Database

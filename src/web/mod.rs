@@ -1,6 +1,6 @@
 use crate::database::{DatabasePool, DatabaseTransaction};
 use crate::web::auth::{AuthMiddle, Rat};
-use crate::{domain, get_base_dir, web, ARGS};
+use crate::{domain, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceRequest, ServiceResponse};
@@ -156,7 +156,7 @@ impl FromRequest for DatabaseTransaction<'static> {
     }
 }
 
-pub async fn start_server(dir: String, database: DatabasePool) -> Result<(), Error> {
+pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     #[derive(OpenApi)]
     #[openapi(
         info(
@@ -275,38 +275,44 @@ async fn serve_files(
     req: HttpRequest,
     user: Option<Rat>,
 ) -> Result<fs::NamedFile, actix_web::Error> {
-    let dir = match user {
-        Some(_) => PathBuf::from(get_base_dir().unwrap() + "/static_auth"),
-        None => PathBuf::from(get_base_dir().unwrap() + "/static"),
+    let base_dir_raw = match user {
+        Some(_) => ARGS.private_content_dir.as_path(),
+        None => ARGS.content_dir.as_path(),
     };
-    let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
-    if !(dir.join(&path).is_dir() || dir.join(&path).is_file()) {
-        return Err(ErrorNotFound("").into());
+
+    let base_dir = base_dir_raw
+        .canonicalize()
+        .map_err(|_| ErrorNotFound("not found"))?;
+
+    let sub_path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
+    let path = base_dir
+        .join(sub_path)
+        .canonicalize()
+        .map_err(|_| ErrorNotFound("not found"))?;
+
+    if !path.exists() || !path.starts_with(base_dir.as_path()) {
+        return Err(ErrorNotFound("not found").into());
     }
-    let mut path2 = dir.join(&path).canonicalize().unwrap();
-    if path2.starts_with(&dir) {
-        if path2.is_dir() {
-            path2.push("index.html");
-        }
-        let file = fs::NamedFile::open(path2)?;
-        Ok(file
-            .use_last_modified(true)
-            .set_content_disposition(ContentDisposition {
-                disposition: DispositionType::Inline,
-                parameters: vec![],
-            }))
+
+    let file = if path.is_dir() {
+        fs::NamedFile::open(path.join("index.html"))?
     } else {
-        Err(ErrorNotFound("not found").into())
-    }
+        fs::NamedFile::open(path)?
+    };
+
+    Ok(file
+        .use_last_modified(true)
+        .set_content_disposition(ContentDisposition {
+            disposition: DispositionType::Inline,
+            parameters: vec![],
+        }))
 }
 
 fn not_found<B>(
     res: actix_web::dev::ServiceResponse<B>,
 ) -> actix_web::Result<actix_web::middleware::ErrorHandlerResponse<B>> {
     let (req, res) = res.into_parts();
-    let path =
-        PathBuf::from_str(format!("/{}/static/de/404.html", get_base_dir().unwrap()).as_str())
-            .unwrap();
+    let path = ARGS.content_dir.join("de/404.html");
 
     let mut file = File::open(path).unwrap();
 
