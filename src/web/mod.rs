@@ -1,5 +1,5 @@
 use crate::database::{DatabasePool, DatabaseTransaction};
-use crate::web::auth::{AuthMiddle, Rat};
+use crate::web::auth::AuthMiddle;
 use crate::{domain, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
@@ -273,10 +273,13 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
 #[get("/{filename:.*}")]
 async fn serve_files(
     req: HttpRequest,
-    user: Option<Rat>,
+    user: Option<User>,
 ) -> Result<fs::NamedFile, actix_web::Error> {
     let base_dir_raw = match user {
-        Some(_) => ARGS.private_content_dir.as_path(),
+        Some(user) => match user.is_rat() {
+            true => ARGS.private_content_dir.as_path(),
+            false => ARGS.hidden_content_dir.as_path(),
+        },
         None => ARGS.content_dir.as_path(),
     };
 

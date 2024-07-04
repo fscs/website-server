@@ -23,6 +23,8 @@ struct Args {
     content_dir: PathBuf,
     #[arg(long, required = true)]
     private_content_dir: PathBuf,
+    #[arg(long, required = true)]
+    hidden_content_dir: PathBuf,
     #[arg(long, default_value_t = {"Info".to_string()})]
     log_level: String,
     #[arg(short, long)]
