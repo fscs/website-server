@@ -29,12 +29,6 @@ pub(crate) struct User {
     userinfo: HashMap<String, serde_json::Value>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-pub(crate) struct Rat {
-    pub(crate) username: String,
-    exp: i64,
-    userinfo: HashMap<String, serde_json::Value>,
-}
 impl User {
     pub async fn from_token(
         access_token: &str,
@@ -70,41 +64,12 @@ impl User {
             userinfo,
         })
     }
-}
 
-impl Rat {
-    pub async fn from_token(
-        access_token: &str,
-        oauth_client: &OauthClient,
-    ) -> Result<User, actix_web::Error> {
-        let userinfo = oauth_client
-            .reqwest_client
-            .get(oauth_client.user_info.to_owned())
-            .bearer_auth(access_token)
-            .send()
-            .await
-            .map_err(|e| {
-                log::error!("{:?}", e);
-                actix_web::error::ErrorUnauthorized("Internal Error")
-            })?
-            .json::<HashMap<String, serde_json::Value>>()
-            .await
-            .map_err(|e| {
-                log::error!("{:?}", e);
-                actix_web::error::ErrorUnauthorized("Internal Error")
-            })?;
-
-        debug!("{:?}", userinfo);
-        Ok(User {
-            username: userinfo
-                .get("preferred_username")
-                .map(|a| a.to_string())
-                .ok_or_else(|| {
-                    debug!("Could not access preferred_username");
-                    ErrorInternalServerError("Internal Error")
-                })?,
-            exp: Utc::now().timestamp() + 300,
-            userinfo,
+    pub fn is_rat(&self) -> bool {
+        self.userinfo.get("realm_access").map_or(false, |r| {
+            r.get("roles").map_or(false, |r| {
+                r.as_array().map_or(false, |r| r.contains(&"Rat".into()))
+            })
         })
     }
 }
@@ -345,35 +310,6 @@ impl FromRequest for AuthCookieJar {
     }
 }
 
-impl FromRequest for Rat {
-    type Error = actix_web::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
-
-    fn from_request(
-        req: &actix_web::HttpRequest,
-        _payload: &mut actix_web::dev::Payload,
-    ) -> Self::Future {
-        let req = req.clone();
-        Box::pin(async move {
-            let user = User::extract(&req).await?;
-
-            if user.userinfo.get("realm_access").map_or(false, |r| {
-                r.get("roles").map_or(false, |r| {
-                    r.as_array().map_or(false, |r| r.contains(&"Rat".into()))
-                })
-            }) {
-                Ok(Rat {
-                    username: user.username,
-                    exp: user.exp,
-                    userinfo: user.userinfo,
-                })
-            } else {
-                debug!("User is not a rat");
-                Err(actix_web::error::ErrorUnauthorized("User is not a rat"))
-            }
-        })
-    }
-}
 impl FromRequest for User {
     type Error = actix_web::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
