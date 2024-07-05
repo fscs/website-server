@@ -3,18 +3,19 @@ use crate::web::auth::AuthMiddle;
 use crate::{domain, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
-use actix_web::dev::{Payload, ServiceRequest, ServiceResponse};
+use actix_web::dev::{Payload, Service, ServiceRequest, ServiceResponse};
 use actix_web::error::{ErrorNotFound, ErrorUnauthorized};
 use actix_web::guard::GuardContext;
 use actix_web::http::header::{self, ContentDisposition, ContentType, DispositionType};
 use actix_web::http::StatusCode;
-use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
-use actix_web::web::Data;
+use actix_web::middleware::{self, ErrorHandlerResponse, ErrorHandlers};
+use actix_web::web::{Data, Redirect};
 use actix_web::{
     get, guard, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer,
     Responder,
 };
 use anyhow::Error;
+use futures_util::future::Either;
 use futures_util::FutureExt;
 use reqwest::Body;
 use serde::Serialize;
@@ -250,6 +251,9 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .handler(StatusCode::NOT_FOUND, not_found)
                     .handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized),
             )
+            // .wrap(middleware::NormalizePath::new(
+            //     middleware::TrailingSlash::Always,
+            // ))
             .wrap(AuthMiddle)
             .service(web::calendar::service("/api/calendar"))
             .service(topmanager::service("/api/topmanager"))
@@ -274,7 +278,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
 async fn serve_files(
     req: HttpRequest,
     user: Option<User>,
-) -> Result<fs::NamedFile, actix_web::Error> {
+) -> Result<HttpResponse, actix_web::Error> {
     let base_dir_raw = match user {
         Some(user) => match user.is_rat() {
             true => ARGS.private_content_dir.as_path(),
@@ -287,7 +291,26 @@ async fn serve_files(
         .canonicalize()
         .map_err(|_| ErrorNotFound("not found"))?;
 
-    let sub_path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
+    let mut sub_path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
+
+    if !(sub_path.starts_with("images")
+        || sub_path.starts_with("bootstrap")
+        || sub_path.starts_with("js")
+        || sub_path.starts_with("css")
+        || sub_path.starts_with("api")
+        || sub_path.starts_with("auth")
+        || sub_path.starts_with("pagefind"))
+    {
+        if !(sub_path.starts_with("de") || sub_path.starts_with("en")) {
+            sub_path = PathBuf::from("de").join(sub_path);
+            let response = HttpResponse::Found()
+                .append_header((header::LOCATION, sub_path.to_str().unwrap()))
+                .finish();
+
+            return Ok(response);
+        }
+    }
+
     let path = base_dir
         .join(sub_path)
         .canonicalize()
@@ -303,12 +326,7 @@ async fn serve_files(
         fs::NamedFile::open(path)?
     };
 
-    Ok(file
-        .use_last_modified(true)
-        .set_content_disposition(ContentDisposition {
-            disposition: DispositionType::Inline,
-            parameters: vec![],
-        }))
+    Ok(file.into_response(&req))
 }
 
 fn not_found<B>(
