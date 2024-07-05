@@ -251,9 +251,6 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .handler(StatusCode::NOT_FOUND, not_found)
                     .handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized),
             )
-            // .wrap(middleware::NormalizePath::new(
-            //     middleware::TrailingSlash::Always,
-            // ))
             .wrap(AuthMiddle)
             .service(web::calendar::service("/api/calendar"))
             .service(topmanager::service("/api/topmanager"))
@@ -292,24 +289,6 @@ async fn serve_files(
         .map_err(|_| ErrorNotFound("not found"))?;
 
     let mut sub_path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
-
-    if !(sub_path.starts_with("images")
-        || sub_path.starts_with("bootstrap")
-        || sub_path.starts_with("js")
-        || sub_path.starts_with("css")
-        || sub_path.starts_with("api")
-        || sub_path.starts_with("auth")
-        || sub_path.starts_with("pagefind"))
-    {
-        if !(sub_path.starts_with("de") || sub_path.starts_with("en")) {
-            sub_path = PathBuf::from("de").join(sub_path);
-            let response = HttpResponse::Found()
-                .append_header((header::LOCATION, sub_path.to_str().unwrap()))
-                .finish();
-
-            return Ok(response);
-        }
-    }
 
     let path = base_dir
         .join(sub_path)
