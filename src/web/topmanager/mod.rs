@@ -13,8 +13,10 @@ use actix_web::{
     web::{self, Data},
     HttpResponse, Responder, Scope,
 };
+use chrono::NaiveDateTime;
 use chrono::NaiveTime;
 use serde::{Deserialize, Serialize};
+use sitzungen::get_sitzung_by_date;
 use sqlx::prelude::FromRow;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
@@ -41,6 +43,8 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(delete_antrag)
         .service(get_sitzungen)
         .service(tops_by_sitzung)
+        .service(get_tops_by_date_with_anträge)
+        .service(get_sitzung_by_date)
         .service(anträge_by_top)
         .service(anträge_by_sitzung)
         .service(create_sitzung)
@@ -63,6 +67,11 @@ pub struct CreateTopParams {
     pub titel: String,
     pub inhalt: Option<serde_json::Value>,
     pub top_type: String,
+}
+
+#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
+pub struct GetTopsByDateParams {
+    pub datum: NaiveDateTime,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
@@ -168,42 +177,45 @@ async fn get_current_tops_with_anträge(db: Data<DatabasePool>) -> impl Responde
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/tops_today/",
+    path = "/api/topmanager/tops_by_date/",
     responses(
         (status = 201, description = "Created", body = Vec<TopWithAnträge>),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[get("/tops_today/")]
-async fn get_tops_today_with_anträge(db: Data<DatabasePool>) -> impl Responder {
+#[get("/tops_by_date/")]
+async fn get_tops_by_date_with_anträge(
+    db: Data<DatabasePool>,
+    params: web::Json<GetTopsByDateParams>,
+) -> impl Responder {
     let tops_with_anträge: Option<anyhow::Result<Vec<TopWithAnträge>>> = db
-        .transaction(move |mut transaction| async move {
-            let now = chrono::Utc::now();
-            let Some(next_sitzung) = transaction
-                .find_sitzung_after(now.date_naive().and_time(NaiveTime::from_hms(0, 0, 0)))
-                .await?
-            else {
-                return Ok((None, transaction));
-            };
-
-            let tops = transaction.tops_by_sitzung(next_sitzung.id).await?;
-
-            let mut tops_with_anträge = vec![];
-
-            for top in tops {
-                let anträge = transaction.anträge_by_top(top.id).await?;
-                let top_with_anträge = TopWithAnträge {
-                    id: top.id,
-                    weight: top.weight,
-                    name: top.name,
-                    anträge,
-                    inhalt: top.inhalt,
-                    top_type: top.top_type,
+        .transaction(move |mut transaction| {
+            let params = params.clone();
+            async move {
+                let now = chrono::Utc::now();
+                let Some(next_sitzung) = transaction.find_sitzung_after(params.datum).await? else {
+                    return Ok((None, transaction));
                 };
-                tops_with_anträge.push(top_with_anträge);
-            }
 
-            Ok((Some(tops_with_anträge), transaction))
+                let tops = transaction.tops_by_sitzung(next_sitzung.id).await?;
+
+                let mut tops_with_anträge = vec![];
+
+                for top in tops {
+                    let anträge = transaction.anträge_by_top(top.id).await?;
+                    let top_with_anträge = TopWithAnträge {
+                        id: top.id,
+                        weight: top.weight,
+                        name: top.name,
+                        anträge,
+                        inhalt: top.inhalt,
+                        top_type: top.top_type,
+                    };
+                    tops_with_anträge.push(top_with_anträge);
+                }
+
+                Ok((Some(tops_with_anträge), transaction))
+            }
         })
         .await
         .transpose();

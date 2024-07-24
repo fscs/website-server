@@ -3,7 +3,7 @@ use crate::domain::{
     PersonRepo, PersonRoleMapping, Sitzung, Top, TopManagerRepo,
 };
 
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgConnection, PgPool, Postgres, Transaction};
@@ -299,7 +299,10 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_sitzung_today(&mut self) -> anyhow::Result<Option<Sitzung>> {
+    async fn get_sitzung_by_date(
+        &mut self,
+        date: NaiveDateTime,
+    ) -> anyhow::Result<Option<Sitzung>> {
         let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
 
         let offset_int = now.date_naive() - chrono::Utc::now().date_naive();

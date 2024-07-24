@@ -17,6 +17,11 @@ pub struct CreateSitzungParams {
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
+pub struct GetSitzungByDateParams {
+    pub datum: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct UpdateSitzungParams {
     pub id: Uuid,
     pub datum: chrono::NaiveDateTime,
@@ -236,15 +241,18 @@ async fn get_next_sitzung(mut transaction: DatabaseTransaction<'_>) -> impl Resp
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/sitzung_today/",
+    path = "/api/topmanager/sitzung_by_date/",
     responses(
         (status = 200, description = "Success", body = Sitzung),
         (status = 404, description = "Not Found"),
     )
 )]
-#[get("/sitzung_today/")]
-async fn get_sitzung_today(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
-    let result = transaction.get_sitzung_today().await;
+#[get("/sitzung_by_date/")]
+async fn get_sitzung_by_date(
+    mut transaction: DatabaseTransaction<'_>,
+    params: web::Json<GetSitzungByDateParams>,
+) -> impl Responder {
+    let result = transaction.get_sitzung_by_date(params.datum).await;
 
     transaction.rest_ok(result).await
 }

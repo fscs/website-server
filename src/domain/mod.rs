@@ -129,7 +129,8 @@ pub trait TopManagerRepo {
 
     async fn get_next_sitzung(&mut self) -> anyhow::Result<Option<Sitzung>>;
 
-    async fn get_sitzung_today(&mut self) -> anyhow::Result<Option<Sitzung>>;
+    async fn get_sitzung_by_date(&mut self, date: NaiveDateTime)
+        -> anyhow::Result<Option<Sitzung>>;
 
     async fn update_sitzung(
         &mut self,
