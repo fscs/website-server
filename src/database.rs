@@ -299,6 +299,20 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
+    async fn get_sitzung_today(&mut self) -> anyhow::Result<Option<Sitzung>> {
+        let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
+
+        let offset_int = now.date_naive() - chrono::Utc::now().date_naive();
+
+        Ok(sqlx::query_as!(
+            Sitzung,
+            "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC",
+            now.naive_utc() + offset_int
+        )
+        .fetch_optional(&mut **self)
+        .await?)
+    }
+
     async fn update_sitzung(
         &mut self,
         id: Uuid,

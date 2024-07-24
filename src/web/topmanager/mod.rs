@@ -13,6 +13,7 @@ use actix_web::{
     web::{self, Data},
     HttpResponse, Responder, Scope,
 };
+use chrono::NaiveTime;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use utoipa::IntoParams;
@@ -135,6 +136,53 @@ async fn get_current_tops_with_anträge(db: Data<DatabasePool>) -> impl Responde
         .transaction(move |mut transaction| async move {
             let now = chrono::Utc::now();
             let Some(next_sitzung) = transaction.find_sitzung_after(now.naive_utc()).await? else {
+                return Ok((None, transaction));
+            };
+
+            let tops = transaction.tops_by_sitzung(next_sitzung.id).await?;
+
+            let mut tops_with_anträge = vec![];
+
+            for top in tops {
+                let anträge = transaction.anträge_by_top(top.id).await?;
+                let top_with_anträge = TopWithAnträge {
+                    id: top.id,
+                    weight: top.weight,
+                    name: top.name,
+                    anträge,
+                    inhalt: top.inhalt,
+                    top_type: top.top_type,
+                };
+                tops_with_anträge.push(top_with_anträge);
+            }
+
+            Ok((Some(tops_with_anträge), transaction))
+        })
+        .await
+        .transpose();
+
+    match tops_with_anträge {
+        Some(tops_with_anträge) => RestStatus::ok_from_result(tops_with_anträge),
+        None => RestStatus::NotFound,
+    }
+}
+
+#[utoipa::path(
+    path = "/api/topmanager/tops_today/",
+    responses(
+        (status = 201, description = "Created", body = Vec<TopWithAnträge>),
+        (status = 400, description = "Bad Request"),
+    )
+)]
+#[get("/tops_today/")]
+async fn get_tops_today_with_anträge(db: Data<DatabasePool>) -> impl Responder {
+    let tops_with_anträge: Option<anyhow::Result<Vec<TopWithAnträge>>> = db
+        .transaction(move |mut transaction| async move {
+            let now = chrono::Utc::now();
+            let Some(next_sitzung) = transaction
+                .find_sitzung_after(now.date_naive().and_time(NaiveTime::from_hms(0, 0, 0)))
+                .await?
+            else {
                 return Ok((None, transaction));
             };
 

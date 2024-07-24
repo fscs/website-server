@@ -234,3 +234,17 @@ async fn get_next_sitzung(mut transaction: DatabaseTransaction<'_>) -> impl Resp
 
     transaction.rest_ok(result).await
 }
+
+#[utoipa::path(
+    path = "/api/topmanager/sitzung_today/",
+    responses(
+        (status = 200, description = "Success", body = Sitzung),
+        (status = 404, description = "Not Found"),
+    )
+)]
+#[get("/sitzung_today/")]
+async fn get_sitzung_today(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+    let result = transaction.get_sitzung_today().await;
+
+    transaction.rest_ok(result).await
+}
