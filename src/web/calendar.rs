@@ -102,10 +102,10 @@ async fn request_cal(url: String) -> anyhow::Result<Vec<CalendarEvent>> {
                 summary: event.get_summary().map(|m| m.to_string()),
                 location: event
                     .get_location()
-                    .map(|m| m.to_string().replace("\\", "")),
+                    .map(|m| m.to_string().replace('\\', "")),
                 description: event.get_description().map(|m| m.to_string()),
-                start: event.get_start().map(|d| dpt_to_date_time(d)).flatten(),
-                end: event.get_start().map(|d| dpt_to_date_time(d)).flatten(),
+                start: event.get_start().and_then(dpt_to_date_time),
+                end: event.get_start().and_then(dpt_to_date_time),
             })
         })
         .collect::<Vec<_>>();

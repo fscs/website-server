@@ -46,9 +46,9 @@ impl RestStatus {
         match result {
             Ok(antrag) => match serde_json::to_value(antrag) {
                 Ok(value) => RestStatus::Created(value),
-                Err(e) => RestStatus::Error(anyhow::Error::from(e)),
+                Err(e) => RestStatus::Error(e.into()),
             },
-            Err(e) => RestStatus::Error(anyhow::Error::from(e)),
+            Err(e) => RestStatus::Error(e),
         }
     }
 
@@ -56,9 +56,9 @@ impl RestStatus {
         match result {
             Ok(antrag) => match serde_json::to_value(antrag) {
                 Ok(value) => RestStatus::Ok(value),
-                Err(e) => RestStatus::Error(anyhow::Error::from(e)),
+                Err(e) => RestStatus::Error(e.into()),
             },
-            Err(e) => RestStatus::Error(anyhow::Error::from(e)),
+            Err(e) => RestStatus::Error(e),
         }
     }
 
@@ -66,10 +66,10 @@ impl RestStatus {
         match result {
             Ok(Some(antrag)) => match serde_json::to_value(antrag) {
                 Ok(value) => RestStatus::Ok(value),
-                Err(e) => RestStatus::Error(anyhow::Error::from(e)),
+                Err(e) => RestStatus::Error(e.into()),
             },
             Ok(None) => RestStatus::NotFound,
-            Err(e) => RestStatus::Error(anyhow::Error::from(e)),
+            Err(e) => RestStatus::Error(e),
         }
     }
 }
@@ -296,7 +296,7 @@ async fn serve_files(
         .map_err(|_| ErrorNotFound("not found"))?;
 
     if !path.exists() || !path.starts_with(base_dir.as_path()) {
-        return Err(ErrorNotFound("not found").into());
+        return Err(ErrorNotFound("not found"));
     }
 
     let file = if path.is_dir() {

@@ -184,7 +184,7 @@ async fn refresh_authentication(
     jar.set_refresh_token(token.refresh_token().map_or("/", |a| a.secret()));
     jar.set_access_token(token.access_token().secret());
 
-    let user = User::from_token(token.access_token().secret(), &oauth_client)
+    let user = User::from_token(token.access_token().secret(), oauth_client)
         .await
         .map_err(|e| anyhow!("{:?}", e))?;
     jar.set_user_info(&user);
@@ -198,8 +198,8 @@ async fn refresh_authentication(
 
     let cookie_header = HeaderValue::from_str(
         &(cookie_header_str
-            .split(";")
-            .filter_map(|c| match c.split_once("=") {
+            .split(';')
+            .filter_map(|c| match c.split_once('=') {
                 Some((c, _)) if c.contains("refresh_token") => None,
                 Some((c, _)) if c.contains("access_token") => None,
                 Some((c, _)) if c.contains("user") => None,
@@ -223,7 +223,7 @@ async fn refresh_authentication(
     )?;
 
     req.headers_mut().insert(header::COOKIE, cookie_header);
-    let _ = req.extensions_mut().clear();
+    req.extensions_mut().clear();
 
     Ok(())
 }
@@ -267,7 +267,7 @@ impl AuthCookieJar {
         self.jar
             .signed(&self.key)
             .get("user")
-            .map_or(None, |c| serde_json::from_str::<User>(&c.value()).ok())
+            .and_then(|c| serde_json::from_str::<User>(c.value()).ok())
             .filter(|u| u.exp > Utc::now().timestamp())
     }
 
@@ -278,8 +278,8 @@ impl AuthCookieJar {
         self.jar.signed_mut(&self.key).add(cookie);
     }
 
-    fn delta<'a>(&'a self) -> impl Iterator<Item = &Cookie<'static>> {
-        self.jar.delta().into_iter()
+    fn delta(&self) -> impl Iterator<Item = &Cookie<'static>> {
+        self.jar.delta()
     }
 }
 
@@ -475,8 +475,8 @@ async fn callback(
         None => "",
     };
 
-    auth_jar.set_access_token(&access_token);
-    auth_jar.set_refresh_token(&refresh_token);
+    auth_jar.set_access_token(access_token);
+    auth_jar.set_refresh_token(refresh_token);
 
     let Ok(user) = User::from_token(access_token, &oauth_client).await else {
         return HttpResponse::InternalServerError().body("Could not access user info");
