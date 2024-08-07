@@ -94,7 +94,7 @@ async fn get_abmeldungen_next_sitzungen(
         (status = 400, description = "Bad Request"),
     )
 )]
-#[get("/between")]
+#[get("/between/")]
 async fn get_abmeldungen_between(
     mut transaction: DatabaseTransaction<'_>,
     params: web::Json<GetAbmeldungBetweenParams>,
