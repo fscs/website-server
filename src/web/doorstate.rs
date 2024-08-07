@@ -1,6 +1,6 @@
 use actix_web::{
     get, put,
-    web::{self, Data},
+    web,
     Responder, Scope,
 };
 use chrono::Utc;

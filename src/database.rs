@@ -4,7 +4,7 @@ use crate::domain::{
 };
 
 use anyhow::Result;
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{NaiveDate, NaiveDateTime};
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgConnection, PgPool, Postgres, Transaction};

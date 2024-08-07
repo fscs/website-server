@@ -3,35 +3,29 @@ use crate::web::auth::AuthMiddle;
 use crate::{domain, web, ARGS};
 use actix_files as fs;
 use actix_web::body::BoxBody;
-use actix_web::dev::{Payload, Service, ServiceRequest, ServiceResponse};
-use actix_web::error::{ErrorNotFound, ErrorUnauthorized};
-use actix_web::guard::GuardContext;
-use actix_web::http::header::{self, ContentDisposition, ContentType, DispositionType};
+use actix_web::dev::{Payload, ServiceResponse};
+use actix_web::error::ErrorNotFound;
+use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
-use actix_web::middleware::{self, ErrorHandlerResponse, ErrorHandlers};
-use actix_web::web::{Data, Redirect};
+use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
+use actix_web::web::Data;
 use actix_web::{
-    get, guard, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer,
+    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer,
     Responder,
 };
 use anyhow::Error;
-use futures_util::future::Either;
-use futures_util::FutureExt;
-use reqwest::Body;
 use serde::Serialize;
 
 use std::fs::File;
 use std::future::Future;
 use std::io::Read;
-use std::path::PathBuf;
 use std::pin::Pin;
-use std::str::FromStr;
 
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-use self::auth::{oauth_client, OauthClient, User};
-use utoipa_swagger_ui::{oauth, SwaggerUi};
+use self::auth::{oauth_client,  User};
+use utoipa_swagger_ui::SwaggerUi;
 
 pub(crate) mod abmeldungen;
 pub(crate) mod auth;
@@ -294,7 +288,7 @@ async fn serve_files(
         .canonicalize()
         .map_err(|_| ErrorNotFound("not found"))?;
 
-    let mut sub_path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
+    let sub_path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
 
     let path = base_dir
         .join(sub_path)

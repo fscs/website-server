@@ -14,7 +14,6 @@ use actix_web::{
     HttpResponse, Responder, Scope,
 };
 use chrono::NaiveDateTime;
-use chrono::NaiveTime;
 use serde::{Deserialize, Serialize};
 use sitzungen::get_sitzung_by_date;
 use sqlx::prelude::FromRow;
@@ -193,7 +192,6 @@ async fn get_tops_by_date_with_anträge(
         .transaction(move |mut transaction| {
             let params = params.clone();
             async move {
-                let now = chrono::Utc::now();
                 let Some(next_sitzung) = transaction.find_sitzung_after(params.datum).await? else {
                     return Ok((None, transaction));
                 };

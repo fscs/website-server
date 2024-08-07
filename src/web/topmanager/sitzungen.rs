@@ -1,9 +1,7 @@
 use crate::database::DatabaseTransaction;
 use crate::domain::TopManagerRepo;
 use crate::web::auth::User;
-use crate::web::topmanager::TopWithAnträge;
-use crate::web::topmanager::{CreateTopParams, RestStatus};
-use actix_web::web::Data;
+use crate::web::topmanager::CreateTopParams;
 use actix_web::{delete, get, patch, put, web, Responder};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
