@@ -3,6 +3,7 @@ use crate::domain::{
     PersonRepo, PersonRoleMapping, Sitzung, Top, TopManagerRepo,
 };
 
+use anyhow::Result;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
@@ -37,19 +38,19 @@ impl<'a> Deref for DatabaseTransaction<'a> {
 }
 
 impl DatabaseTransaction<'_> {
-    pub async fn commit(self) -> anyhow::Result<()> {
+    pub async fn commit(self) -> Result<()> {
         self.transaction.commit().await?;
         Ok(())
     }
 
-    pub async fn rollback(self) -> anyhow::Result<()> {
+    pub async fn rollback(self) -> Result<()> {
         self.transaction.rollback().await?;
         Ok(())
     }
 }
 
 impl DatabasePool {
-    pub async fn new(url: &str) -> anyhow::Result<Self> {
+    pub async fn new(url: &str) -> Result<Self> {
         let pool = PgPoolOptions::new().max_connections(5).connect(url).await?;
 
         Ok(DatabasePool { pool })
@@ -59,7 +60,7 @@ impl DatabasePool {
         &self.pool
     }
 
-    pub async fn start_transaction(&self) -> anyhow::Result<DatabaseTransaction<'static>> {
+    pub async fn start_transaction(&self) -> Result<DatabaseTransaction<'static>> {
         Ok(DatabaseTransaction {
             transaction: self.pool.begin().await?,
         })
@@ -68,12 +69,12 @@ impl DatabasePool {
     pub async fn transaction<
         'a,
         T: 'static,
-        Fut: Future<Output = anyhow::Result<(T, DatabaseTransaction<'a>)>>,
+        Fut: Future<Output = Result<(T, DatabaseTransaction<'a>)>>,
         F: Fn(DatabaseTransaction<'a>) -> Fut + 'static,
     >(
         &self,
         fun: F,
-    ) -> anyhow::Result<T> {
+    ) -> Result<T> {
         let transaction = self.start_transaction().await?;
         let (result, transaction) = fun(transaction).await?;
         transaction.commit().await?;
@@ -87,7 +88,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         date_time: NaiveDateTime,
         name: &str,
         location: &str,
-    ) -> anyhow::Result<Sitzung> {
+    ) -> Result<Sitzung> {
         Ok(sqlx::query_as!(
             Sitzung,
             "INSERT INTO sitzungen (datum, name, location) VALUES ($1, $2, $3) RETURNING *",
@@ -99,7 +100,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person> {
+    async fn create_person(&mut self, name: &str) -> Result<Person> {
         Ok(sqlx::query_as!(
             Person,
             "INSERT INTO person (name) VALUES ($1) ON CONFLICT(name) DO UPDATE SET name = $1 RETURNING *",
@@ -109,11 +110,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn create_antragssteller(
-        &mut self,
-        antrag_id: Uuid,
-        person_id: Uuid,
-    ) -> anyhow::Result<()> {
+    async fn create_antragssteller(&mut self, antrag_id: Uuid, person_id: Uuid) -> Result<()> {
         sqlx::query_as!(
             Antragssteller,
             "INSERT INTO antragsstellende (antrags_id, person_id) VALUES ($1, $2)",
@@ -125,7 +122,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         Ok(())
     }
 
-    async fn save_sitzung(&mut self, sitzung: Sitzung) -> anyhow::Result<Sitzung> {
+    async fn save_sitzung(&mut self, sitzung: Sitzung) -> Result<Sitzung> {
         Ok(sqlx::query_as!(
             Sitzung,
             "UPDATE sitzungen SET datum = $1, name = $2, location = $3 WHERE id = $4 RETURNING *",
@@ -138,7 +135,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn find_sitzung_by_id(&mut self, uuid: Uuid) -> anyhow::Result<Option<Sitzung>> {
+    async fn find_sitzung_by_id(&mut self, uuid: Uuid) -> Result<Option<Sitzung>> {
         Ok(
             sqlx::query_as!(Sitzung, "SELECT * FROM sitzungen WHERE id = $1", uuid)
                 .fetch_optional(&mut **self)
@@ -146,10 +143,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         )
     }
 
-    async fn find_sitzung_after(
-        &mut self,
-        date_time: NaiveDateTime,
-    ) -> anyhow::Result<Option<Sitzung>> {
+    async fn find_sitzung_after(&mut self, date_time: NaiveDateTime) -> Result<Option<Sitzung>> {
         let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
 
         let offset_int = now.time() - chrono::Utc::now().time();
@@ -162,7 +156,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_sitzungen(&mut self) -> anyhow::Result<Vec<Sitzung>> {
+    async fn get_sitzungen(&mut self) -> Result<Vec<Sitzung>> {
         Ok(sqlx::query_as!(Sitzung, "SELECT * FROM sitzungen")
             .fetch_all(&mut **self)
             .await?)
@@ -173,7 +167,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         titel: &str,
         antragstext: &str,
         begründung: &str,
-    ) -> anyhow::Result<Antrag> {
+    ) -> Result<Antrag> {
         Ok(sqlx::query_as!(
             Antrag,
             "INSERT INTO anträge (titel, antragstext, begründung) VALUES ($1, $2, $3) RETURNING *",
@@ -185,7 +179,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn find_antrag_by_id(&mut self, uuid: Uuid) -> anyhow::Result<Antrag> {
+    async fn find_antrag_by_id(&mut self, uuid: Uuid) -> Result<Antrag> {
         Ok(
             sqlx::query_as!(Antrag, "SELECT * FROM anträge WHERE id = $1", uuid)
                 .fetch_one(&mut **self)
@@ -193,13 +187,13 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         )
     }
 
-    async fn get_anträge(&mut self) -> anyhow::Result<Vec<Antrag>> {
+    async fn get_anträge(&mut self) -> Result<Vec<Antrag>> {
         Ok(sqlx::query_as!(Antrag, "SELECT * FROM anträge")
             .fetch_all(&mut **self)
             .await?)
     }
 
-    async fn delete_antrag(&mut self, uuid: Uuid) -> anyhow::Result<()> {
+    async fn delete_antrag(&mut self, uuid: Uuid) -> Result<()> {
         sqlx::query!("DELETE FROM antragstop WHERE antrag_id = $1", uuid)
             .execute(&mut **self)
             .await?;
@@ -214,7 +208,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         Ok(())
     }
 
-    async fn anträge_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Antrag>> {
+    async fn anträge_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Antrag>> {
         Ok(sqlx::query_as!(
             Antrag,
             "SELECT anträge.id, anträge.antragstext, anträge.begründung, anträge.titel FROM anträge
@@ -232,7 +226,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         sitzung_id: Uuid,
         top_type: &str,
         inhalt: &Option<Value>,
-    ) -> anyhow::Result<Top> {
+    ) -> Result<Top> {
         let weight = sqlx::query!(
             "SELECT COUNT(*) FROM tops WHERE sitzung_id = $1 and top_type = $2",
             sitzung_id,
@@ -256,7 +250,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn add_antrag_to_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> anyhow::Result<()> {
+    async fn add_antrag_to_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()> {
         sqlx::query!(
             "INSERT INTO antragstop (antrag_id, top_id) VALUES ($1, $2)",
             antrag_id,
@@ -267,7 +261,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         Ok(())
     }
 
-    async fn anträge_by_top(&mut self, top_id: Uuid) -> anyhow::Result<Vec<Antrag>> {
+    async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>> {
         Ok(sqlx::query_as!(Antrag,
             "SELECT anträge.id, anträge.antragstext, anträge.begründung, anträge.titel FROM anträge
                   JOIN antragstop ON anträge.id = antragstop.antrag_id WHERE antragstop.top_id = $1", top_id)
@@ -275,7 +269,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
             .await?)
     }
 
-    async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> anyhow::Result<Vec<Top>> {
+    async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Top>> {
         Ok(sqlx::query_as!(
             Top,
             "SELECT id, name, inhalt, weight, top_type FROM tops WHERE sitzung_id = $1 ORDER BY weight",
@@ -285,7 +279,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_next_sitzung(&mut self) -> anyhow::Result<Option<Sitzung>> {
+    async fn get_next_sitzung(&mut self) -> Result<Option<Sitzung>> {
         let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
 
         let offset_int = now.time() - chrono::Utc::now().time();
@@ -299,10 +293,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_sitzung_by_date(
-        &mut self,
-        date: NaiveDateTime,
-    ) -> anyhow::Result<Option<Sitzung>> {
+    async fn get_sitzung_by_date(&mut self, date: NaiveDateTime) -> Result<Option<Sitzung>> {
         let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
 
         let offset_int = now.date_naive() - chrono::Utc::now().date_naive();
@@ -322,7 +313,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         datum: NaiveDateTime,
         name: &str,
         location: &str,
-    ) -> anyhow::Result<Sitzung> {
+    ) -> Result<Sitzung> {
         Ok(sqlx::query_as!(
             Sitzung,
             "UPDATE sitzungen SET datum = $1, name = $2, location = $3 WHERE id = $4 RETURNING *",
@@ -335,7 +326,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn delete_sitzung(&mut self, id: Uuid) -> anyhow::Result<()> {
+    async fn delete_sitzung(&mut self, id: Uuid) -> Result<()> {
         sqlx::query!("DELETE FROM tops WHERE sitzung_id = $1", id)
             .execute(&mut **self)
             .await?;
@@ -352,7 +343,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         titel: &str,
         top_type: &str,
         inhalt: &Option<Value>,
-    ) -> anyhow::Result<Top> {
+    ) -> Result<Top> {
         Ok(sqlx::query_as!(
             Top,
             "UPDATE tops SET name = $1, inhalt = $2, sitzung_id = $3, top_type = $4 WHERE id = $5 RETURNING name, inhalt, id, weight, top_type",
@@ -366,7 +357,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn delete_top(&mut self, id: Uuid) -> anyhow::Result<()> {
+    async fn delete_top(&mut self, id: Uuid) -> Result<()> {
         sqlx::query!("DELETE FROM antragstop WHERE top_id = $1", id)
             .execute(&mut **self)
             .await?;
@@ -380,7 +371,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         &mut self,
         antrag_id: Uuid,
         top_id: Uuid,
-    ) -> anyhow::Result<AntragTopMapping> {
+    ) -> Result<AntragTopMapping> {
         Ok(sqlx::query_as!(
             crate::domain::AntragTopMapping,
             "INSERT INTO antragstop (antrag_id, top_id) VALUES ($1, $2) RETURNING *",
@@ -391,11 +382,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn delete_antrag_top_mapping(
-        &mut self,
-        antrag_id: Uuid,
-        top_id: Uuid,
-    ) -> anyhow::Result<()> {
+    async fn delete_antrag_top_mapping(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()> {
         sqlx::query!(
             "DELETE FROM antragstop WHERE antrag_id = $1 AND top_id = $2",
             antrag_id,
@@ -406,7 +393,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         Ok(())
     }
 
-    async fn get_sitzung(&mut self, id: Uuid) -> anyhow::Result<Option<Sitzung>> {
+    async fn get_sitzung(&mut self, id: Uuid) -> Result<Option<Sitzung>> {
         Ok(
             sqlx::query_as!(Sitzung, "SELECT * FROM sitzungen WHERE id = $1", id)
                 .fetch_optional(&mut **self)
@@ -416,11 +403,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
 }
 
 impl DoorStateRepo for DatabaseTransaction<'_> {
-    async fn add_doorstate(
-        &mut self,
-        time: NaiveDateTime,
-        is_open: bool,
-    ) -> anyhow::Result<Doorstate> {
+    async fn add_doorstate(&mut self, time: NaiveDateTime, is_open: bool) -> Result<Doorstate> {
         Ok(sqlx::query_as!(
             Doorstate,
             "INSERT INTO doorstate (time, is_open) VALUES ($1, $2) RETURNING *",
@@ -431,7 +414,7 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_doorstate(&mut self, time: NaiveDateTime) -> anyhow::Result<Option<Doorstate>> {
+    async fn get_doorstate(&mut self, time: NaiveDateTime) -> Result<Option<Doorstate>> {
         Ok(sqlx::query_as!(
             Doorstate,
             "SELECT * FROM doorstate WHERE time < $1 ORDER BY time DESC LIMIT 1",
@@ -441,7 +424,7 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_doorstate_history(&mut self) -> anyhow::Result<Option<Vec<Doorstate>>> {
+    async fn get_doorstate_history(&mut self) -> Result<Option<Vec<Doorstate>>> {
         Ok(Some(
             sqlx::query_as!(Doorstate, "SELECT * FROM doorstate")
                 .fetch_all(&mut **self)
@@ -451,7 +434,7 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
 }
 
 impl PersonRepo for DatabaseTransaction<'_> {
-    async fn patch_person(&mut self, id: Uuid, name: &str) -> anyhow::Result<Person> {
+    async fn patch_person(&mut self, id: Uuid, name: &str) -> Result<Person> {
         Ok(sqlx::query_as!(
             Person,
             "UPDATE person SET name = $1 WHERE id = $2 RETURNING *",
@@ -467,7 +450,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
         rolle: &str,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
-    ) -> anyhow::Result<PersonRoleMapping> {
+    ) -> Result<PersonRoleMapping> {
         Ok(sqlx::query_as!(
             PersonRoleMapping,
             "INSERT INTO rollen (person_id, rolle, anfangsdatum, ablaufdatum) VALUES ($1, $2, $3, $4) RETURNING *",
@@ -486,7 +469,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
         rolle: &str,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
-    ) -> anyhow::Result<PersonRoleMapping> {
+    ) -> Result<PersonRoleMapping> {
         Ok(sqlx::query_as!(
             PersonRoleMapping,
             "UPDATE rollen SET rolle = $1, anfangsdatum = $2, ablaufdatum = $3 WHERE person_id = $4 RETURNING *",
@@ -499,14 +482,14 @@ impl PersonRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn delete_person_role_mapping(&mut self, person_id: Uuid) -> anyhow::Result<()> {
+    async fn delete_person_role_mapping(&mut self, person_id: Uuid) -> Result<()> {
         sqlx::query!("DELETE FROM rollen WHERE person_id = $1", person_id,)
             .execute(&mut **self)
             .await?;
         Ok(())
     }
 
-    async fn create_person(&mut self, name: &str) -> anyhow::Result<Person> {
+    async fn create_person(&mut self, name: &str) -> Result<Person> {
         Ok(sqlx::query_as!(
             Person,
             "INSERT INTO person (name) VALUES ($1) ON CONFLICT(name) DO UPDATE SET name = $1 RETURNING *",
@@ -516,7 +499,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_persons(&mut self) -> anyhow::Result<Vec<Person>> {
+    async fn get_persons(&mut self) -> Result<Vec<Person>> {
         Ok(sqlx::query_as!(Person, "SELECT * FROM person")
             .fetch_all(&mut **self)
             .await?)
@@ -526,7 +509,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
         rolle: &str,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
-    ) -> anyhow::Result<Vec<Person>> {
+    ) -> Result<Vec<Person>> {
         Ok(sqlx::query_as!(
             Person,
             "SELECT id,name FROM person
@@ -546,7 +529,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
         rolle: &str,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
-    ) -> anyhow::Result<PersonRoleMapping> {
+    ) -> Result<PersonRoleMapping> {
         Ok(sqlx::query_as!(
             PersonRoleMapping,
             "UPDATE rollen SET rolle = $1, anfangsdatum = $2, ablaufdatum = $3 WHERE person_id = $4 RETURNING *",
@@ -559,7 +542,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn delete_person(&mut self, id: Uuid) -> anyhow::Result<()> {
+    async fn delete_person(&mut self, id: Uuid) -> Result<()> {
         sqlx::query!("DELETE FROM person WHERE id = $1", id)
             .execute(&mut **self)
             .await?;
@@ -573,7 +556,7 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
         person_id: Uuid,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
-    ) -> anyhow::Result<Abmeldung> {
+    ) -> Result<Abmeldung> {
         Ok(sqlx::query_as!(
             Abmeldung,
             "INSERT INTO abmeldungen (person_id, anfangsdatum, ablaufdatum) VALUES ($1, $2, $3) RETURNING *",
@@ -585,7 +568,7 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_abmeldungen(&mut self) -> anyhow::Result<Vec<Abmeldung>> {
+    async fn get_abmeldungen(&mut self) -> Result<Vec<Abmeldung>> {
         Ok(sqlx::query_as!(Abmeldung, "SELECT * FROM abmeldungen")
             .fetch_all(&mut **self)
             .await?)
@@ -596,7 +579,7 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
         person_id: Uuid,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
-    ) -> anyhow::Result<Abmeldung> {
+    ) -> Result<Abmeldung> {
         Ok(sqlx::query_as!(
             Abmeldung,
             "UPDATE abmeldungen SET anfangsdatum = $1, ablaufdatum = $2 WHERE person_id = $3 RETURNING *",
@@ -613,7 +596,7 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
         person_id: Uuid,
         anfangsdatum: NaiveDate,
         ablaufdatum: NaiveDate,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         sqlx::query!(
             "DELETE FROM abmeldungen WHERE person_id = $1 AND anfangsdatum = $2 AND ablaufdatum = $3",
             person_id,
@@ -625,24 +608,20 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
         Ok(())
     }
 
-    async fn get_abmeldungen_next_sitzung(&mut self) -> anyhow::Result<Vec<Abmeldung>> {
-        let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
-
-        let offset_int = now.time() - chrono::Utc::now().time();
-        let sitzung = sqlx::query_as!(
-            Sitzung,
-            "SELECT * FROM sitzungen WHERE datum > $1 ORDER BY datum ASC LIMIT 1",
-            now.naive_utc() + offset_int
-        )
-        .fetch_one(&mut **self)
-        .await?;
-        Ok(sqlx::query_as!(
+    async fn get_abmeldungen_between(
+        &mut self,
+        start: &NaiveDate,
+        end: &NaiveDate,
+    ) -> Result<Vec<Abmeldung>> {
+        let result = sqlx::query_as!(
             Abmeldung,
             "SELECT * FROM abmeldungen WHERE anfangsdatum <= $1 AND ablaufdatum >= $2",
-            sitzung.datum.date(),
-            sitzung.datum.date()
+            start,
+            end,
         )
         .fetch_all(&mut **self)
-        .await?)
+        .await?;
+
+        return Ok(result);
     }
 }

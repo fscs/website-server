@@ -242,6 +242,7 @@ async fn get_next_sitzung(mut transaction: DatabaseTransaction<'_>) -> impl Resp
 
 #[utoipa::path(
     path = "/api/topmanager/sitzung_by_date/",
+    request_body = GetSitzungByDateParams,
     responses(
         (status = 200, description = "Success", body = Sitzung),
         (status = 404, description = "Not Found"),
