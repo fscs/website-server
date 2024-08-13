@@ -1,7 +1,7 @@
-use crate::database::DatabaseTransaction;
 use crate::domain::TopManagerRepo;
 use crate::web::auth::User;
 use crate::web::topmanager::CreateTopParams;
+use crate::{database::DatabaseTransaction, domain::get_tops_with_anträge};
 use actix_web::{delete, get, patch, put, web, Responder};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
@@ -219,7 +219,7 @@ async fn tops_by_sitzung(
     mut transaction: DatabaseTransaction<'_>,
     id: web::Path<Uuid>,
 ) -> impl Responder {
-    let tops = transaction.tops_by_sitzung(id.clone()).await;
+    let tops = get_tops_with_anträge(id.clone(), &mut transaction).await;
 
     transaction.rest_ok(tops).await
 }

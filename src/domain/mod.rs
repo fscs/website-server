@@ -7,6 +7,8 @@ use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
+use crate::{database::DatabaseTransaction, web::topmanager::TopWithAnträge};
+
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Sitzung {
     pub id: Uuid,
@@ -82,11 +84,7 @@ pub trait TopManagerRepo {
 
     async fn create_person(&mut self, name: &str) -> Result<Person>;
 
-    async fn create_antragssteller(
-        &mut self,
-        antrag_id: Uuid,
-        person_id: Uuid,
-    ) -> Result<()>;
+    async fn create_antragssteller(&mut self, antrag_id: Uuid, person_id: Uuid) -> Result<()>;
 
     async fn save_sitzung(&mut self, sitzung: Sitzung) -> Result<Sitzung>;
 
@@ -130,8 +128,7 @@ pub trait TopManagerRepo {
 
     async fn get_next_sitzung(&mut self) -> Result<Option<Sitzung>>;
 
-    async fn get_sitzung_by_date(&mut self, date: NaiveDateTime)
-        -> Result<Option<Sitzung>>;
+    async fn get_sitzung_by_date(&mut self, date: NaiveDateTime) -> Result<Option<Sitzung>>;
 
     async fn update_sitzung(
         &mut self,
@@ -160,11 +157,7 @@ pub trait TopManagerRepo {
         top_id: Uuid,
     ) -> Result<AntragTopMapping>;
 
-    async fn delete_antrag_top_mapping(
-        &mut self,
-        antrag_id: Uuid,
-        top_id: Uuid,
-    ) -> Result<()>;
+    async fn delete_antrag_top_mapping(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()>;
 
     async fn get_sitzung(&mut self, top_id: Uuid) -> Result<Option<Sitzung>>;
 }
@@ -176,9 +169,9 @@ pub trait DoorStateRepo {
         time: NaiveDateTime,
         state: bool,
     ) -> anyhow::Result<Doorstate>;
-    
+
     async fn get_doorstate(&mut self, time: NaiveDateTime) -> Result<Option<Doorstate>>;
-    
+
     async fn get_doorstate_history(&mut self) -> Result<Option<Vec<Doorstate>>>;
 }
 
@@ -226,6 +219,27 @@ pub trait PersonRepo {
     async fn delete_person(&mut self, id: Uuid) -> Result<()>;
 }
 
+pub async fn get_tops_with_anträge(
+    sitzung: Uuid,
+    transaction: &mut DatabaseTransaction<'_>,
+) -> Result<Vec<TopWithAnträge>> {
+    let tops = transaction.tops_by_sitzung(sitzung).await?;
+    let mut tops_with_anträge = vec![];
+    for top in tops {
+        let anträge = transaction.anträge_by_top(top.id).await?;
+        let top_with_anträge = TopWithAnträge {
+            id: top.id,
+            weight: top.weight,
+            name: top.name,
+            anträge,
+            inhalt: top.inhalt,
+            top_type: top.top_type,
+        };
+        tops_with_anträge.push(top_with_anträge);
+    }
+    Ok(tops_with_anträge)
+}
+
 #[cfg_attr(test, automock)]
 pub trait AbmeldungRepo {
     async fn add_person_abmeldung(
@@ -251,5 +265,9 @@ pub trait AbmeldungRepo {
         ablaufdatum: NaiveDate,
     ) -> Result<()>;
 
-    async fn get_abmeldungen_between(&mut self, start: &NaiveDate, end: &NaiveDate) -> Result<Vec<Abmeldung>>;
+    async fn get_abmeldungen_between(
+        &mut self,
+        start: &NaiveDate,
+        end: &NaiveDate,
+    ) -> Result<Vec<Abmeldung>>;
 }
