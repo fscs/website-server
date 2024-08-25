@@ -12,7 +12,6 @@
       url = "github:oxalica/rust-overlay";
       inputs = {
         nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "flake-utils";
       };
     };
   };
@@ -30,7 +29,7 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        craneLib = crane.lib.${system};
+        craneLib = crane.mkLib pkgs;
         inherit (pkgs) lib;
 
         sqlFilter = path: _type: null != builtins.match ".*sql$" path;
