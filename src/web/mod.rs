@@ -10,8 +10,7 @@ use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
 use actix_web::{
-    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer,
-    Responder,
+    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
 };
 use anyhow::Error;
 use serde::Serialize;
@@ -24,7 +23,7 @@ use std::pin::Pin;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-use self::auth::{oauth_client,  User};
+use self::auth::{oauth_client, User};
 use utoipa_swagger_ui::SwaggerUi;
 
 pub(crate) mod abmeldungen;
@@ -226,6 +225,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             domain::Antrag,
             domain::Top,
             domain::PersonRoleMapping,
+            domain::SitzungType,
             domain::Sitzung,
             domain::Antragsstellende,
             topmanager::TopWithAnträge,

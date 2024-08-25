@@ -1,4 +1,4 @@
-use crate::domain::TopManagerRepo;
+use crate::domain::{SitzungType, TopManagerRepo};
 use crate::web::auth::User;
 use crate::web::topmanager::CreateTopParams;
 use crate::{database::DatabaseTransaction, domain::get_tops_with_anträge};
@@ -10,8 +10,8 @@ use uuid::Uuid;
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct CreateSitzungParams {
     pub datum: chrono::NaiveDateTime,
-    pub name: String,
     pub location: String,
+    pub sitzung_type: SitzungType,
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
@@ -23,8 +23,8 @@ pub struct GetSitzungByDateParams {
 pub struct UpdateSitzungParams {
     pub id: Uuid,
     pub datum: chrono::NaiveDateTime,
-    pub name: String,
     pub location: String,
+    pub sitzung_type: SitzungType,
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
@@ -95,8 +95,8 @@ async fn update_sitzung(
         .update_sitzung(
             params.id,
             params.datum,
-            params.name.as_str(),
             params.location.as_str(),
+            params.sitzung_type,
         )
         .await;
     transaction.rest_created(result).await
@@ -135,7 +135,7 @@ async fn create_sitzung(
     params: web::Json<CreateSitzungParams>,
 ) -> impl Responder {
     let result = transaction
-        .create_sitzung(params.datum, params.name.as_str(), params.location.as_str())
+        .create_sitzung(params.datum, params.location.as_str(), params.sitzung_type)
         .await;
 
     transaction.rest_created(result).await

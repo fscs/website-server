@@ -1,8 +1,4 @@
-use actix_web::{
-    get, put,
-    web,
-    Responder, Scope,
-};
+use actix_web::{get, put, web, Responder, Scope};
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::types::chrono;

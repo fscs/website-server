@@ -2,19 +2,30 @@ use anyhow::Result;
 use chrono::{NaiveDate, NaiveDateTime};
 #[cfg(test)]
 use mockall::automock;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::{database::DatabaseTransaction, web::topmanager::TopWithAnträge};
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema)]
+#[sqlx(type_name = "sitzungtype", rename_all = "lowercase")]
+pub enum SitzungType {
+    Normal,
+    VV,
+    WahlVV,
+    Ersatz,
+    Konsti,
+    Dringlichkeit,
+}
+
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Sitzung {
     pub id: Uuid,
     pub datum: NaiveDateTime,
-    pub name: String,
     pub location: String,
+    pub sitzung_type: SitzungType,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
@@ -78,8 +89,8 @@ pub trait TopManagerRepo {
     async fn create_sitzung(
         &mut self,
         date_time: NaiveDateTime,
-        name: &str,
         location: &str,
+        sitzung_type: SitzungType,
     ) -> Result<Sitzung>;
 
     async fn create_person(&mut self, name: &str) -> Result<Person>;
@@ -134,8 +145,8 @@ pub trait TopManagerRepo {
         &mut self,
         id: Uuid,
         datum: NaiveDateTime,
-        name: &str,
         location: &str,
+        sitzung_type: SitzungType,
     ) -> Result<Sitzung>;
 
     async fn delete_sitzung(&mut self, id: Uuid) -> Result<()>;
