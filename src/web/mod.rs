@@ -308,7 +308,7 @@ async fn serve_files(
     let mut res = file.into_response(&req);
     res.headers_mut().append(
         header::CACHE_CONTROL,
-        header::HeaderValue::from_static("must-revalidate max-age=0"),
+        header::HeaderValue::from_static("must-revalidate, max-age=0"),
     );
 
     Ok(res)
