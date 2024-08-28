@@ -6,7 +6,7 @@ use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceResponse};
 use actix_web::error::ErrorNotFound;
 use actix_web::http::header::ContentType;
-use actix_web::http::StatusCode;
+use actix_web::http::{header, StatusCode};
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
 use actix_web::{
@@ -305,7 +305,13 @@ async fn serve_files(
         fs::NamedFile::open(path)?
     };
 
-    Ok(file.into_response(&req))
+    let mut res = file.into_response(&req);
+    res.headers_mut().append(
+        header::CACHE_CONTROL,
+        header::HeaderValue::from_static("must-revalidate max-age=0"),
+    );
+
+    Ok(res)
 }
 
 fn not_found<B>(
