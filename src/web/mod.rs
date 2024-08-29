@@ -1,29 +1,24 @@
 use crate::database::{DatabasePool, DatabaseTransaction};
 use crate::web::auth::AuthMiddle;
 use crate::{domain, web, ARGS};
-use actix_files as fs;
+use actix_files::NamedFile;
 use actix_web::body::BoxBody;
-use actix_web::dev::{Payload, ServiceResponse};
-use actix_web::error::ErrorNotFound;
-use actix_web::http::header::ContentType;
+use actix_web::dev::Payload;
 use actix_web::http::{header, StatusCode};
-use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
+use actix_web::middleware::ErrorHandlers;
 use actix_web::web::{scope, Data};
-use actix_web::{
-    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
-};
+use actix_web::{get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
 use serde::Serialize;
 
-use std::fs::File;
 use std::future::Future;
-use std::io::Read;
+use std::path::{Component, Path, PathBuf};
 use std::pin::Pin;
 
 use utoipa::OpenApi;
 
 use self::auth::{oauth_client, User};
-use utoipa_swagger_ui::{Config, SwaggerUi};
+use utoipa_swagger_ui::SwaggerUi;
 
 pub(crate) mod abmeldungen;
 pub(crate) mod auth;
@@ -243,27 +238,20 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
 
     HttpServer::new(move || {
         App::new()
-            .wrap(
-                ErrorHandlers::new()
-                    .handler(StatusCode::NOT_FOUND, not_found)
-                    .handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized),
-            )
+            .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized))
             .wrap(AuthMiddle)
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
             .service(auth::service("/auth"))
             // /api/docs needs to be before /api
-            .service(
-                SwaggerUi::new("/api/docs/{_:.*}")
-                    .url("/api/openapi.json", ApiDoc::openapi())
-            )
+            .service(SwaggerUi::new("/api/docs/{_:.*}").url("/api/openapi.json", ApiDoc::openapi()))
             .service(
                 scope("/api")
                     .service(calendar::service("/calendar"))
                     .service(topmanager::service("/topmanager"))
                     .service(doorstate::service("/doorstate"))
                     .service(person::service("/person"))
-                    .service(abmeldungen::service("/abmeldungen"))
+                    .service(abmeldungen::service("/abmeldungen")),
             )
     })
     .bind((ARGS.host.as_str(), ARGS.port))?
@@ -279,7 +267,7 @@ async fn serve_files(
     user: Option<User>,
 ) -> Result<HttpResponse, actix_web::Error> {
     // decide what the user gets to see
-    let base_dir_raw = match user {
+    let base_dir = match user {
         Some(user) => match user.is_rat() {
             true => ARGS.private_content_dir.as_path(),
             false => ARGS.hidden_content_dir.as_path(),
@@ -287,25 +275,13 @@ async fn serve_files(
         None => ARGS.content_dir.as_path(),
     };
 
-    let base_dir = base_dir_raw
-        .canonicalize()
-        .map_err(|_| ErrorNotFound("not found"))?;
+    let sub_path: PathBuf = req.match_info().query("filename").parse().unwrap();
 
-    let sub_path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
-
-    let path = base_dir
-        .join(sub_path)
-        .canonicalize()
-        .map_err(|_| ErrorNotFound("not found"))?;
-
-    if !path.exists() || !path.starts_with(base_dir.as_path()) {
-        return Err(ErrorNotFound("not found"));
-    }
-
-    let file = if path.is_dir() {
-        fs::NamedFile::open(path.join("index.html"))?
+    let file = if let Some(f) = find_file(base_dir, sub_path.as_path()) {
+        f
     } else {
-        fs::NamedFile::open(path)?
+        let not_found_path = ARGS.content_dir.join("de/404.html");
+        NamedFile::open(not_found_path).unwrap()
     };
 
     // configure headers for cache control
@@ -343,24 +319,25 @@ async fn serve_files(
     Ok(res)
 }
 
-fn not_found<B>(
-    res: actix_web::dev::ServiceResponse<B>,
-) -> actix_web::Result<actix_web::middleware::ErrorHandlerResponse<B>> {
-    let (req, res) = res.into_parts();
-    let path = ARGS.content_dir.join("de/404.html");
+/// try finding file sub_path in base and ONLY in base
+fn find_file(base: &Path, sub_path: &Path) -> Option<NamedFile> {
+    // validate the sub_path doesnt go backwards
+    for component in sub_path.components() {
+        if matches!(component, Component::ParentDir | Component::Prefix(_)) {
+            return None;
+        }
+    }
 
-    let mut file = File::open(path).unwrap();
+    let path = base.join(sub_path);
+    let actual_path = if path.is_dir() {
+        path.join("index.html")
+    } else {
+        path
+    };
 
-    let mut content = String::new();
-    file.read_to_string(&mut content).unwrap();
+    let Ok(file) = NamedFile::open(actual_path) else {
+        return None;
+    };
 
-    let status = res.status();
-
-    let new_response = HttpResponseBuilder::new(status)
-        .insert_header(ContentType::html())
-        .body(content);
-
-    Ok(ErrorHandlerResponse::Response(
-        ServiceResponse::new(req, new_response).map_into_right_body(),
-    ))
+    return Some(file);
 }
