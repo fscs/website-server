@@ -276,6 +276,7 @@ async fn serve_files(
     req: HttpRequest,
     user: Option<User>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    // decide what the user gets to see
     let base_dir_raw = match user {
         Some(user) => match user.is_rat() {
             true => ARGS.private_content_dir.as_path(),
@@ -305,11 +306,37 @@ async fn serve_files(
         fs::NamedFile::open(path)?
     };
 
-    let mut res = file.into_response(&req);
-    res.headers_mut().append(
-        header::CACHE_CONTROL,
-        header::HeaderValue::from_static("must-revalidate, max-age=0"),
-    );
+    // configure headers for cache control
+    //
+    // we enforce html to always be revalidated. we assume all of our assets to be fingerprinted,
+    // so those can be cached
+    let must_revalidate = *file.content_type() == mime::TEXT_HTML;
+
+    // we dont want to set Last-Modified on responses. since we're nix-people, the date will always
+    // be 1970-01-01 which is kind of unnessecary to set
+    //
+    // ETag should only be set if we want the browser to revalidate
+    let mut res = if must_revalidate {
+        file.use_last_modified(false).into_response(&req)
+    } else {
+        file.use_last_modified(false)
+            .use_etag(false)
+            .into_response(&req)
+    };
+
+    if must_revalidate {
+        // always revalidate and only cache in the browser
+        res.headers_mut().append(
+            header::CACHE_CONTROL,
+            header::HeaderValue::from_static("private, must-revalidate, max-age=0"),
+        );
+    } else {
+        // allow assets to be cached for up to a year, their urls will change if they change
+        res.headers_mut().append(
+            header::CACHE_CONTROL,
+            header::HeaderValue::from_static("immutable, max-age=31536000"),
+        );
+    }
 
     Ok(res)
 }

@@ -1251,6 +1251,7 @@ dependencies = [
  "icalendar",
  "lazy_static",
  "log",
+ "mime",
  "mockall",
  "oauth2",
  "pretty_env_logger",

@@ -32,6 +32,7 @@ utoipa = { version = "4", features = [ "actix_extras", "chrono", "uuid", "openap
 utoipa-swagger-ui = { version = "6", features = [ "actix-web" ] }
 utoipa-rapidoc = { version = "3", features = [ "actix-web" ] }
 blocking = "1"
+mime = "0"
 
 [dev-dependencies]
 mockall = "0"
