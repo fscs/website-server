@@ -3,14 +3,19 @@ use crate::web::auth::AuthMiddle;
 use crate::{domain, web, ARGS};
 use actix_files::NamedFile;
 use actix_web::body::BoxBody;
-use actix_web::dev::Payload;
+use actix_web::dev::{Payload, ServiceResponse};
+use actix_web::error::ErrorNotFound;
+use actix_web::http::header::{CacheControl, CacheDirective, ContentType};
 use actix_web::http::{header, StatusCode};
-use actix_web::middleware::ErrorHandlers;
+use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::{scope, Data};
-use actix_web::{get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
+};
 use anyhow::Error;
 use serde::Serialize;
 
+use std::fs::File;
 use std::future::Future;
 use std::path::{Component, Path, PathBuf};
 use std::pin::Pin;
@@ -253,6 +258,12 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .service(person::service("/person"))
                     .service(abmeldungen::service("/abmeldungen")),
             )
+            .route(
+                "/{filename:.*}",
+                actix_web::web::get()
+                    .to(serve_files)
+                    .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, file_not_found)),
+            )
     })
     .bind((ARGS.host.as_str(), ARGS.port))?
     .run()
@@ -261,11 +272,10 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     Ok(())
 }
 
-#[get("/{filename:.*}")]
 async fn serve_files(
     req: HttpRequest,
     user: Option<User>,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<impl Responder, actix_web::Error> {
     // decide what the user gets to see
     let base_dir = match user {
         Some(user) => match user.is_rat() {
@@ -277,11 +287,22 @@ async fn serve_files(
 
     let sub_path: PathBuf = req.match_info().query("filename").parse().unwrap();
 
-    let file = if let Some(f) = find_file(base_dir, sub_path.as_path()) {
-        f
+    // validate that the sub_path doesnt go backwards
+    for component in sub_path.components() {
+        if matches!(component, Component::ParentDir | Component::Prefix(_)) {
+            return Err(ErrorNotFound("not found"));
+        }
+    }
+
+    let path = base_dir.join(sub_path.as_path());
+    let actual_path = if path.is_dir() {
+        path.join("index.html")
     } else {
-        let not_found_path = ARGS.content_dir.join("de/404.html");
-        NamedFile::open(not_found_path).unwrap()
+        path
+    };
+
+    let Ok(file) = NamedFile::open(actual_path) else {
+        return Err(ErrorNotFound("not found"));
     };
 
     // configure headers for cache control
@@ -294,50 +315,48 @@ async fn serve_files(
     // be 1970-01-01 which is kind of unnessecary to set
     //
     // ETag should only be set if we want the browser to revalidate
-    let mut res = if must_revalidate {
-        file.use_last_modified(false).into_response(&req)
+    let res = if must_revalidate {
+        file.use_last_modified(false)
+            .customize()
+            .insert_header(CacheControl(vec![
+                CacheDirective::Private,
+                CacheDirective::MustRevalidate,
+                CacheDirective::MaxAge(0),
+            ]))
+            .respond_to(&req)
     } else {
         file.use_last_modified(false)
             .use_etag(false)
-            .into_response(&req)
+            .customize()
+            .insert_header(CacheControl(vec![
+                CacheDirective::Extension("immutable".to_string(), None),
+                CacheDirective::MaxAge(31536000),
+            ]))
+            .respond_to(&req)
     };
-
-    if must_revalidate {
-        // always revalidate and only cache in the browser
-        res.headers_mut().append(
-            header::CACHE_CONTROL,
-            header::HeaderValue::from_static("private, must-revalidate, max-age=0"),
-        );
-    } else {
-        // allow assets to be cached for up to a year, their urls will change if they change
-        res.headers_mut().append(
-            header::CACHE_CONTROL,
-            header::HeaderValue::from_static("immutable, max-age=31536000"),
-        );
-    }
 
     Ok(res)
 }
 
-/// try finding file sub_path in base and ONLY in base
-fn find_file(base: &Path, sub_path: &Path) -> Option<NamedFile> {
-    // validate the sub_path doesnt go backwards
-    for component in sub_path.components() {
-        if matches!(component, Component::ParentDir | Component::Prefix(_)) {
-            return None;
-        }
-    }
+fn file_not_found(
+    srv_res: ServiceResponse<BoxBody>,
+) -> actix_web::Result<ErrorHandlerResponse<BoxBody>> {
+    let req = srv_res.request();
+    let path = ARGS.content_dir.join("de/404.html");
 
-    let path = base.join(sub_path);
-    let actual_path = if path.is_dir() {
-        path.join("index.html")
-    } else {
-        path
-    };
+    let file = NamedFile::open(path).unwrap();
 
-    let Ok(file) = NamedFile::open(actual_path) else {
-        return None;
-    };
+    let http_res = file
+        .use_last_modified(false)
+        .customize()
+        .insert_header(CacheControl(vec![
+            CacheDirective::Private,
+            CacheDirective::MustRevalidate,
+            CacheDirective::MaxAge(0),
+        ]))
+        .respond_to(&req);
 
-    return Some(file);
+    Ok(ErrorHandlerResponse::Response(
+        srv_res.into_response(http_res),
+    ))
 }
