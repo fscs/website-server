@@ -99,7 +99,7 @@ async fn create_antrag(
 
                 let now = Utc::now();
 
-                let Some(sitzung) = transaction.find_sitzung_after(now.naive_utc()).await? else {
+                let Some(sitzung) = transaction.find_sitzung_after(now).await? else {
                     return Ok((antrag, transaction));
                 };
 

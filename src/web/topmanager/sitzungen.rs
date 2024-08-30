@@ -3,26 +3,27 @@ use crate::web::auth::User;
 use crate::web::topmanager::CreateTopParams;
 use crate::{database::DatabaseTransaction, domain::get_tops_with_anträge};
 use actix_web::{delete, get, patch, put, web, Responder};
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct CreateSitzungParams {
-    pub datum: chrono::NaiveDateTime,
+    pub datum: DateTime<Utc>,
     pub location: String,
     pub sitzung_type: SitzungType,
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct GetSitzungByDateParams {
-    pub datum: chrono::NaiveDateTime,
+    pub datum: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct UpdateSitzungParams {
     pub id: Uuid,
-    pub datum: chrono::NaiveDateTime,
+    pub datum: DateTime<Utc>,
     pub location: String,
     pub sitzung_type: SitzungType,
 }

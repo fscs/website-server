@@ -13,7 +13,7 @@ use actix_web::{
     web::{self, Data},
     HttpResponse, Responder, Scope,
 };
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sitzungen::get_sitzung_by_date;
 use sqlx::prelude::FromRow;
@@ -70,7 +70,7 @@ pub struct CreateTopParams {
 
 #[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
 pub struct GetTopsByDateParams {
-    pub datum: NaiveDateTime,
+    pub datum: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
@@ -143,7 +143,7 @@ async fn get_current_tops_with_anträge(db: Data<DatabasePool>) -> impl Responde
     let tops_with_anträge: Option<anyhow::Result<Vec<TopWithAnträge>>> = db
         .transaction(move |mut transaction| async move {
             let now = chrono::Utc::now();
-            let Some(next_sitzung) = transaction.find_sitzung_after(now.naive_utc()).await? else {
+            let Some(next_sitzung) = transaction.find_sitzung_after(now).await? else {
                 return Ok((None, transaction));
             };
 

@@ -4,7 +4,7 @@ use crate::domain::{
 };
 
 use anyhow::Result;
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgConnection, PgPool, Postgres, Transaction};
@@ -85,7 +85,7 @@ impl DatabasePool {
 impl TopManagerRepo for DatabaseTransaction<'_> {
     async fn create_sitzung(
         &mut self,
-        date_time: NaiveDateTime,
+        date_time: DateTime<Utc>,
         location: &str,
         sitzung_type: SitzungType,
     ) -> Result<Sitzung> {
@@ -166,10 +166,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn find_sitzung_after(&mut self, date_time: NaiveDateTime) -> Result<Option<Sitzung>> {
-        let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
-
-        let offset_int = now.time() - chrono::Utc::now().time();
+    async fn find_sitzung_after(&mut self, datetime: DateTime<Utc>) -> Result<Option<Sitzung>> {
         Ok(sqlx::query_as!(
             Sitzung,
             r#"
@@ -177,7 +174,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
                 FROM sitzungen 
                 WHERE datum > $1 
                 ORDER BY datum ASC"#,
-            date_time + offset_int
+            datetime
         )
         .fetch_optional(&mut **self)
         .await?)
@@ -373,10 +370,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     }
 
     async fn get_next_sitzung(&mut self) -> Result<Option<Sitzung>> {
-        let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
-
-        let offset_int = now.time() - chrono::Utc::now().time();
-
+        let now = chrono::Utc::now();
         Ok(sqlx::query_as!(
             Sitzung,
             r#"
@@ -385,17 +379,13 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
                 WHERE datum > $1 
                 ORDER BY datum ASC
             "#,
-            now.naive_utc() + offset_int
+            now
         )
         .fetch_optional(&mut **self)
         .await?)
     }
 
-    async fn get_sitzung_by_date(&mut self, date: NaiveDateTime) -> Result<Option<Sitzung>> {
-        let now = chrono::Utc::now().with_timezone(&chrono_tz::Europe::Berlin);
-
-        let offset_int = now.date_naive() - chrono::Utc::now().date_naive();
-
+    async fn get_sitzung_by_date(&mut self, datetime: DateTime<Utc>) -> Result<Option<Sitzung>> {
         Ok(sqlx::query_as!(
             Sitzung,
             r#"
@@ -404,7 +394,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
                 WHERE datum > $1 
                 ORDER BY datum ASC
             "#,
-            now.naive_utc() + offset_int
+            datetime
         )
         .fetch_optional(&mut **self)
         .await?)
@@ -413,7 +403,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
     async fn update_sitzung(
         &mut self,
         id: Uuid,
-        datum: NaiveDateTime,
+        datum: DateTime<Utc>,
         location: &str,
         sitzung_type: SitzungType,
     ) -> Result<Sitzung> {
@@ -556,7 +546,7 @@ impl TopManagerRepo for DatabaseTransaction<'_> {
 }
 
 impl DoorStateRepo for DatabaseTransaction<'_> {
-    async fn add_doorstate(&mut self, time: NaiveDateTime, is_open: bool) -> Result<Doorstate> {
+    async fn add_doorstate(&mut self, time: DateTime<Utc>, is_open: bool) -> Result<Doorstate> {
         Ok(sqlx::query_as!(
             Doorstate,
             r#"
@@ -571,7 +561,7 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
         .await?)
     }
 
-    async fn get_doorstate(&mut self, time: NaiveDateTime) -> Result<Option<Doorstate>> {
+    async fn get_doorstate(&mut self, time: DateTime<Utc>) -> Result<Option<Doorstate>> {
         Ok(sqlx::query_as!(
             Doorstate,
             r#"

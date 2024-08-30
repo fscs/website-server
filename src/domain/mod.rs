@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{DateTime, Utc, NaiveDate};
 #[cfg(test)]
 use mockall::automock;
 use serde::{Deserialize, Serialize};
@@ -23,7 +23,7 @@ pub enum SitzungType {
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Sitzung {
     pub id: Uuid,
-    pub datum: NaiveDateTime,
+    pub datum: DateTime<Utc>,
     pub location: String,
     pub sitzung_type: SitzungType,
 }
@@ -47,7 +47,7 @@ pub struct Antrag {
 
 #[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
 pub struct Doorstate {
-    pub time: NaiveDateTime,
+    pub time: DateTime<Utc>,
     pub is_open: bool,
 }
 
@@ -88,7 +88,7 @@ pub struct AntragTopMapping {
 pub trait TopManagerRepo {
     async fn create_sitzung(
         &mut self,
-        date_time: NaiveDateTime,
+        date_time: DateTime<Utc>,
         location: &str,
         sitzung_type: SitzungType,
     ) -> Result<Sitzung>;
@@ -103,7 +103,7 @@ pub trait TopManagerRepo {
 
     async fn find_sitzung_after(
         &mut self,
-        date_time: NaiveDateTime,
+        date_time: DateTime<Utc>,
     ) -> anyhow::Result<Option<Sitzung>>;
 
     async fn get_sitzungen(&mut self) -> Result<Vec<Sitzung>>;
@@ -139,12 +139,12 @@ pub trait TopManagerRepo {
 
     async fn get_next_sitzung(&mut self) -> Result<Option<Sitzung>>;
 
-    async fn get_sitzung_by_date(&mut self, date: NaiveDateTime) -> Result<Option<Sitzung>>;
+    async fn get_sitzung_by_date(&mut self, datetime: DateTime<Utc>) -> Result<Option<Sitzung>>;
 
     async fn update_sitzung(
         &mut self,
         id: Uuid,
-        datum: NaiveDateTime,
+        datum: DateTime<Utc>,
         location: &str,
         sitzung_type: SitzungType,
     ) -> Result<Sitzung>;
@@ -177,11 +177,11 @@ pub trait TopManagerRepo {
 pub trait DoorStateRepo {
     async fn add_doorstate(
         &mut self,
-        time: NaiveDateTime,
+        time: DateTime<Utc>,
         state: bool,
     ) -> anyhow::Result<Doorstate>;
 
-    async fn get_doorstate(&mut self, time: NaiveDateTime) -> Result<Option<Doorstate>>;
+    async fn get_doorstate(&mut self, time: DateTime<Utc>) -> Result<Option<Doorstate>>;
 
     async fn get_doorstate_history(&mut self) -> Result<Option<Vec<Doorstate>>>;
 }
