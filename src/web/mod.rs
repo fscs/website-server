@@ -267,10 +267,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     Ok(())
 }
 
-#[get(
-    "/{filename:.*}",
-    wrap = "ErrorHandlers::new().handler(StatusCode::NOT_FOUND, file_not_found)"
-)]
+#[get("/{filename:.*}", wrap = "ErrorHandlers::new().handler(StatusCode::NOT_FOUND, file_not_found)")]
 async fn serve_files(
     req: HttpRequest,
     user: Option<User>,

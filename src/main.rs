@@ -4,7 +4,7 @@ use std::{convert::identity, path::PathBuf, str::FromStr};
 
 mod database;
 mod domain;
-mod web;
+// mod web;
 
 use crate::database::DatabasePool;
 use clap::Parser;
@@ -52,5 +52,6 @@ async fn main() -> anyhow::Result<()> {
     let database = DatabasePool::new(&database_url).await?;
     sqlx::migrate!().run(database.pool()).await?;
 
-    web::start_server(database).await
+    // web::start_server(database).await
+    Ok(())
 }

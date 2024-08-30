@@ -34,7 +34,7 @@ async fn put_doorstate(
 ) -> impl Responder {
     let now = Utc::now();
     let result = transaction
-        .add_doorstate(now, params.is_open)
+        .add_doorstate(now.naive_utc(), params.is_open)
         .await;
 
     transaction.rest_ok(result).await
@@ -50,7 +50,7 @@ async fn put_doorstate(
 #[get("/")]
 async fn get_doorstate(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
     let now = Utc::now();
-    let result = transaction.get_doorstate(now).await;
+    let result = transaction.get_doorstate(now.naive_utc()).await;
 
     transaction.rest_ok(result).await
 }

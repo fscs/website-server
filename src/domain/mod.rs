@@ -1,13 +1,11 @@
 use anyhow::Result;
-use chrono::{DateTime, Utc, NaiveDate};
+use chrono::{DateTime, NaiveDate, Utc};
 #[cfg(test)]
 use mockall::automock;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
-
-use crate::{database::DatabaseTransaction, web::topmanager::TopWithAnträge};
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema)]
 #[sqlx(type_name = "sitzungtype", rename_all = "lowercase")]
@@ -85,200 +83,183 @@ pub struct AntragTopMapping {
 }
 
 #[cfg_attr(test, automock)]
-pub trait TopManagerRepo {
+pub trait SitzungRepo {
     async fn create_sitzung(
         &mut self,
-        date_time: DateTime<Utc>,
+        datetime: DateTime<Utc>,
         location: &str,
         sitzung_type: SitzungType,
     ) -> Result<Sitzung>;
 
-    async fn create_person(&mut self, name: &str) -> Result<Person>;
+    async fn sitzungen(&mut self) -> Result<Vec<Sitzung>>;
 
-    async fn create_antragssteller(&mut self, antrag_id: Uuid, person_id: Uuid) -> Result<()>;
+    async fn sitzung_by_id(&mut self, id: Uuid) -> Result<Option<Sitzung>>;
 
-    async fn save_sitzung(&mut self, sitzung: Sitzung) -> Result<Sitzung>;
+    async fn first_sitzung_after(&mut self, datetime: DateTime<Utc>) -> Result<Option<Sitzung>>;
 
-    async fn find_sitzung_by_id(&mut self, uuid: Uuid) -> Result<Option<Sitzung>>;
-
-    async fn find_sitzung_after(
+    async fn sitzungen_between(
         &mut self,
-        date_time: DateTime<Utc>,
-    ) -> anyhow::Result<Option<Sitzung>>;
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<Sitzung>>;
 
-    async fn get_sitzungen(&mut self) -> Result<Vec<Sitzung>>;
-
-    async fn create_antrag(
-        &mut self,
-        titel: &str,
-        antragstext: &str,
-        begründung: &str,
-    ) -> Result<Antrag>;
-
-    async fn find_antrag_by_id(&mut self, uuid: Uuid) -> Result<Antrag>;
-
-    async fn get_anträge(&mut self) -> Result<Vec<Antrag>>;
-
-    async fn delete_antrag(&mut self, uuid: Uuid) -> Result<()>;
-
-    async fn anträge_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Antrag>>;
-
-    async fn create_top(
-        &mut self,
-        titel: &str,
-        sitzung_id: Uuid,
-        top_type: &str,
-        inhalt: &Option<serde_json::Value>,
-    ) -> Result<Top>;
-
-    async fn add_antrag_to_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()>;
-
-    async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
-
-    async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Top>>;
-
-    async fn get_next_sitzung(&mut self) -> Result<Option<Sitzung>>;
-
-    async fn get_sitzung_by_date(&mut self, datetime: DateTime<Utc>) -> Result<Option<Sitzung>>;
-
-    async fn update_sitzung(
+    async fn update_sitzung<'a>(
         &mut self,
         id: Uuid,
-        datum: DateTime<Utc>,
-        location: &str,
-        sitzung_type: SitzungType,
+        datetime: Option<DateTime<Utc>>,
+        location: Option<&'a str>,
+        sitzung_type: Option<SitzungType>,
     ) -> Result<Sitzung>;
 
     async fn delete_sitzung(&mut self, id: Uuid) -> Result<()>;
+}
 
-    async fn update_top(
+#[cfg_attr(test, automock)]
+pub trait TopRepo {
+    async fn create_top<'a>(
         &mut self,
+        title: &str,
         sitzung_id: Uuid,
-        id: Uuid,
-        titel: &str,
         top_type: &str,
-        inhalt: &Option<serde_json::Value>,
+        inhalt: &serde_json::Value,
     ) -> Result<Top>;
 
-    async fn delete_top(&mut self, id: Uuid) -> Result<()>;
+    async fn create_antrag(
+        &mut self,
+        creator: Uuid,
+        title: &str,
+        reason: &str,
+        antragstext: &str,
+    ) -> Result<Antrag>;
 
-    async fn create_antrag_top_mapping(
+    async fn top_by_id(&mut self, id: Uuid) -> Result<Option<Top>>;
+
+    async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Top>>;
+
+    async fn antrag_by_id(&mut self, id: Uuid) -> Result<Option<Antrag>>;
+
+    async fn anträge_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Antrag>>;
+
+    async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
+
+    async fn update_top<'a>(
+        &mut self,
+        id: Uuid,
+        sitzung_id: Option<Uuid>,
+        title: Option<&'a str>,
+        top_type: Option<&'a str>,
+        inhalt: Option<&'a serde_json::Value>,
+    ) -> Result<Top>;
+
+    async fn update_antrag<'a>(
+        &mut self,
+        id: Uuid,
+        title: Option<&'a str>,
+        reason: Option<&'a str>,
+        antragstext: Option<&'a str>,
+    ) -> Result<Antrag>;
+
+    async fn attach_antrag_to_top(
         &mut self,
         antrag_id: Uuid,
         top_id: Uuid,
     ) -> Result<AntragTopMapping>;
 
-    async fn delete_antrag_top_mapping(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()>;
+    async fn detach_antrag_from_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()>;
 
-    async fn get_sitzung(&mut self, top_id: Uuid) -> Result<Option<Sitzung>>;
+    async fn delete_antrag(&mut self, id: Uuid) -> Result<()>;
+
+    async fn delete_top(&mut self, id: Uuid) -> Result<()>;
 }
 
 #[cfg_attr(test, automock)]
 pub trait DoorStateRepo {
-    async fn add_doorstate(
+    async fn create_doorstate(
         &mut self,
-        time: DateTime<Utc>,
-        state: bool,
-    ) -> anyhow::Result<Doorstate>;
+        timestamp: DateTime<Utc>,
+        is_open: bool,
+    ) -> Result<Doorstate>;
 
-    async fn get_doorstate(&mut self, time: DateTime<Utc>) -> Result<Option<Doorstate>>;
+    async fn remove_doorstate(
+        &mut self,
+        timestamp: DateTime<Utc>
+    ) -> Result<()>;
 
-    async fn get_doorstate_history(&mut self) -> Result<Option<Vec<Doorstate>>>;
+    async fn doorstate_at(&mut self, timestamp: DateTime<Utc>) -> Result<Option<Doorstate>>;
+
+    async fn doorstate_between(
+        &mut self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<Doorstate>>;
 }
 
 #[cfg_attr(test, automock)]
 pub trait PersonRepo {
-    async fn patch_person(&mut self, id: Uuid, name: &str) -> Result<Person>;
-
-    async fn add_person_role_mapping(
-        &mut self,
-        person_id: Uuid,
-        rolle: &str,
-        anfangsdatum: NaiveDate,
-        ablaufdatum: NaiveDate,
-    ) -> Result<PersonRoleMapping>;
-
-    async fn update_person_role_mapping(
-        &mut self,
-        person_id: Uuid,
-        rolle: &str,
-        anfangsdatum: NaiveDate,
-        ablaufdatum: NaiveDate,
-    ) -> Result<PersonRoleMapping>;
-
-    async fn delete_person_role_mapping(&mut self, person_id: Uuid) -> Result<()>;
-
     async fn create_person(&mut self, name: &str) -> Result<Person>;
 
-    async fn get_persons(&mut self) -> Result<Vec<Person>>;
+    async fn persons(&mut self) -> Result<Vec<Person>>;
 
-    async fn get_person_by_role(
-        &mut self,
-        rolle: &str,
-        anfangsdatum: NaiveDate,
-        ablaufdatum: NaiveDate,
-    ) -> Result<Vec<Person>>;
-
-    async fn update_person(
-        &mut self,
-        person_id: Uuid,
-        rolle: &str,
-        anfangsdatum: NaiveDate,
-        ablaufdatum: NaiveDate,
-    ) -> Result<PersonRoleMapping>;
+    async fn update_person(&mut self, id: Uuid, name: &str) -> Result<Person>;
 
     async fn delete_person(&mut self, id: Uuid) -> Result<()>;
-}
 
-pub async fn get_tops_with_anträge(
-    sitzung: Uuid,
-    transaction: &mut DatabaseTransaction<'_>,
-) -> Result<Vec<TopWithAnträge>> {
-    let tops = transaction.tops_by_sitzung(sitzung).await?;
-    let mut tops_with_anträge = vec![];
-    for top in tops {
-        let anträge = transaction.anträge_by_top(top.id).await?;
-        let top_with_anträge = TopWithAnträge {
-            id: top.id,
-            weight: top.weight,
-            name: top.name,
-            anträge,
-            inhalt: top.inhalt,
-            top_type: top.top_type,
-        };
-        tops_with_anträge.push(top_with_anträge);
-    }
-    Ok(tops_with_anträge)
+    async fn assign_role_to_person(
+        &mut self,
+        person_id: Uuid,
+        role: &str,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<PersonRoleMapping>;
+
+    async fn persons_with_role(
+        &mut self,
+        role: &str,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<Person>>;
 }
 
 #[cfg_attr(test, automock)]
 pub trait AbmeldungRepo {
-    async fn add_person_abmeldung(
+    async fn create_abmeldung(
         &mut self,
         person_id: Uuid,
-        anfangsdatum: NaiveDate,
-        ablaufdatum: NaiveDate,
+        start: NaiveDate,
+        end: NaiveDate,
     ) -> Result<Abmeldung>;
 
-    async fn get_abmeldungen(&mut self) -> Result<Vec<Abmeldung>>;
-
-    async fn update_person_abmeldung(
+    async fn abmeldungen_by_person(
         &mut self,
         person_id: Uuid,
-        anfangsdatum: NaiveDate,
-        ablaufdatum: NaiveDate,
-    ) -> Result<Abmeldung>;
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<Abmeldung>>;
 
-    async fn delete_person_abmeldung(
-        &mut self,
-        person_id: Uuid,
-        anfangsdatum: NaiveDate,
-        ablaufdatum: NaiveDate,
-    ) -> Result<()>;
-
-    async fn get_abmeldungen_between(
+    async fn abmeldungen_between(
         &mut self,
         start: &NaiveDate,
         end: &NaiveDate,
     ) -> Result<Vec<Abmeldung>>;
 }
+
+// pub async fn get_tops_with_anträge(
+//     sitzung: Uuid,
+//     transaction: &mut DatabaseTransaction<'_>,
+// ) -> Result<Vec<TopWithAnträge>> {
+//     let tops = transaction.tops_by_sitzung(sitzung).await?;
+//     let mut tops_with_anträge = vec![];
+//     for top in tops {
+//         let anträge = transaction.anträge_by_top(top.id).await?;
+//         let top_with_anträge = TopWithAnträge {
+//             id: top.id,
+//             weight: top.weight,
+//             name: top.name,
+//             anträge,
+//             inhalt: top.inhalt,
+//             top_type: top.top_type,
+//         };
+//         tops_with_anträge.push(top_with_anträge);
+//     }
+//     Ok(tops_with_anträge)
+// }
