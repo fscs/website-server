@@ -1262,7 +1262,6 @@ dependencies = [
  "tera",
  "tokio",
  "utoipa",
- "utoipa-rapidoc",
  "utoipa-swagger-ui",
  "uuid",
 ]
@@ -3930,18 +3929,6 @@ dependencies = [
  "regex",
  "syn 2.0.76",
  "uuid",
-]
-
-[[package]]
-name = "utoipa-rapidoc"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e79a75396496e4fe41359375a67e8fcb9c28444cd1cb5e8ac54f47684e64290"
-dependencies = [
- "actix-web",
- "serde",
- "serde_json",
- "utoipa",
 ]
 
 [[package]]

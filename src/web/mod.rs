@@ -8,7 +8,7 @@ use actix_web::error::ErrorNotFound;
 use actix_web::http::header::ContentType;
 use actix_web::http::{header, StatusCode};
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
-use actix_web::web::Data;
+use actix_web::web::{scope, Data};
 use actix_web::{
     get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
 };
@@ -21,10 +21,9 @@ use std::io::Read;
 use std::pin::Pin;
 
 use utoipa::OpenApi;
-use utoipa_rapidoc::RapiDoc;
 
 use self::auth::{oauth_client, User};
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_swagger_ui::{Config, SwaggerUi};
 
 pub(crate) mod abmeldungen;
 pub(crate) mod auth;
@@ -242,9 +241,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     )]
     struct ApiDoc;
 
-    let openapi = ApiDoc::openapi();
-
-    Ok(HttpServer::new(move || {
+    HttpServer::new(move || {
         App::new()
             .wrap(
                 ErrorHandlers::new()
@@ -252,23 +249,28 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized),
             )
             .wrap(AuthMiddle)
-            .service(web::calendar::service("/api/calendar"))
-            .service(topmanager::service("/api/topmanager"))
-            .service(doorstate::service("/api/doorstate"))
-            .service(auth::service("/auth"))
-            .service(person::service("/api/person"))
-            .service(abmeldungen::service("/api/abmeldungen"))
-            .service(
-                SwaggerUi::new("/api/docs/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
-            )
-            .service(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
-            .service(serve_files)
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
+            .service(auth::service("/auth"))
+            // /api/docs needs to be before /api
+            .service(
+                SwaggerUi::new("/api/docs/{_:.*}")
+                    .url("/api/openapi.json", ApiDoc::openapi())
+            )
+            .service(
+                scope("/api")
+                    .service(calendar::service("/calendar"))
+                    .service(topmanager::service("/topmanager"))
+                    .service(doorstate::service("/doorstate"))
+                    .service(person::service("/person"))
+                    .service(abmeldungen::service("/abmeldungen"))
+            )
     })
     .bind((ARGS.host.as_str(), ARGS.port))?
     .run()
-    .await?)
+    .await?;
+
+    Ok(())
 }
 
 #[get("/{filename:.*}")]
