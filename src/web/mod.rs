@@ -258,12 +258,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .service(person::service("/person"))
                     .service(abmeldungen::service("/abmeldungen")),
             )
-            .route(
-                "/{filename:.*}",
-                actix_web::web::get()
-                    .to(serve_files)
-                    .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, file_not_found)),
-            )
+            .service(serve_files)
     })
     .bind((ARGS.host.as_str(), ARGS.port))?
     .run()
@@ -272,6 +267,10 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     Ok(())
 }
 
+#[get(
+    "/{filename:.*}",
+    wrap = "ErrorHandlers::new().handler(StatusCode::NOT_FOUND, file_not_found)"
+)]
 async fn serve_files(
     req: HttpRequest,
     user: Option<User>,
