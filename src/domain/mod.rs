@@ -7,7 +7,7 @@ use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
 #[sqlx(type_name = "sitzungtype", rename_all = "lowercase")]
 pub enum SitzungType {
     Normal,
@@ -91,6 +91,14 @@ pub trait SitzungRepo {
         sitzung_type: SitzungType,
     ) -> Result<Sitzung>;
 
+    async fn create_top<'a>(
+        &mut self,
+        sitzung_id: Uuid,
+        title: &str,
+        top_type: &str,
+        inhalt: Option<&'a serde_json::Value>,
+    ) -> Result<Top>;
+
     async fn sitzungen(&mut self) -> Result<Vec<Sitzung>>;
 
     async fn sitzung_by_id(&mut self, id: Uuid) -> Result<Option<Sitzung>>;
@@ -103,6 +111,10 @@ pub trait SitzungRepo {
         end: DateTime<Utc>,
     ) -> Result<Vec<Sitzung>>;
 
+    async fn top_by_id(&mut self, id: Uuid) -> Result<Option<Top>>;
+
+    async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Top>>;
+
     async fn update_sitzung<'a>(
         &mut self,
         id: Uuid,
@@ -110,37 +122,6 @@ pub trait SitzungRepo {
         location: Option<&'a str>,
         sitzung_type: Option<SitzungType>,
     ) -> Result<Sitzung>;
-
-    async fn delete_sitzung(&mut self, id: Uuid) -> Result<()>;
-}
-
-#[cfg_attr(test, automock)]
-pub trait TopRepo {
-    async fn create_top<'a>(
-        &mut self,
-        title: &str,
-        sitzung_id: Uuid,
-        top_type: &str,
-        inhalt: &serde_json::Value,
-    ) -> Result<Top>;
-
-    async fn create_antrag(
-        &mut self,
-        creator: Uuid,
-        title: &str,
-        reason: &str,
-        antragstext: &str,
-    ) -> Result<Antrag>;
-
-    async fn top_by_id(&mut self, id: Uuid) -> Result<Option<Top>>;
-
-    async fn tops_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Top>>;
-
-    async fn antrag_by_id(&mut self, id: Uuid) -> Result<Option<Antrag>>;
-
-    async fn anträge_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Antrag>>;
-
-    async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
 
     async fn update_top<'a>(
         &mut self,
@@ -151,14 +132,6 @@ pub trait TopRepo {
         inhalt: Option<&'a serde_json::Value>,
     ) -> Result<Top>;
 
-    async fn update_antrag<'a>(
-        &mut self,
-        id: Uuid,
-        title: Option<&'a str>,
-        reason: Option<&'a str>,
-        antragstext: Option<&'a str>,
-    ) -> Result<Antrag>;
-
     async fn attach_antrag_to_top(
         &mut self,
         antrag_id: Uuid,
@@ -167,9 +140,36 @@ pub trait TopRepo {
 
     async fn detach_antrag_from_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()>;
 
-    async fn delete_antrag(&mut self, id: Uuid) -> Result<()>;
+    async fn delete_sitzung(&mut self, id: Uuid) -> Result<()>;
 
     async fn delete_top(&mut self, id: Uuid) -> Result<()>;
+}
+
+#[cfg_attr(test, automock)]
+pub trait AntragRepo {
+    async fn create_antrag(
+        &mut self,
+        creator: Uuid,
+        title: &str,
+        reason: &str,
+        antragstext: &str,
+    ) -> Result<Antrag>;
+
+    async fn antrag_by_id(&mut self, id: Uuid) -> Result<Option<Antrag>>;
+
+    async fn anträge_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Antrag>>;
+
+    async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
+
+    async fn update_antrag<'a>(
+        &mut self,
+        id: Uuid,
+        title: Option<&'a str>,
+        reason: Option<&'a str>,
+        antragstext: Option<&'a str>,
+    ) -> Result<Antrag>;
+
+    async fn delete_antrag(&mut self, id: Uuid) -> Result<()>;
 }
 
 #[cfg_attr(test, automock)]
@@ -180,10 +180,7 @@ pub trait DoorStateRepo {
         is_open: bool,
     ) -> Result<Doorstate>;
 
-    async fn remove_doorstate(
-        &mut self,
-        timestamp: DateTime<Utc>
-    ) -> Result<()>;
+    async fn remove_doorstate(&mut self, timestamp: DateTime<Utc>) -> Result<()>;
 
     async fn doorstate_at(&mut self, timestamp: DateTime<Utc>) -> Result<Option<Doorstate>>;
 
@@ -198,6 +195,13 @@ pub trait DoorStateRepo {
 pub trait PersonRepo {
     async fn create_person(&mut self, name: &str) -> Result<Person>;
 
+    async fn create_abmeldung(
+        &mut self,
+        person_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Abmeldung>;
+    
     async fn persons(&mut self) -> Result<Vec<Person>>;
 
     async fn update_person(&mut self, id: Uuid, name: &str) -> Result<Person>;
@@ -218,24 +222,14 @@ pub trait PersonRepo {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Person>>;
-}
-
-#[cfg_attr(test, automock)]
-pub trait AbmeldungRepo {
-    async fn create_abmeldung(
-        &mut self,
-        person_id: Uuid,
-        start: NaiveDate,
-        end: NaiveDate,
-    ) -> Result<Abmeldung>;
-
+    
     async fn abmeldungen_by_person(
         &mut self,
         person_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Abmeldung>>;
-
+    
     async fn abmeldungen_between(
         &mut self,
         start: &NaiveDate,
