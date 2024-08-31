@@ -4,12 +4,10 @@ use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 use std::future::Future;
 use std::ops::{Deref, DerefMut};
 
-pub mod sitzungen;
-pub mod tops;
+pub mod antrag;
 pub mod doorstate;
 pub mod persons;
-pub mod abmeldungen;
-
+pub mod sitzungen;
 
 #[derive(Clone)]
 pub struct DatabasePool {

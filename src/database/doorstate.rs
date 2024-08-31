@@ -1,5 +1,5 @@
-use chrono::{DateTime, Utc};
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
 
 use crate::domain::{DoorStateRepo, Doorstate};

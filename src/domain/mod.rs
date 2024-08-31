@@ -201,7 +201,7 @@ pub trait PersonRepo {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Abmeldung>;
-    
+
     async fn persons(&mut self) -> Result<Vec<Person>>;
 
     async fn update_person(&mut self, id: Uuid, name: &str) -> Result<Person>;
@@ -222,14 +222,14 @@ pub trait PersonRepo {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Person>>;
-    
+
     async fn abmeldungen_by_person(
         &mut self,
         person_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Abmeldung>>;
-    
+
     async fn abmeldungen_between(
         &mut self,
         start: &NaiveDate,
