@@ -1,12 +1,11 @@
 use anyhow::Result;
 use chrono::NaiveDate;
+use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{Abmeldung, AbmeldungRepo};
 
-use super::DatabaseTransaction;
-
-impl AbmeldungRepo for DatabaseTransaction<'_> {
+impl AbmeldungRepo for PgConnection {
     async fn create_abmeldung(
         &mut self,
         person_id: Uuid,
@@ -24,7 +23,7 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
             start,
             end
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -46,7 +45,7 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
             end,
             person_id,
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         return Ok(result);
@@ -66,7 +65,7 @@ impl AbmeldungRepo for DatabaseTransaction<'_> {
             start,
             end,
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         return Ok(result);

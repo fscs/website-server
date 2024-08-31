@@ -1,12 +1,11 @@
 use chrono::{DateTime, Utc};
 use anyhow::Result;
+use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{Sitzung, SitzungRepo, SitzungType};
 
-use super::DatabaseTransaction;
-
-impl SitzungRepo for DatabaseTransaction<'_> {
+impl SitzungRepo for PgConnection {
     async fn create_sitzung(
         &mut self,
         datetime: DateTime<Utc>,
@@ -24,7 +23,7 @@ impl SitzungRepo for DatabaseTransaction<'_> {
             location,
             sitzung_type as SitzungType,
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -38,7 +37,7 @@ impl SitzungRepo for DatabaseTransaction<'_> {
                 FROM sitzungen
             "#
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         Ok(result)
@@ -54,7 +53,7 @@ impl SitzungRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .fetch_optional(&mut **self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
@@ -72,7 +71,7 @@ impl SitzungRepo for DatabaseTransaction<'_> {
             "#,
             datetime
         )
-        .fetch_optional(&mut **self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
@@ -93,7 +92,7 @@ impl SitzungRepo for DatabaseTransaction<'_> {
             start,
             end
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         Ok(result)
@@ -122,7 +121,7 @@ impl SitzungRepo for DatabaseTransaction<'_> {
             sitzung_type as Option<SitzungType>,
             id
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -136,7 +135,7 @@ impl SitzungRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .execute(&mut **self)
+        .execute(&mut *self)
         .await?;
 
         sqlx::query!(
@@ -146,7 +145,7 @@ impl SitzungRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .execute(&mut **self)
+        .execute(&mut *self)
         .await?;
 
         Ok(())

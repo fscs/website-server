@@ -1,11 +1,10 @@
 use chrono::{DateTime, Utc};
 use anyhow::Result;
+use sqlx::PgConnection;
 
 use crate::domain::{DoorStateRepo, Doorstate};
 
-use super::DatabaseTransaction;
-
-impl DoorStateRepo for DatabaseTransaction<'_> {
+impl DoorStateRepo for PgConnection {
     async fn create_doorstate(
         &mut self,
         timestamp: DateTime<Utc>,
@@ -21,7 +20,7 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
             timestamp,
             is_open
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -35,7 +34,7 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
             "#,
             timestamp
         )
-        .execute(&mut **self)
+        .execute(self)
         .await?;
 
         Ok(())
@@ -52,7 +51,7 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
             "#,
             time
         )
-        .fetch_optional(&mut **self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
@@ -72,7 +71,7 @@ impl DoorStateRepo for DatabaseTransaction<'_> {
             start,
             end
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         Ok(result)

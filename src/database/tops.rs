@@ -1,11 +1,10 @@
 use anyhow::Result;
+use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{Antrag, AntragTopMapping, Top, TopRepo};
 
-use super::DatabaseTransaction;
-
-impl TopRepo for DatabaseTransaction<'_> {
+impl TopRepo for PgConnection {
     async fn create_top<'a>(
         &mut self,
         title: &str,
@@ -22,7 +21,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             sitzung_id,
             top_type
         )
-        .fetch_one(&mut **self)
+        .fetch_one(&mut *self)
         .await?
         .count;
 
@@ -39,7 +38,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             top_type,
             inhalt
         )
-        .fetch_one(&mut **self)
+        .fetch_one(&mut *self)
         .await?;
 
         Ok(result)
@@ -63,7 +62,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             antragstext,
             reason
         )
-        .fetch_one(&mut **self)
+        .fetch_one(&mut *self)
         .await?;
 
         sqlx::query!(
@@ -74,7 +73,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             result.id,
             creator
         )
-        .execute(&mut **self)
+        .execute(&mut *self)
         .await?;
 
         Ok(result)
@@ -90,7 +89,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .fetch_optional(&mut **self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
@@ -106,7 +105,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             sitzung_id
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         Ok(result)
@@ -122,7 +121,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .fetch_optional(&mut **self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
@@ -142,7 +141,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             sitzung_id
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         Ok(result)
@@ -160,7 +159,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             top_id
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         Ok(result)
@@ -192,7 +191,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             inhalt,
             id
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -221,7 +220,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             antragstext,
             id
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -242,7 +241,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             antrag_id,
             top_id
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -257,7 +256,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             antrag_id,
             top_id
         )
-        .execute(&mut **self)
+        .execute(self)
         .await?;
 
         Ok(())
@@ -271,7 +270,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .execute(&mut **self)
+        .execute(&mut *self)
         .await?;
 
         sqlx::query!(
@@ -281,7 +280,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .execute(&mut **self)
+        .execute(&mut *self)
         .await?;
 
         sqlx::query!(
@@ -291,7 +290,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .execute(&mut **self)
+        .execute(&mut *self)
         .await?;
 
         Ok(())
@@ -305,7 +304,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .execute(&mut **self)
+        .execute(&mut *self)
         .await?;
 
         sqlx::query!(
@@ -315,7 +314,7 @@ impl TopRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .execute(&mut **self)
+        .execute(&mut *self)
         .await?;
 
         Ok(())

@@ -1,12 +1,11 @@
 use anyhow::Result;
 use chrono::NaiveDate;
+use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{Person, PersonRepo, PersonRoleMapping};
 
-use super::DatabaseTransaction;
-
-impl PersonRepo for DatabaseTransaction<'_> {
+impl PersonRepo for PgConnection {
     async fn create_person(&mut self, name: &str) -> Result<Person> {
         let result = sqlx::query_as!(
             Person,
@@ -19,7 +18,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
             "#,
             name
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -33,7 +32,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
                 FROM person
             "#
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         Ok(result)
@@ -51,7 +50,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
             name,
             id
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -65,7 +64,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
             "#,
             id
         )
-        .execute(&mut **self)
+        .execute(self)
         .await?;
         Ok(())
     }
@@ -89,7 +88,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
             start,
             end
         )
-        .fetch_one(&mut **self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -112,7 +111,7 @@ impl PersonRepo for DatabaseTransaction<'_> {
             start,
             end,
         )
-        .fetch_all(&mut **self)
+        .fetch_all(self)
         .await?;
 
         Ok(result)
