@@ -195,6 +195,8 @@ pub trait DoorStateRepo {
 pub trait PersonRepo {
     async fn create_person(&mut self, name: &str) -> Result<Person>;
 
+    async fn find_person(&mut self, id: Uuid) -> Result<Person>;
+
     async fn create_abmeldung(
         &mut self,
         person_id: Uuid,
@@ -212,15 +214,23 @@ pub trait PersonRepo {
         &mut self,
         person_id: Uuid,
         role: &str,
-        start: NaiveDate,
-        end: NaiveDate,
+        start: DateTime<Utc>,
+        end: Option<DateTime<Utc>>,
+    ) -> Result<PersonRoleMapping>;
+
+    async fn delete_role_from_person(
+        &mut self,
+        person_id: Uuid,
+        role: &str,
+        start: DateTime<Utc>,
+        end: Option<DateTime<Utc>>,
     ) -> Result<PersonRoleMapping>;
 
     async fn persons_with_role(
         &mut self,
         role: &str,
-        start: NaiveDate,
-        end: NaiveDate,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
     ) -> Result<Vec<Person>>;
 
     async fn abmeldungen_by_person(
