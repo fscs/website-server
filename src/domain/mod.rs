@@ -3,13 +3,13 @@ use chrono::{DateTime, NaiveDate, Utc};
 #[cfg(test)]
 use mockall::automock;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
-#[sqlx(type_name = "sitzungtype", rename_all = "lowercase")]
-pub enum SitzungType {
+#[sqlx(type_name = "sitzungkind", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum SitzungKind {
     Normal,
     VV,
     WahlVV,
@@ -18,38 +18,70 @@ pub enum SitzungType {
     Dringlichkeit,
 }
 
-#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
-pub struct Sitzung {
-    pub id: Uuid,
-    pub datum: DateTime<Utc>,
-    pub location: String,
-    pub sitzung_type: SitzungType,
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
+#[sqlx(type_name = "topkind", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum TopKind {
+    Regularia,
+    Bericht,
+    Normal,
+    Verschiedenes
 }
 
-#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct Sitzung {
+    pub id: Uuid,
+    pub datetime: DateTime<Utc>,
+    pub location: String,
+    pub kind: SitzungKind,
+}
+
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct Top {
     pub id: Uuid,
     pub weight: i64,
     pub name: String,
     pub inhalt: Option<serde_json::Value>,
-    pub top_type: String,
+    pub kind: TopKind,
 }
 
-#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
-pub struct Antrag {
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct AntragData {
     pub id: Uuid,
     pub titel: String,
     pub antragstext: String,
     pub begründung: String,
 }
 
-#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
-pub struct Doorstate {
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct Antrag {
+    #[serde(flatten)]
+    pub data: AntragData,
+    pub creators: Vec<Uuid>,
+}
+
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct SitzungWithTops {
+    #[serde(flatten)]
+    pub sitzung: Sitzung,
+    pub tops: Vec<TopWithAnträge>
+}
+
+
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct TopWithAnträge {
+    #[serde(flatten)]
+    pub top: Top,
+    pub anträge: Vec<Antrag>
+}
+
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct DoorState {
     pub time: DateTime<Utc>,
     pub is_open: bool,
 }
 
-#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct PersonRoleMapping {
     pub person_id: Uuid,
     pub rolle: String,
@@ -57,26 +89,20 @@ pub struct PersonRoleMapping {
     pub ablaufdatum: NaiveDate,
 }
 
-#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct Person {
     pub id: Uuid,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
-pub struct Antragsstellende {
-    pub antrags_id: Uuid,
-    pub person_id: Uuid,
-}
-
-#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct Abmeldung {
     pub person_id: Uuid,
     pub anfangsdatum: NaiveDate,
     pub ablaufdatum: NaiveDate,
 }
 
-#[derive(Debug, Serialize, FromRow, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct AntragTopMapping {
     pub antrag_id: Uuid,
     pub top_id: Uuid,
@@ -88,15 +114,15 @@ pub trait SitzungRepo {
         &mut self,
         datetime: DateTime<Utc>,
         location: &str,
-        sitzung_type: SitzungType,
+        kind: SitzungKind,
     ) -> Result<Sitzung>;
 
     async fn create_top<'a>(
         &mut self,
         sitzung_id: Uuid,
-        title: &str,
-        top_type: &str,
+        name: &str,
         inhalt: Option<&'a serde_json::Value>,
+        kind: TopKind,
     ) -> Result<Top>;
 
     async fn sitzungen(&mut self) -> Result<Vec<Sitzung>>;
@@ -120,25 +146,17 @@ pub trait SitzungRepo {
         id: Uuid,
         datetime: Option<DateTime<Utc>>,
         location: Option<&'a str>,
-        sitzung_type: Option<SitzungType>,
-    ) -> Result<Sitzung>;
+        kind: Option<SitzungKind>,
+    ) -> Result<Option<Sitzung>>;
 
     async fn update_top<'a>(
         &mut self,
         id: Uuid,
         sitzung_id: Option<Uuid>,
-        title: Option<&'a str>,
-        top_type: Option<&'a str>,
+        name: Option<&'a str>,
         inhalt: Option<&'a serde_json::Value>,
-    ) -> Result<Top>;
-
-    async fn attach_antrag_to_top(
-        &mut self,
-        antrag_id: Uuid,
-        top_id: Uuid,
-    ) -> Result<AntragTopMapping>;
-
-    async fn detach_antrag_from_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()>;
+        kind: Option<TopKind>,
+    ) -> Result<Option<Top>>;
 
     async fn delete_sitzung(&mut self, id: Uuid) -> Result<()>;
 
@@ -146,10 +164,23 @@ pub trait SitzungRepo {
 }
 
 #[cfg_attr(test, automock)]
+pub trait AntragTopMapRepo {
+    async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
+    
+    async fn attach_antrag_to_top(
+        &mut self,
+        antrag_id: Uuid,
+        top_id: Uuid,
+    ) -> Result<AntragTopMapping>;
+
+    async fn detach_antrag_from_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()>;
+}
+
+#[cfg_attr(test, automock)]
 pub trait AntragRepo {
     async fn create_antrag(
         &mut self,
-        creator: Uuid,
+        creators: &[Uuid],
         title: &str,
         reason: &str,
         antragstext: &str,
@@ -157,38 +188,33 @@ pub trait AntragRepo {
 
     async fn antrag_by_id(&mut self, id: Uuid) -> Result<Option<Antrag>>;
 
-    async fn anträge_by_sitzung(&mut self, sitzung_id: Uuid) -> Result<Vec<Antrag>>;
-
-    async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
-
     async fn update_antrag<'a>(
         &mut self,
         id: Uuid,
+        creators: Option<&'a [Uuid]>,
         title: Option<&'a str>,
         reason: Option<&'a str>,
         antragstext: Option<&'a str>,
-    ) -> Result<Antrag>;
+    ) -> Result<Option<Antrag>>;
 
     async fn delete_antrag(&mut self, id: Uuid) -> Result<()>;
 }
 
 #[cfg_attr(test, automock)]
 pub trait DoorStateRepo {
-    async fn create_doorstate(
+    async fn create_door_state(
         &mut self,
         timestamp: DateTime<Utc>,
         is_open: bool,
-    ) -> Result<Doorstate>;
+    ) -> Result<DoorState>;
 
-    async fn remove_doorstate(&mut self, timestamp: DateTime<Utc>) -> Result<()>;
+    async fn door_state_at(&mut self, timestamp: DateTime<Utc>) -> Result<Option<DoorState>>;
 
-    async fn doorstate_at(&mut self, timestamp: DateTime<Utc>) -> Result<Option<Doorstate>>;
-
-    async fn doorstate_between(
+    async fn door_state_between(
         &mut self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
-    ) -> Result<Vec<Doorstate>>;
+    ) -> Result<Vec<DoorState>>;
 }
 
 #[cfg_attr(test, automock)]

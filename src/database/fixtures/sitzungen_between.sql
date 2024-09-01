@@ -1,4 +1,4 @@
-INSERT INTO sitzungen (id, datum, location, sitzung_type) 
+INSERT INTO sitzungen (id, datetime, location, kind) 
 VALUES 
     ('bb667262-dd63-4ad7-b957-9f9674c11791', '2024-09-10T12:30:00+2:00', 'ein uni raum', 'vv'),
     ('51789e78-c2f6-4c67-a271-d05d95de9cab', '2024-09-17T12:30:00+2:00', 'ein uni raum', 'normal'),

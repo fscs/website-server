@@ -3,25 +3,25 @@ use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::domain::{AntragTopMapping, Sitzung, SitzungRepo, SitzungType, Top};
+use crate::domain::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind};
 
 impl SitzungRepo for PgConnection {
     async fn create_sitzung(
         &mut self,
         datetime: DateTime<Utc>,
         location: &str,
-        sitzung_type: SitzungType,
+        kind: SitzungKind,
     ) -> Result<Sitzung> {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                INSERT INTO sitzungen (datum, location, sitzung_type) 
+                INSERT INTO sitzungen (datetime, location, kind) 
                 VALUES ($1, $2, $3) 
-                RETURNING id, datum, location, sitzung_type AS "sitzung_type!: SitzungType"
+                RETURNING id, datetime, location, kind AS "kind!: SitzungKind"
             "#,
             datetime,
             location,
-            sitzung_type as SitzungType,
+            kind as SitzungKind,
         )
         .fetch_one(self)
         .await?;
@@ -32,18 +32,18 @@ impl SitzungRepo for PgConnection {
     async fn create_top<'a>(
         &mut self,
         sitzung_id: Uuid,
-        title: &str,
-        top_type: &str,
+        name: &str,
         inhalt: Option<&'a serde_json::Value>,
+        kind: TopKind,
     ) -> Result<Top> {
         let weight = sqlx::query!(
             r#"
                 SELECT MAX(weight)
                 FROM tops 
-                WHERE sitzung_id = $1 and top_type = $2
+                WHERE sitzung_id = $1 and kind = $2
             "#,
             sitzung_id,
-            top_type
+            kind as TopKind,
         )
         .fetch_one(&mut *self)
         .await?
@@ -52,15 +52,15 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Top,
             r#"
-                INSERT INTO tops (name, sitzung_id, weight, top_type, inhalt)
+                INSERT INTO tops (name, sitzung_id, weight, inhalt, kind)
                 VALUES ($1, $2, $3, $4 ,$5) 
-                RETURNING name, weight, top_type, inhalt, id
+                RETURNING id, name, weight, inhalt, kind AS "kind!: TopKind"
             "#,
-            title,
+            name,
             sitzung_id,
             weight.unwrap_or(0) + 1,
-            top_type,
-            inhalt
+            inhalt,
+            kind as TopKind,
         )
         .fetch_one(&mut *self)
         .await?;
@@ -72,7 +72,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datum, location, sitzung_type AS "sitzung_type!: SitzungType"
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind"
                 FROM sitzungen
             "#
         )
@@ -86,7 +86,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datum, location, sitzung_type AS "sitzung_type!: SitzungType"
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind"
                 FROM sitzungen
                 WHERE id = $1
             "#,
@@ -102,10 +102,10 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datum, location, sitzung_type AS "sitzung_type!: SitzungType"
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind"
                 FROM sitzungen
-                WHERE datum >= $1
-                ORDER BY datum ASC
+                WHERE datetime >= $1
+                ORDER BY datetime ASC
                 LIMIT 1
             "#,
             datetime
@@ -124,9 +124,9 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datum, location, sitzung_type AS "sitzung_type!: SitzungType" 
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind" 
                 FROM sitzungen
-                WHERE datum >= $1 AND datum <= $2
+                WHERE datetime >= $1 AND datetime <= $2
             "#,
             start,
             end
@@ -141,7 +141,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Top,
             r#"
-                SELECT name, weight, top_type, inhalt, id
+                SELECT id, name, weight, inhalt, kind AS "kind!: TopKind"
                 FROM tops
                 WHERE id = $1
             "#,
@@ -157,7 +157,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Top,
             r#"
-                SELECT name, weight, top_type, inhalt, id
+                SELECT id, name, weight, inhalt, kind AS "kind!: TopKind"
                 FROM tops
                 WHERE sitzung_id = $1
             "#,
@@ -174,25 +174,25 @@ impl SitzungRepo for PgConnection {
         id: Uuid,
         datetime: Option<DateTime<Utc>>,
         location: Option<&'a str>,
-        sitzung_type: Option<SitzungType>,
-    ) -> Result<Sitzung> {
+        kind: Option<SitzungKind>,
+    ) -> Result<Option<Sitzung>> {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
                 UPDATE sitzungen 
                 SET 
-                    datum = COALESCE($1, datum),
+                    datetime = COALESCE($1, datetime),
                     location = COALESCE($2, location),
-                    sitzung_type = COALESCE($3, sitzung_type)
+                    kind = COALESCE($3, kind)
                 WHERE id = $4 
-                RETURNING id, datum, location, sitzung_type AS "sitzung_type!: SitzungType" 
+                RETURNING id, datetime, location, kind AS "kind!: SitzungKind" 
             "#,
             datetime,
             location,
-            sitzung_type as Option<SitzungType>,
+            kind as Option<SitzungKind>,
             id
         )
-        .fetch_one(self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
@@ -202,67 +202,32 @@ impl SitzungRepo for PgConnection {
         &mut self,
         id: Uuid,
         sitzung_id: Option<Uuid>,
-        title: Option<&'a str>,
-        top_type: Option<&'a str>,
+        name: Option<&'a str>,
         inhalt: Option<&'a serde_json::Value>,
-    ) -> Result<Top> {
+        kind: Option<TopKind>,
+    ) -> Result<Option<Top>> {
         let result = sqlx::query_as!(
             Top,
             r#"
                 UPDATE tops 
                 SET 
-                    sitzung_id = COALESCE($1, sitzung_id),
-                    name = COALESCE($2, name),
-                    top_type = COALESCE($3, top_type),
-                    inhalt = COALESCE($4, inhalt)
-                WHERE id = $5 
-                RETURNING name, inhalt, id, weight, top_type
+                    sitzung_id = COALESCE($2, sitzung_id),
+                    name = COALESCE($3, name),
+                    kind = COALESCE($4, kind),
+                    inhalt = COALESCE($5, inhalt)
+                WHERE id = $1 
+                RETURNING id, name, weight, inhalt, kind AS "kind!: TopKind"
             "#,
+            id,
             sitzung_id,
-            title,
-            top_type,
+            name,
+            kind as Option<TopKind>,
             inhalt,
-            id
         )
-        .fetch_one(self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
-    }
-
-    async fn attach_antrag_to_top(
-        &mut self,
-        antrag_id: Uuid,
-        top_id: Uuid,
-    ) -> Result<AntragTopMapping> {
-        let map = sqlx::query_as!(
-            AntragTopMapping,
-            r#"
-                INSERT INTO antragstop (antrag_id, top_id) 
-                VALUES ($1, $2)
-                RETURNING *
-            "#,
-            antrag_id,
-            top_id
-        );
-        let result = map.fetch_one(self).await?;
-
-        Ok(result)
-    }
-
-    async fn detach_antrag_from_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()> {
-        sqlx::query!(
-            r#"
-                DELETE FROM antragstop 
-                WHERE antrag_id = $1 AND top_id = $2
-            "#,
-            antrag_id,
-            top_id
-        )
-        .execute(self)
-        .await?;
-
-        Ok(())
     }
 
     async fn delete_sitzung(&mut self, id: Uuid) -> Result<()> {
@@ -321,9 +286,7 @@ mod test {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::SitzungType;
-
-    use super::SitzungRepo;
+    use crate::domain::{SitzungRepo, SitzungKind, TopKind};
 
     #[sqlx::test]
     async fn create_sitzung(pool: PgPool) -> Result<()> {
@@ -331,15 +294,15 @@ mod test {
 
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T10:30:00+02:00").unwrap();
         let location = "ein uni raum";
-        let sitzung_type = SitzungType::VV;
+        let sitzung_kind = SitzungKind::VV;
 
         let sitzung = conn
-            .create_sitzung(datetime.into(), location, sitzung_type)
+            .create_sitzung(datetime.into(), location, sitzung_kind)
             .await?;
 
-        assert_eq!(sitzung.datum, datetime);
+        assert_eq!(sitzung.datetime, datetime);
         assert_eq!(sitzung.location, location);
-        assert_eq!(sitzung.sitzung_type, sitzung_type);
+        assert_eq!(sitzung.kind, sitzung_kind);
 
         Ok(())
     }
@@ -351,25 +314,25 @@ mod test {
         let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
 
         let first_title = "hallo";
-        let first_top_type = "normal";
+        let first_top_kind = TopKind::Normal;
 
         let first_top = conn
-            .create_top(sitzung_id, first_title, first_top_type, None)
+            .create_top(sitzung_id, first_title, None, first_top_kind)
             .await?;
 
         let second_title = "haaaalllo";
-        let second_top_type = "normal";
+        let second_top_kind = TopKind::Normal;
 
         let second_top = conn
-            .create_top(sitzung_id, second_title, second_top_type, None)
+            .create_top(sitzung_id, second_title, None, second_top_kind)
             .await?;
 
         assert_eq!(first_top.name, first_title);
-        assert_eq!(first_top.top_type, first_top_type);
+        assert_eq!(first_top.kind, first_top_kind);
         assert_eq!(first_top.weight, 1);
 
         assert_eq!(second_top.name, second_title);
-        assert_eq!(second_top.top_type, second_top_type);
+        assert_eq!(second_top.kind, second_top_kind);
         assert_eq!(second_top.weight, 2);
 
         Ok(())
@@ -382,39 +345,39 @@ mod test {
         let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
 
         let first_title = "hallo";
-        let first_top_type = "normal";
+        let first_top_kind = TopKind::Normal;
 
         let first_top = conn
-            .create_top(sitzung_id, first_title, first_top_type, None)
+            .create_top(sitzung_id, first_title, None, first_top_kind)
             .await?;
 
         assert_eq!(first_top.name, first_title);
-        assert_eq!(first_top.top_type, first_top_type);
+        assert_eq!(first_top.kind, first_top_kind);
         assert_eq!(first_top.weight, 5);
 
         Ok(())
     }
 
     #[sqlx::test(fixtures("sitzung_by_id"))]
-    async fn sitzung_by_id(pool: PgPool) -> anyhow::Result<()> {
+    async fn sitzung_by_id(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let id = Uuid::parse_str("42f7e3e2-91e4-4e60-89d9-72add0230901").unwrap();
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T12:30:00+02:00").unwrap();
         let location = "ein uni raum";
-        let sitzung_type = SitzungType::VV;
+        let sitzung_kind = SitzungKind::VV;
 
         let sitzung = conn.sitzung_by_id(id).await?.unwrap();
 
-        assert_eq!(sitzung.datum, datetime);
+        assert_eq!(sitzung.datetime, datetime);
         assert_eq!(sitzung.location, location);
-        assert_eq!(sitzung.sitzung_type, sitzung_type);
+        assert_eq!(sitzung.kind, sitzung_kind);
 
         Ok(())
     }
 
     #[sqlx::test(fixtures("first_sitzung_after"))]
-    async fn first_sitzung_after(pool: PgPool) -> anyhow::Result<()> {
+    async fn first_sitzung_after(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let timestamp = DateTime::parse_from_rfc3339("2024-09-15T00:00:00+02:00").unwrap();
@@ -429,7 +392,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("sitzungen_between"))]
-    async fn sitzungen_between(pool: PgPool) -> anyhow::Result<()> {
+    async fn sitzungen_between(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let start = DateTime::parse_from_rfc3339("2024-09-17T12:30:00+02:00").unwrap();
@@ -456,7 +419,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("top_by_id"))]
-    async fn top_by_id(pool: PgPool) -> anyhow::Result<()> {
+    async fn top_by_id(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let id = Uuid::parse_str("78d38fbf-b360-41ad-be0d-ddcffdd47bb2").unwrap();
@@ -464,17 +427,17 @@ mod test {
         let top = conn.top_by_id(id).await?.unwrap();
 
         let weight = 4;
-        let top_type = "normal";
+        let top_kind = TopKind::Normal;
 
         assert_eq!(top.id, id);
         assert_eq!(top.weight, weight);
-        assert_eq!(top.top_type, top_type);
+        assert_eq!(top.kind, top_kind);
 
         Ok(())
     }
 
     #[sqlx::test(fixtures("tops_by_sitzung"))]
-    async fn tops_by_sitzung(pool: PgPool) -> anyhow::Result<()> {
+    async fn tops_by_sitzung(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
@@ -496,30 +459,31 @@ mod test {
     }
 
     #[sqlx::test(fixtures("update_sitzung"))]
-    async fn update_sitzung(pool: PgPool) -> anyhow::Result<()> {
+    async fn update_sitzung(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
 
-        let new_sitzung_type = SitzungType::Konsti;
+        let new_sitzung_kind = SitzungKind::Konsti;
 
         let sitzung = conn
-            .update_sitzung(sitzung_id, None, None, Some(new_sitzung_type))
-            .await?;
+            .update_sitzung(sitzung_id, None, None, Some(new_sitzung_kind))
+            .await?
+            .unwrap();
 
         let old_datetime = DateTime::parse_from_rfc3339("2024-09-10T12:30:00+02:00").unwrap();
         let old_location = "ein uni raum";
 
         assert_eq!(sitzung.id, sitzung_id);
-        assert_eq!(sitzung.datum, old_datetime);
+        assert_eq!(sitzung.datetime, old_datetime);
         assert_eq!(sitzung.location, old_location);
-        assert_eq!(sitzung.sitzung_type, new_sitzung_type);
+        assert_eq!(sitzung.kind, new_sitzung_kind);
 
         Ok(())
     }
 
     #[sqlx::test(fixtures("update_top"))]
-    async fn update_top(pool: PgPool) -> anyhow::Result<()> {
+    async fn update_top(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let top_id = Uuid::parse_str("78d38fbf-b360-41ad-be0d-ddcffdd47bb2").unwrap();
@@ -528,41 +492,45 @@ mod test {
 
         let top = conn
             .update_top(top_id, None, Some(new_name), None, None)
-            .await?;
+            .await?
+            .unwrap();
 
-        let old_top_type = "normal";
+        let old_top_kind = TopKind::Normal;
         let old_weight = 4;
 
         assert_eq!(top.name, new_name);
-        assert_eq!(top.top_type, old_top_type);
+        assert_eq!(top.kind, old_top_kind);
         assert_eq!(top.weight, old_weight);
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures("attach_antrag_to_top"))]
-    async fn attach_antrag_to_top(pool: PgPool) -> anyhow::Result<()> {
+    #[sqlx::test(fixtures("delete_sitzung"))]
+    async fn delete_sitzung(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let top_id = Uuid::parse_str("78d38fbf-b360-41ad-be0d-ddcffdd47bb2").unwrap();
-        let antrag_id = Uuid::parse_str("641d6bbe-990c-4ece-9e38-dd3cd0d77460").unwrap();
+        let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
 
-        let mapping = conn.attach_antrag_to_top(antrag_id, top_id).await?;
+        conn.delete_sitzung(sitzung_id).await?;
 
-        assert_eq!(mapping.top_id, top_id);
-        assert_eq!(mapping.antrag_id, antrag_id);
+        let please_dont_be_a_sitzung = conn.sitzung_by_id(sitzung_id).await?;
+
+        assert!(please_dont_be_a_sitzung.is_none());
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures("detach_antrag_from_top"))]
-    async fn detach_antrag_from_top(pool: PgPool) -> anyhow::Result<()> {
+    #[sqlx::test(fixtures("delete_top"))]
+    async fn delete_top(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let top_id = Uuid::parse_str("78d38fbf-b360-41ad-be0d-ddcffdd47bb2").unwrap();
-        let antrag_id = Uuid::parse_str("641d6bbe-990c-4ece-9e38-dd3cd0d77460").unwrap();
+        let top_id = Uuid::parse_str("91e12cf2-a773-4c8d-a418-8cf68478db43").unwrap();
 
-        conn.detach_antrag_from_top(antrag_id, top_id).await?;
+        conn.delete_top(top_id).await?;
+
+        let please_dont_be_a_top = conn.top_by_id(top_id).await?;
+
+        assert!(please_dont_be_a_top.is_none());
 
         Ok(())
     }

@@ -5,9 +5,10 @@ use std::future::Future;
 use std::ops::{Deref, DerefMut};
 
 pub mod antrag;
-pub mod doorstate;
+pub mod door_state;
 pub mod persons;
 pub mod sitzungen;
+pub mod antrag_top_map;
 
 #[derive(Clone)]
 pub struct DatabasePool {
