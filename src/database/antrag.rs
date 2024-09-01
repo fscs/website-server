@@ -107,8 +107,8 @@ impl AntragRepo for PgConnection {
         title: Option<&'a str>,
         reason: Option<&'a str>,
         antragstext: Option<&'a str>,
-    ) -> Result<Option<Antrag>> {
-        let Some(antrag) = sqlx::query_as!(
+    ) -> Result<Antrag> {
+        let antrag = sqlx::query_as!(
             AntragData,
             r#"
                 UPDATE anträge
@@ -124,11 +124,8 @@ impl AntragRepo for PgConnection {
             antragstext,
             id
         )
-        .fetch_optional(&mut *self)
-        .await?
-        else {
-            return Ok(None);
-        };
+        .fetch_one(&mut *self)
+        .await?;
 
         let new_creators = if let Some(creators) = creators {
             sqlx::query!(
@@ -153,7 +150,7 @@ impl AntragRepo for PgConnection {
             creators: new_creators,
         };
 
-        Ok(Some(result))
+        Ok(result)
     }
 
     async fn delete_antrag(&mut self, id: Uuid) -> Result<()> {
@@ -179,7 +176,7 @@ mod test {
 
     use crate::domain::AntragRepo;
 
-    #[sqlx::test(fixtures("create_antrag"))]
+    #[sqlx::test(fixtures("gimme_persons"))]
     async fn create_antrag(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
@@ -208,7 +205,7 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("antrag_by_id"))]
+    #[sqlx::test(fixtures("gimme_persons", "gimme_antraege"))]
     async fn antrag_by_id(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
@@ -233,7 +230,7 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("update_antrag"))]
+    #[sqlx::test(fixtures("gimme_persons", "gimme_antraege"))]
     async fn update_antrag(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
@@ -257,8 +254,7 @@ mod test {
                 None,
                 Some(new_antragstext),
             )
-            .await?
-            .unwrap();
+            .await?;
 
         assert_eq!(antrag.creators, new_creators);
         assert_eq!(antrag.data.antragstext, new_antragstext);
@@ -268,7 +264,7 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("delete_antrag"))]
+    #[sqlx::test(fixtures("gimme_persons", "gimme_antraege"))]
     async fn delete_antrag(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 

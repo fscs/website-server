@@ -87,7 +87,7 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("door_state_at"))]
+    #[sqlx::test(fixtures("gimme_door_states"))]
     async fn door_state_at(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
         
@@ -95,12 +95,12 @@ mod test {
 
         let state = conn.door_state_at(datetime.into()).await?.unwrap();
 
-        assert_eq!(state.is_open, false);
+        assert_eq!(state.is_open, true);
 
         Ok(())
     }
     
-    #[sqlx::test(fixtures("door_state_between"))]
+    #[sqlx::test(fixtures("gimme_door_states"))]
     async fn door_state_between(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
         

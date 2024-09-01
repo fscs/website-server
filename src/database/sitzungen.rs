@@ -127,6 +127,7 @@ impl SitzungRepo for PgConnection {
                 SELECT id, datetime, location, kind AS "kind!: SitzungKind" 
                 FROM sitzungen
                 WHERE datetime >= $1 AND datetime <= $2
+                ORDER BY datetime ASC
             "#,
             start,
             end
@@ -160,6 +161,7 @@ impl SitzungRepo for PgConnection {
                 SELECT id, name, weight, inhalt, kind AS "kind!: TopKind"
                 FROM tops
                 WHERE sitzung_id = $1
+                ORDER BY weight ASC
             "#,
             sitzung_id
         )
@@ -175,7 +177,7 @@ impl SitzungRepo for PgConnection {
         datetime: Option<DateTime<Utc>>,
         location: Option<&'a str>,
         kind: Option<SitzungKind>,
-    ) -> Result<Option<Sitzung>> {
+    ) -> Result<Sitzung> {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
@@ -192,7 +194,7 @@ impl SitzungRepo for PgConnection {
             kind as Option<SitzungKind>,
             id
         )
-        .fetch_optional(self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -205,7 +207,7 @@ impl SitzungRepo for PgConnection {
         name: Option<&'a str>,
         inhalt: Option<&'a serde_json::Value>,
         kind: Option<TopKind>,
-    ) -> Result<Option<Top>> {
+    ) -> Result<Top> {
         let result = sqlx::query_as!(
             Top,
             r#"
@@ -224,7 +226,7 @@ impl SitzungRepo for PgConnection {
             kind as Option<TopKind>,
             inhalt,
         )
-        .fetch_optional(self)
+        .fetch_one(self)
         .await?;
 
         Ok(result)
@@ -307,11 +309,11 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("create_top"))]
+    #[sqlx::test(fixtures("gimme_sitzungen"))]
     async fn create_top(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
+        let sitzung_id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
 
         let first_title = "hallo";
         let first_top_kind = TopKind::Normal;
@@ -338,31 +340,31 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("create_top_correct_weight"))]
+    #[sqlx::test(fixtures("gimme_sitzungen", "gimme_tops"))]
     async fn create_top_correct_weight(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
+        let sitzung_id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
 
-        let first_title = "hallo";
-        let first_top_kind = TopKind::Normal;
+        let title = "hallo";
+        let kind = TopKind::Normal;
 
-        let first_top = conn
-            .create_top(sitzung_id, first_title, None, first_top_kind)
+        let top = conn
+            .create_top(sitzung_id, title, None, kind)
             .await?;
 
-        assert_eq!(first_top.name, first_title);
-        assert_eq!(first_top.kind, first_top_kind);
-        assert_eq!(first_top.weight, 5);
+        assert_eq!(top.name, title);
+        assert_eq!(top.kind, kind);
+        assert_eq!(top.weight, 5);
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures("sitzung_by_id"))]
+    #[sqlx::test(fixtures("gimme_sitzungen"))]
     async fn sitzung_by_id(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let id = Uuid::parse_str("42f7e3e2-91e4-4e60-89d9-72add0230901").unwrap();
+        let id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T12:30:00+02:00").unwrap();
         let location = "ein uni raum";
         let sitzung_kind = SitzungKind::VV;
@@ -376,13 +378,13 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("first_sitzung_after"))]
+    #[sqlx::test(fixtures("gimme_sitzungen"))]
     async fn first_sitzung_after(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let timestamp = DateTime::parse_from_rfc3339("2024-09-15T00:00:00+02:00").unwrap();
 
-        let id = Uuid::parse_str("260ce9e8-7618-4117-9a17-32211a03fae7").unwrap();
+        let id = Uuid::parse_str("177b861d-0447-45ce-bc56-9eb68991cbda").unwrap();
 
         let sitzung = conn.first_sitzung_after(timestamp.into()).await?.unwrap();
 
@@ -391,7 +393,7 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("sitzungen_between"))]
+    #[sqlx::test(fixtures("gimme_sitzungen"))]
     async fn sitzungen_between(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
@@ -404,25 +406,25 @@ mod test {
 
         assert_eq!(
             sitzungen[0].id,
-            Uuid::parse_str("51789e78-c2f6-4c67-a271-d05d95de9cab")?
+            Uuid::parse_str("177b861d-0447-45ce-bc56-9eb68991cbda").unwrap()
         );
         assert_eq!(
             sitzungen[1].id,
-            Uuid::parse_str("c92e9e19-13bd-4243-b520-55bea77fae8b")?
+            Uuid::parse_str("76f4a8a9-8944-4d89-b6b8-8cdbc1acedb2").unwrap()
         );
         assert_eq!(
             sitzungen[2].id,
-            Uuid::parse_str("d8398880-8598-4080-bf5b-9d063295024f")?
+            Uuid::parse_str("1e89dd3e-04fc-4f66-9ab3-e8e5bedcf053").unwrap()
         );
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures("top_by_id"))]
+    #[sqlx::test(fixtures("gimme_sitzungen", "gimme_tops"))]
     async fn top_by_id(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let id = Uuid::parse_str("78d38fbf-b360-41ad-be0d-ddcffdd47bb2").unwrap();
+        let id = Uuid::parse_str("44e9af7f-c183-4e82-8f3c-c421cb87f506").unwrap();
 
         let top = conn.top_by_id(id).await?.unwrap();
 
@@ -436,42 +438,49 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("tops_by_sitzung"))]
+    #[sqlx::test(fixtures("gimme_sitzungen", "gimme_tops"))]
     async fn tops_by_sitzung(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
+        let sitzung_id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
 
         let tops = conn.tops_by_sitzung(sitzung_id).await?;
 
-        assert_eq!(tops.len(), 2);
+        assert_eq!(tops.len(), 4);
 
         assert_eq!(
             tops[0].id,
-            Uuid::parse_str("78d38fbf-b360-41ad-be0d-ddcffdd47bb2")?
+            Uuid::parse_str("fd6b67df-60f2-453a-9ffc-93514c5ccdb1").unwrap()
         );
         assert_eq!(
             tops[1].id,
-            Uuid::parse_str("9cce6322-029a-498e-8385-c1f9644077a5")?
+            Uuid::parse_str("c5f7f1cf-9c40-47de-8385-9d7e9853f57f").unwrap()
+        );
+        assert_eq!(
+            tops[2].id,
+            Uuid::parse_str("44e9af7f-c183-4e82-8f3c-c421cb87f506").unwrap()
+        );
+        assert_eq!(
+            tops[3].id,
+            Uuid::parse_str("cc035514-1303-4dc8-851b-04a62b96bcba").unwrap()
         );
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures("update_sitzung"))]
+    #[sqlx::test(fixtures("gimme_sitzungen"))]
     async fn update_sitzung(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
+        let sitzung_id = Uuid::parse_str("76f4a8a9-8944-4d89-b6b8-8cdbc1acedb2").unwrap();
 
         let new_sitzung_kind = SitzungKind::Konsti;
 
         let sitzung = conn
             .update_sitzung(sitzung_id, None, None, Some(new_sitzung_kind))
-            .await?
-            .unwrap();
+            .await?;
 
-        let old_datetime = DateTime::parse_from_rfc3339("2024-09-10T12:30:00+02:00").unwrap();
+        let old_datetime = DateTime::parse_from_rfc3339("2024-09-24T12:30:00+02:00").unwrap();
         let old_location = "ein uni raum";
 
         assert_eq!(sitzung.id, sitzung_id);
@@ -482,18 +491,17 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("update_top"))]
+    #[sqlx::test(fixtures("gimme_sitzungen", "gimme_tops"))]
     async fn update_top(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let top_id = Uuid::parse_str("78d38fbf-b360-41ad-be0d-ddcffdd47bb2").unwrap();
+        let top_id = Uuid::parse_str("44e9af7f-c183-4e82-8f3c-c421cb87f506").unwrap();
 
         let new_name = "neuer name lmao";
 
         let top = conn
             .update_top(top_id, None, Some(new_name), None, None)
-            .await?
-            .unwrap();
+            .await?;
 
         let old_top_kind = TopKind::Normal;
         let old_weight = 4;
@@ -505,11 +513,11 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("delete_sitzung"))]
+    #[sqlx::test(fixtures("gimme_sitzungen"))]
     async fn delete_sitzung(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let sitzung_id = Uuid::parse_str("ba788d36-4798-408b-8dd1-102095ae2d6d").unwrap();
+        let sitzung_id = Uuid::parse_str("6180cdfb-3d66-447e-9051-feb904c7245f").unwrap();
 
         conn.delete_sitzung(sitzung_id).await?;
 
@@ -520,11 +528,11 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("delete_top"))]
+    #[sqlx::test(fixtures("gimme_sitzungen", "gimme_tops"))]
     async fn delete_top(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let top_id = Uuid::parse_str("91e12cf2-a773-4c8d-a418-8cf68478db43").unwrap();
+        let top_id = Uuid::parse_str("cc035514-1303-4dc8-851b-04a62b96bcba").unwrap();
 
         conn.delete_top(top_id).await?;
 

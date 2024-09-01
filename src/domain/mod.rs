@@ -147,7 +147,7 @@ pub trait SitzungRepo {
         datetime: Option<DateTime<Utc>>,
         location: Option<&'a str>,
         kind: Option<SitzungKind>,
-    ) -> Result<Option<Sitzung>>;
+    ) -> Result<Sitzung>;
 
     async fn update_top<'a>(
         &mut self,
@@ -156,7 +156,7 @@ pub trait SitzungRepo {
         name: Option<&'a str>,
         inhalt: Option<&'a serde_json::Value>,
         kind: Option<TopKind>,
-    ) -> Result<Option<Top>>;
+    ) -> Result<Top>;
 
     async fn delete_sitzung(&mut self, id: Uuid) -> Result<()>;
 
@@ -195,7 +195,7 @@ pub trait AntragRepo {
         title: Option<&'a str>,
         reason: Option<&'a str>,
         antragstext: Option<&'a str>,
-    ) -> Result<Option<Antrag>>;
+    ) -> Result<Antrag>;
 
     async fn delete_antrag(&mut self, id: Uuid) -> Result<()>;
 }
@@ -221,8 +221,6 @@ pub trait DoorStateRepo {
 pub trait PersonRepo {
     async fn create_person(&mut self, name: &str) -> Result<Person>;
 
-    async fn find_person(&mut self, id: Uuid) -> Result<Person>;
-
     async fn create_abmeldung(
         &mut self,
         person_id: Uuid,
@@ -231,46 +229,52 @@ pub trait PersonRepo {
     ) -> Result<Abmeldung>;
 
     async fn persons(&mut self) -> Result<Vec<Person>>;
-
-    async fn update_person(&mut self, id: Uuid, name: &str) -> Result<Person>;
-
-    async fn delete_person(&mut self, id: Uuid) -> Result<()>;
-
-    async fn assign_role_to_person(
-        &mut self,
-        person_id: Uuid,
-        role: &str,
-        start: DateTime<Utc>,
-        end: Option<DateTime<Utc>>,
-    ) -> Result<PersonRoleMapping>;
-
-    async fn delete_role_from_person(
-        &mut self,
-        person_id: Uuid,
-        role: &str,
-        start: DateTime<Utc>,
-        end: Option<DateTime<Utc>>,
-    ) -> Result<PersonRoleMapping>;
+    
+    async fn person_by_id(&mut self, id: Uuid) -> Result<Option<Person>>;
 
     async fn persons_with_role(
         &mut self,
         role: &str,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: NaiveDate,
+        end: NaiveDate,
     ) -> Result<Vec<Person>>;
 
     async fn abmeldungen_by_person(
         &mut self,
         person_id: Uuid,
-        start: NaiveDate,
-        end: NaiveDate,
     ) -> Result<Vec<Abmeldung>>;
 
-    async fn abmeldungen_between(
+    async fn abmeldungen_at(
         &mut self,
-        start: &NaiveDate,
-        end: &NaiveDate,
+        date: NaiveDate,
     ) -> Result<Vec<Abmeldung>>;
+    
+    async fn assign_role_to_person(
+        &mut self,
+        person_id: Uuid,
+        role: &str,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<PersonRoleMapping>;
+
+    async fn revoke_role_from_person(
+        &mut self,
+        person_id: Uuid,
+        role: &str,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<()>;
+
+    async fn revoke_abmeldung_from_person(
+        &mut self,
+        person_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<()>;
+    
+    async fn update_person<'a>(&mut self, id: Uuid, name: Option<&'a str>) -> Result<Person>;
+
+    async fn delete_person(&mut self, id: Uuid) -> Result<()>;
 }
 
 // pub async fn get_tops_with_anträge(
