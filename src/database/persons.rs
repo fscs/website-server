@@ -479,9 +479,6 @@ mod test {
         Ok(())
     }
 
-    // outer
-    // inner
-
     #[sqlx::test(fixtures("gimme_persons", "gimme_abmeldungen"))]
     async fn revoke_abmeldung_from_person_no_overlap(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
@@ -542,7 +539,7 @@ mod test {
 
         Ok(())
     }
-
+    
     #[sqlx::test(fixtures("gimme_persons", "gimme_abmeldungen"))]
     async fn revoke_abmeldung_from_person_inner_overlap(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
@@ -556,6 +553,38 @@ mod test {
 
         let remaining_abmeldungen = conn.abmeldungen_by_person(person_id).await?;
         assert_eq!(remaining_abmeldungen.len(), 3);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("gimme_persons", "gimme_abmeldungen"))]
+    async fn revoke_abmeldung_from_person_outer_overlap(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let person_id = Uuid::parse_str("78be7f57-8340-43e0-bba2-074da360ddf4").unwrap();
+        let start = NaiveDate::from_ymd_opt(2024, 09, 03).unwrap();
+        let end = NaiveDate::from_ymd_opt(2024, 09, 06).unwrap();
+
+        conn.revoke_abmeldung_from_person(person_id, start, end)
+            .await?;
+
+        let left_start = NaiveDate::from_ymd_opt(2024, 09, 01).unwrap();
+        let left_end = NaiveDate::from_ymd_opt(2024, 09, 03).unwrap();
+        
+        let right_start = NaiveDate::from_ymd_opt(2024, 09, 06).unwrap();
+        let right_end = NaiveDate::from_ymd_opt(2024, 09, 07).unwrap();
+
+        let remaining_abmeldungen = conn.abmeldungen_by_person(person_id).await?;
+
+        assert_eq!(remaining_abmeldungen.len(), 5);
+        
+        assert!(remaining_abmeldungen
+            .iter()
+            .any(|e| e.anfangsdatum == left_start && e.ablaufdatum == left_end));
+            
+        assert!(remaining_abmeldungen
+            .iter()
+            .any(|e| e.anfangsdatum == right_start && e.ablaufdatum == right_end));
 
         Ok(())
     }
