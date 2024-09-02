@@ -96,6 +96,12 @@ pub struct Person {
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct Role {
+    pub id: Uuid,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct Abmeldung {
     pub person_id: Uuid,
     pub anfangsdatum: NaiveDate,
@@ -221,6 +227,8 @@ pub trait DoorStateRepo {
 pub trait PersonRepo {
     async fn create_person(&mut self, name: &str) -> Result<Person>;
 
+    async fn create_role(&mut self, name: &str) -> Result<()>;
+
     async fn create_abmeldung(
         &mut self,
         person_id: Uuid,
@@ -229,6 +237,8 @@ pub trait PersonRepo {
     ) -> Result<Abmeldung>;
 
     async fn persons(&mut self) -> Result<Vec<Person>>;
+    
+    async fn roles(&mut self) -> Result<Vec<String>>;
     
     async fn person_by_id(&mut self, id: Uuid) -> Result<Option<Person>>;
 
@@ -275,6 +285,8 @@ pub trait PersonRepo {
     async fn update_person<'a>(&mut self, id: Uuid, name: Option<&'a str>) -> Result<Person>;
 
     async fn delete_person(&mut self, id: Uuid) -> Result<()>;
+    
+    async fn delete_role(&mut self, name: &str) -> Result<()>;
 }
 
 // pub async fn get_tops_with_anträge(
