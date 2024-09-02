@@ -182,10 +182,10 @@ impl PersonRepo for PgConnection {
                 )
                 INSERT INTO abmeldungen (person_id, anfangsdatum, ablaufdatum)
                 SELECT * FROM (VALUES
-                 ($1, (SELECT MIN(overlap.anfangsdatum) FROM overlap), $2),
-                    ($1, (SELECT MIN(overlap.anfangsdatum) FROM overlap), $2)) AS bounds (person_id, anfangsdatum, ablaufdatum)
+                  ($1, (SELECT MIN(overlap.anfangsdatum) FROM overlap), $2),
+                  ($1, $3, (SELECT MAX(overlap.ablaufdatum) FROM overlap))) AS bounds (person_id, anfangsdatum, ablaufdatum)
                 WHERE
-                    bounds.anfangsdatum < $2 AND
+                    bounds.anfangsdatum < $2 OR
                     bounds.ablaufdatum > $3
             "#,
             person_id,
@@ -520,7 +520,7 @@ mod test {
 
         Ok(())
     }
-    
+
     #[sqlx::test(fixtures("gimme_persons", "gimme_abmeldungen"))]
     async fn revoke_abmeldung_from_person_right_overlap(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
@@ -542,7 +542,7 @@ mod test {
 
         Ok(())
     }
-    
+
     #[sqlx::test(fixtures("gimme_persons", "gimme_abmeldungen"))]
     async fn revoke_abmeldung_from_person_inner_overlap(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
@@ -553,7 +553,7 @@ mod test {
 
         conn.revoke_abmeldung_from_person(person_id, start, end)
             .await?;
-        
+
         let remaining_abmeldungen = conn.abmeldungen_by_person(person_id).await?;
         assert_eq!(remaining_abmeldungen.len(), 3);
 
