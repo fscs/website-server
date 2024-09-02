@@ -235,22 +235,12 @@ impl SitzungRepo for PgConnection {
     async fn delete_sitzung(&mut self, id: Uuid) -> Result<()> {
         sqlx::query!(
             r#"
-                DELETE FROM tops 
-                WHERE sitzung_id = $1;
-            "#,
-            id
-        )
-        .execute(&mut *self)
-        .await?;
-
-        sqlx::query!(
-            r#"
                 DELETE FROM sitzungen 
                 WHERE id = $1
             "#,
             id
         )
-        .execute(&mut *self)
+        .execute(self)
         .await?;
 
         Ok(())
@@ -259,22 +249,12 @@ impl SitzungRepo for PgConnection {
     async fn delete_top(&mut self, id: Uuid) -> Result<()> {
         sqlx::query!(
             r#"
-                DELETE FROM antragstop 
-                WHERE top_id = $1
-            "#,
-            id
-        )
-        .execute(&mut *self)
-        .await?;
-
-        sqlx::query!(
-            r#"
                 DELETE FROM tops 
                 WHERE id = $1
             "#,
             id
         )
-        .execute(&mut *self)
+        .execute(self)
         .await?;
 
         Ok(())
