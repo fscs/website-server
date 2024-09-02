@@ -131,11 +131,11 @@
                 "--port"
                 "8080"
                 "--content-dir"
-                "static"
+                "test/static"
                 "--private-content-dir"
-                "static_auth"
+                "test/static_auth"
                 "--hidden-content-dir"
-                "hidden_static"
+                "test/hidden_static"
               ];
               ExposedPorts = {
                 "8080/tcp" = {};
@@ -188,7 +188,7 @@
             fi
 
             echo Starting the server
-            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --content-dir static --private-content-dir static_auth --hidden-content-dir static_hidden
+            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --content-dir test/static --private-content-dir test/static_auth --hidden-content-dir test/static_hidden
 
             if [ "$ALREADY_RUNNING" = false ]; then
               echo Stopping the Database
