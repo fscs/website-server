@@ -157,6 +157,8 @@
 
             ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR" start
 
+            trap "${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR stop; exit" SIGINT
+
             ${pkgs.sqlx-cli}/bin/sqlx migrate run --source ./migrations  --database-url $DATABASE_URL
 
             read -p "Press enter to stop the database"
@@ -178,13 +180,15 @@
 
             # Check if the database is already running
             ALREADY_RUNNING=false
+            
             if ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR status; then
-              echo Initializing the Database
               ALREADY_RUNNING=true
             fi
 
             if [ "$ALREADY_RUNNING" = false ]; then
+              echo Initializing the Database
               ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
+              trap "${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR stop; exit" SIGINT
             fi
 
             echo Starting the server
