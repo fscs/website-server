@@ -678,7 +678,7 @@ mod test {
 
         let roles = conn.roles().await?;
 
-        assert_eq!(roles.len(), 1);
+        assert_eq!(roles.len(), 2);
 
         Ok(())
     }
