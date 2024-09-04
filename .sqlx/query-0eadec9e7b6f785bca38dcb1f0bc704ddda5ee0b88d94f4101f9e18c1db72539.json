@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT *\n                FROM abmeldungen\n                WHERE anfangsdatum <= $1 AND ablaufdatum >= $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "person_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "anfangsdatum",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 2,
+        "name": "ablaufdatum",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0eadec9e7b6f785bca38dcb1f0bc704ddda5ee0b88d94f4101f9e18c1db72539"
+}

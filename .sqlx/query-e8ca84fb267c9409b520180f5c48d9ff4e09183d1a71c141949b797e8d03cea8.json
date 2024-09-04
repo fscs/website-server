@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                DELETE FROM antragstop \n                WHERE antrag_id = $1 AND top_id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e8ca84fb267c9409b520180f5c48d9ff4e09183d1a71c141949b797e8d03cea8"
+}

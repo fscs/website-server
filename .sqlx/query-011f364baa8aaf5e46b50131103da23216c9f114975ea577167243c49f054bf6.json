@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                WITH overlap AS (\n                    DELETE FROM abmeldungen\n                    WHERE\n                        person_id = $1 AND\n                        anfangsdatum <= $3 AND\n                        ablaufdatum >= $2\n                    RETURNING *\n                )\n                INSERT INTO abmeldungen \n                SELECT \n                    $1,\n                    LEAST($2::date, MIN(anfangsdatum)) AS anfangsdatum, \n                    GREATEST($3::date, MAX(ablaufdatum)) AS ablaufdatum\n                FROM overlap\n                RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "person_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "anfangsdatum",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 2,
+        "name": "ablaufdatum",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "011f364baa8aaf5e46b50131103da23216c9f114975ea577167243c49f054bf6"
+}

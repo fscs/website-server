@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM sitzungen WHERE id = $1",
+  "query": "\n                SELECT * FROM person\n            ",
   "describe": {
     "columns": [
       {
@@ -10,25 +10,17 @@
       },
       {
         "ordinal": 1,
-        "name": "datum",
-        "type_info": "Timestamp"
-      },
-      {
-        "ordinal": 2,
         "name": "name",
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid"
-      ]
+      "Left": []
     },
     "nullable": [
-      false,
       false,
       false
     ]
   },
-  "hash": "03a669665fc8800cb9834b4f12b2531803b8a77b39aad87a4bff6d4e06242ee2"
+  "hash": "a6ffba54f766871b1713654e28b013307d58da0df4fb5a68b2ac180d630b15ad"
 }

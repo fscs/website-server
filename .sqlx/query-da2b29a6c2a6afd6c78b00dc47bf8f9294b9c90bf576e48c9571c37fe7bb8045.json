@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT * \n                FROM abmeldungen\n                WHERE person_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "person_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "anfangsdatum",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 2,
+        "name": "ablaufdatum",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "da2b29a6c2a6afd6c78b00dc47bf8f9294b9c90bf576e48c9571c37fe7bb8045"
+}
