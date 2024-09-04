@@ -150,7 +150,7 @@ pub trait SitzungRepo {
         datetime: Option<DateTime<Utc>>,
         location: Option<&'a str>,
         kind: Option<SitzungKind>,
-    ) -> Result<Sitzung>;
+    ) -> Result<Option<Sitzung>>;
 
     async fn update_top<'a>(
         &mut self,
@@ -159,11 +159,11 @@ pub trait SitzungRepo {
         name: Option<&'a str>,
         inhalt: Option<&'a serde_json::Value>,
         kind: Option<TopKind>,
-    ) -> Result<Top>;
+    ) -> Result<Option<Top>>;
 
-    async fn delete_sitzung(&mut self, id: Uuid) -> Result<()>;
+    async fn delete_sitzung(&mut self, id: Uuid) -> Result<Option<Sitzung>>;
 
-    async fn delete_top(&mut self, id: Uuid) -> Result<()>;
+    async fn delete_top(&mut self, id: Uuid) -> Result<Option<Top>>;
 }
 
 #[cfg_attr(test, automock)]
@@ -174,9 +174,10 @@ pub trait AntragTopMapRepo {
         &mut self,
         antrag_id: Uuid,
         top_id: Uuid,
-    ) -> Result<AntragTopMapping>;
+    ) -> Result<Option<AntragTopMapping>>;
 
-    async fn detach_antrag_from_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<()>;
+    async fn detach_antrag_from_top(&mut self, antrag_id: Uuid, top_id: Uuid)
+        -> Result<Option<AntragTopMapping>>;
 }
 
 #[cfg_attr(test, automock)]
@@ -200,9 +201,9 @@ pub trait AntragRepo {
         title: Option<&'a str>,
         reason: Option<&'a str>,
         antragstext: Option<&'a str>,
-    ) -> Result<Antrag>;
+    ) -> Result<Option<Antrag>>;
 
-    async fn delete_antrag(&mut self, id: Uuid) -> Result<()>;
+    async fn delete_antrag(&mut self, id: Uuid) -> Result<Option<AntragData>>;
 }
 
 #[cfg_attr(test, automock)]
@@ -251,22 +252,30 @@ pub trait PersonRepo {
         &mut self,
         person_id: Uuid,
         role: &str,
-    ) -> Result<PersonRoleMapping>;
+    ) -> Result<Option<PersonRoleMapping>>;
 
-    async fn revoke_role_from_person(&mut self, person_id: Uuid, role: &str) -> Result<()>;
+    async fn revoke_role_from_person(
+        &mut self,
+        person_id: Uuid,
+        role: &str,
+    ) -> Result<Option<PersonRoleMapping>>;
 
     async fn revoke_abmeldung_from_person(
         &mut self,
         person_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
-    ) -> Result<()>;
+    ) -> Result<Option<Abmeldung>>;
 
-    async fn update_person<'a>(&mut self, id: Uuid, name: Option<&'a str>) -> Result<Person>;
+    async fn update_person<'a>(
+        &mut self,
+        id: Uuid,
+        name: Option<&'a str>,
+    ) -> Result<Option<Person>>;
 
-    async fn delete_person(&mut self, id: Uuid) -> Result<()>;
+    async fn delete_person(&mut self, id: Uuid) -> Result<Option<Person>>;
 
-    async fn delete_role(&mut self, name: &str) -> Result<()>;
+    async fn delete_role(&mut self, name: &str) -> Result<Option<String>>;
 }
 
 // pub async fn get_tops_with_anträge(

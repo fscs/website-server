@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                DELETE FROM tops\n                WHERE id = $1\n                RETURNING id, name, weight, inhalt, kind AS \"kind!: TopKind\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "weight",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "inhalt",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "kind!: TopKind",
+        "type_info": {
+          "Custom": {
+            "name": "topkind",
+            "kind": {
+              "Enum": [
+                "regularia",
+                "bericht",
+                "normal",
+                "verschiedenes"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "4c58234bb47e99634f6771843af5eed1b6824797996765c7edc57d2bfc4f19db"
+}

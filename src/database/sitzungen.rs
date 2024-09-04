@@ -177,7 +177,7 @@ impl SitzungRepo for PgConnection {
         datetime: Option<DateTime<Utc>>,
         location: Option<&'a str>,
         kind: Option<SitzungKind>,
-    ) -> Result<Sitzung> {
+    ) -> Result<Option<Sitzung>> {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
@@ -194,7 +194,7 @@ impl SitzungRepo for PgConnection {
             kind as Option<SitzungKind>,
             id
         )
-        .fetch_one(self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
@@ -207,7 +207,7 @@ impl SitzungRepo for PgConnection {
         name: Option<&'a str>,
         inhalt: Option<&'a serde_json::Value>,
         kind: Option<TopKind>,
-    ) -> Result<Top> {
+    ) -> Result<Option<Top>> {
         let result = sqlx::query_as!(
             Top,
             r#"
@@ -226,38 +226,42 @@ impl SitzungRepo for PgConnection {
             kind as Option<TopKind>,
             inhalt,
         )
-        .fetch_one(self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
     }
 
-    async fn delete_sitzung(&mut self, id: Uuid) -> Result<()> {
-        sqlx::query!(
+    async fn delete_sitzung(&mut self, id: Uuid) -> Result<Option<Sitzung>> {
+        let result = sqlx::query_as!(
+            Sitzung,
             r#"
-                DELETE FROM sitzungen 
+                DELETE FROM sitzungen
                 WHERE id = $1
+                RETURNING id, datetime, location, kind AS "kind!: SitzungKind"
             "#,
             id
         )
-        .execute(self)
+        .fetch_optional(self)
         .await?;
 
-        Ok(())
+        Ok(result)
     }
 
-    async fn delete_top(&mut self, id: Uuid) -> Result<()> {
-        sqlx::query!(
+    async fn delete_top(&mut self, id: Uuid) -> Result<Option<Top>> {
+        let result = sqlx::query_as!(
+            Top,
             r#"
-                DELETE FROM tops 
+                DELETE FROM tops
                 WHERE id = $1
+                RETURNING id, name, weight, inhalt, kind AS "kind!: TopKind"
             "#,
             id
         )
-        .execute(self)
+        .fetch_optional(self)
         .await?;
 
-        Ok(())
+        Ok(result)
     }
 }
 
@@ -458,7 +462,8 @@ mod test {
 
         let sitzung = conn
             .update_sitzung(sitzung_id, None, None, Some(new_sitzung_kind))
-            .await?;
+            .await?
+            .unwrap();
 
         let old_datetime = DateTime::parse_from_rfc3339("2024-09-24T12:30:00+02:00").unwrap();
         let old_location = "ein uni raum";
@@ -481,7 +486,8 @@ mod test {
 
         let top = conn
             .update_top(top_id, None, Some(new_name), None, None)
-            .await?;
+            .await?
+            .unwrap();
 
         let old_top_kind = TopKind::Normal;
         let old_weight = 4;

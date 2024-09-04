@@ -141,8 +141,8 @@ impl AntragRepo for PgConnection {
         title: Option<&'a str>,
         reason: Option<&'a str>,
         antragstext: Option<&'a str>,
-    ) -> Result<Antrag> {
-        let antrag = sqlx::query_as!(
+    ) -> Result<Option<Antrag>> {
+        let Some(antrag) = sqlx::query_as!(
             AntragData,
             r#"
                 UPDATE anträge
@@ -158,8 +158,11 @@ impl AntragRepo for PgConnection {
             antragstext,
             id
         )
-        .fetch_one(&mut *self)
-        .await?;
+        .fetch_optional(&mut *self)
+        .await?
+        else {
+            return Ok(None);
+        };
 
         let new_creators = if let Some(creators) = creators {
             sqlx::query!(
@@ -184,28 +187,28 @@ impl AntragRepo for PgConnection {
             creators: new_creators,
         };
 
-        Ok(result)
+        Ok(Some(result))
     }
 
-    async fn delete_antrag(&mut self, id: Uuid) -> Result<()> {
-        sqlx::query!(
+    async fn delete_antrag(&mut self, id: Uuid) -> Result<Option<AntragData>> {
+        let result = sqlx::query_as!(
+            AntragData,
             r#"
                 DELETE FROM anträge 
                 WHERE id = $1
+                RETURNING *
             "#,
             id
         )
-        .execute(&mut *self)
+        .fetch_optional(&mut *self)
         .await?;
 
-        Ok(())
+        Ok(result)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::borrow::BorrowMut;
-
     use anyhow::Result;
     use sqlx::PgPool;
     use uuid::Uuid;
@@ -339,7 +342,8 @@ mod test {
                 None,
                 Some(new_antragstext),
             )
-            .await?;
+            .await?
+            .unwrap();
 
         assert_eq!(antrag.creators, new_creators);
         assert_eq!(antrag.data.antragstext, new_antragstext);

@@ -165,36 +165,44 @@ impl PersonRepo for PgConnection {
         &mut self,
         person_id: Uuid,
         role: &str,
-    ) -> Result<PersonRoleMapping> {
+    ) -> Result<Option<PersonRoleMapping>> {
         let result = sqlx::query_as!(
             PersonRoleMapping,
             r#"
                 INSERT INTO rolemapping
                 VALUES ($1, $2)
+                ON CONFLICT
+                DO NOTHING
                 RETURNING *
             "#,
             person_id,
             role
         )
-        .fetch_one(self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
     }
 
-    async fn revoke_role_from_person(&mut self, person_id: Uuid, role: &str) -> Result<()> {
-        sqlx::query!(
+    async fn revoke_role_from_person(
+        &mut self,
+        person_id: Uuid,
+        role: &str,
+    ) -> Result<Option<PersonRoleMapping>> {
+        let result = sqlx::query_as!(
+            PersonRoleMapping,
             r#"
                 DELETE FROM rolemapping
                 WHERE person_id = $1 AND rolle = $2
+                RETURNING *
             "#,
             person_id,
             role
         )
-        .execute(self)
+        .fetch_optional(self)
         .await?;
 
-        Ok(())
+        Ok(result)
     }
 
     async fn revoke_abmeldung_from_person(
@@ -202,8 +210,9 @@ impl PersonRepo for PgConnection {
         person_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
-    ) -> Result<()> {
-        sqlx::query!(
+    ) -> Result<Option<Abmeldung>> {
+        let result = sqlx::query_as!(
+            Abmeldung,
             r#"
                 WITH overlap AS (
                     DELETE FROM abmeldungen
@@ -220,18 +229,23 @@ impl PersonRepo for PgConnection {
                 WHERE
                     bounds.anfangsdatum < $2 OR
                     bounds.ablaufdatum > $3
+                RETURNING *
             "#,
             person_id,
             start,
             end
         )
-        .execute(self)
+        .fetch_optional(self)
         .await?;
 
-        Ok(())
+        Ok(result)
     }
 
-    async fn update_person<'a>(&mut self, id: Uuid, name: Option<&'a str>) -> Result<Person> {
+    async fn update_person<'a>(
+        &mut self,
+        id: Uuid,
+        name: Option<&'a str>,
+    ) -> Result<Option<Person>> {
         let result = sqlx::query_as!(
             Person,
             r#"
@@ -244,38 +258,41 @@ impl PersonRepo for PgConnection {
             id,
             name
         )
-        .fetch_one(self)
+        .fetch_optional(self)
         .await?;
 
         Ok(result)
     }
 
-    async fn delete_person(&mut self, id: Uuid) -> Result<()> {
-        sqlx::query!(
+    async fn delete_person(&mut self, id: Uuid) -> Result<Option<Person>> {
+        let result = sqlx::query_as!(
+            Person,
             r#"
                 DELETE FROM person
                 WHERE id = $1
+                RETURNING *
             "#,
             id
         )
-        .execute(self)
+        .fetch_optional(self)
         .await?;
 
-        Ok(())
+        Ok(result)
     }
 
-    async fn delete_role(&mut self, name: &str) -> Result<()> {
-        sqlx::query!(
+    async fn delete_role(&mut self, name: &str) -> Result<Option<String>> {
+        let result = sqlx::query_scalar!(
             r#"
                 DELETE FROM roles
                 WHERE name = $1
+                RETURNING *
             "#,
             name
         )
-        .execute(self)
+        .fetch_optional(self)
         .await?;
 
-        Ok(())
+        Ok(result)
     }
 }
 
@@ -495,18 +512,18 @@ mod test {
         let person_id = Uuid::parse_str("5a5a134d-9345-4c36-a466-1c3bb806b240").unwrap();
         let role = "Banana";
 
-        let mapping = conn.assign_role_to_person(person_id, role).await?;
+        let mapping = conn.assign_role_to_person(person_id, role).await?.unwrap();
 
         assert_eq!(mapping.person_id, person_id);
         assert_eq!(mapping.rolle, role);
-            
+
         Ok(())
     }
 
     #[sqlx::test(fixtures("gimme_persons", "gimme_rollen"))]
     async fn revoke_role_from_person(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
-        
+
         let person_id = Uuid::parse_str("5a5a134d-9345-4c36-a466-1c3bb806b240").unwrap();
         let role = "Kooptiert";
 
@@ -517,7 +534,7 @@ mod test {
         let still_has_role = persons.iter().any(|p| p.id == person_id);
 
         assert!(!still_has_role);
-        
+
         Ok(())
     }
 
@@ -638,7 +655,7 @@ mod test {
         let id = Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap();
         let new_name = "auch meine mutter";
 
-        let person = conn.update_person(id, Some(new_name)).await?;
+        let person = conn.update_person(id, Some(new_name)).await?.unwrap();
 
         assert_eq!(person.name, new_name);
 

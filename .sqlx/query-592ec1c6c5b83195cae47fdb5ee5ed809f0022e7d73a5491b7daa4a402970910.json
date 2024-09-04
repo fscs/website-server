@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                DELETE FROM sitzungen\n                WHERE id = $1\n                RETURNING id, datetime, location, kind AS \"kind!: SitzungKind\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "location",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "kind!: SitzungKind",
+        "type_info": {
+          "Custom": {
+            "name": "sitzungkind",
+            "kind": {
+              "Enum": [
+                "normal",
+                "vv",
+                "wahlvv",
+                "ersatz",
+                "konsti",
+                "dringlichkeit"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "592ec1c6c5b83195cae47fdb5ee5ed809f0022e7d73a5491b7daa4a402970910"
+}

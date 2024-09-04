@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO rolemapping\n                VALUES ($1, $2)\n                ON CONFLICT\n                DO NOTHING\n                RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "person_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "rolle",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "f77611289a10cf8f31cae90301da89b1c971bfb4097e7dbbbe8a6d1ec21fea25"
+}

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                DELETE FROM antragstop \n                WHERE antrag_id = $1 AND top_id = $2\n                RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "antrag_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "top_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "46c008cd7bb5da13f89a0971e7c5e48ebc8a27c4b75f8aa7b0afbb686b9b958c"
+}

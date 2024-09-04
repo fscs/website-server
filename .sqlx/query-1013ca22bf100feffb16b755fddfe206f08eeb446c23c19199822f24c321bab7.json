@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                INSERT INTO antragstop (antrag_id, top_id) \n                VALUES ($1, $2)\n                RETURNING *\n            ",
+  "query": "\n                INSERT INTO antragstop (antrag_id, top_id) \n                VALUES ($1, $2)\n                ON CONFLICT\n                DO NOTHING\n                RETURNING *\n            ",
   "describe": {
     "columns": [
       {
@@ -25,5 +25,5 @@
       false
     ]
   },
-  "hash": "eac4cccab247380f66b33e2e35f584b6179729beec17d078dc300d3c42f20e9b"
+  "hash": "1013ca22bf100feffb16b755fddfe206f08eeb446c23c19199822f24c321bab7"
 }
