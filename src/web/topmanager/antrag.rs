@@ -39,6 +39,7 @@ pub struct UpdateAntragParams {
 }
 
 #[utoipa::path(
+    path = "/api/anträge/",
     responses(
         (status = 200, description = "Success", body = Vec<Antrag>),
         (status = 500, description = "Internal Server Error"),
@@ -50,6 +51,7 @@ async fn get_anträge(mut transaction: DatabaseTransaction<'_>) -> impl Responde
 }
 
 #[utoipa::path(
+    path = "/api/anträge/{id}",
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 404, description = "Not Found"),
@@ -65,6 +67,7 @@ async fn get_antrag_by_id(
 }
 
 #[utoipa::path(
+    path = "/api/anträge/{id}",
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 404, description = "Not Found"),
@@ -89,6 +92,7 @@ async fn create_antrag(
 }
 
 #[utoipa::path(
+    path = "/api/anträge/{id}",
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 404, description = "Not Found"),
@@ -115,6 +119,7 @@ async fn patch_antrag(
 }
 
 #[utoipa::path(
+    path = "/api/anträge/{id}",
     responses(
         (status = 200, description = "Success"),
         (status = 404, description = "Not Found"),
