@@ -1,274 +1,127 @@
-#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
-pub struct CreateAntragParams {
-    pub titel: String,
-    pub antragstext: String,
-    pub begründung: String,
-    pub antragssteller: String,
-    pub top_type: String,
-}
-
-#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
-pub struct UpdateAntragParams {
-    pub id: Uuid,
-    pub titel: String,
-    pub antragstext: String,
-    pub begründung: String,
-}
-
-#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
-pub struct DeleteAntragParams {
-    pub id: Uuid,
-}
-
-#[derive(Debug, Deserialize, Clone, ToSchema, IntoParams)]
-pub struct CreateAntragTopMappingParams {
-    pub antrag_id: Uuid,
-    pub top_id: Uuid,
-}
-
-use crate::database::DatabasePool;
-use crate::domain::TopManagerRepo;
-use crate::web::auth::User;
-use crate::web::topmanager::RestStatus;
-use actix_web::web::Data;
-use actix_web::{delete, get, patch, put, web, Responder};
-use chrono::Utc;
+use actix_web::{
+    delete, get, patch, post,
+    web::{self, Path},
+    Responder, Scope,
+};
 use serde::Deserialize;
-
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-#[utoipa::path(
-    path = "/api/topmanager/antrag/",
-    request_body=UpdateAntragParams,
-    responses(
-        (status = 201, description = "Created", body = Antrag),
-        (status = 400, description = "Bad Request"),
-    )
-)]
-#[patch("/antrag/")]
-async fn update_antrag(
-    _user: User,
-    db: Data<DatabasePool>,
-    params: web::Json<UpdateAntragParams>,
-) -> impl Responder {
-    let result = sqlx::query(
-        "UPDATE anträge SET titel = $1, antragstext = $2, begründung = $3 WHERE id = $4",
-    )
-    .bind(&params.titel)
-    .bind(&params.antragstext)
-    .bind(&params.begründung)
-    .bind(params.id)
-    .execute(db.pool())
-    .await;
-    match result {
-        Ok(_) => "Antrag geändert",
-        Err(e) => {
-            log::error!("Failed to update Antrag: {:?}", e);
-            "Failed to update Antrag"
-        }
-    }
+use crate::{
+    database::DatabaseTransaction,
+    domain::AntragRepo,
+    web::{person::get_persons, RestStatus},
+};
+
+pub(crate) fn service(path: &'static str) -> Scope {
+    web::scope(path)
+        .service(get_persons)
+        .service(get_antrag_by_id)
+        .service(create_antrag)
+        .service(patch_antrag)
+        .service(delete_antrag)
+}
+
+#[derive(Debug, IntoParams, Deserialize, ToSchema)]
+pub struct CreateAntragParams {
+    antragssteller: Vec<Uuid>,
+    begründung: String,
+    antragstext: String,
+    titel: String,
+}
+
+#[derive(Debug, IntoParams, Deserialize, ToSchema)]
+pub struct UpdateAntragParams {
+    antragssteller: Option<Vec<Uuid>>,
+    begründung: Option<String>,
+    antragstext: Option<String>,
+    titel: Option<String>,
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/antrag/",
-    request_body = CreateAntragParams,
-    responses(
-        (status = 200, description = "Success", body = Antrag),
-        (status = 400, description = "Bad Request"),
-    )
-)]
-#[put("/antrag/")]
-async fn create_antrag(
-    _user: User,
-    db: Data<DatabasePool>,
-    params: web::Json<CreateAntragParams>,
-) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                let antrag = transaction
-                    .create_antrag(&params.titel, &params.antragstext, &params.begründung)
-                    .await?;
-
-                let person = transaction.create_person(&params.antragssteller).await?;
-                transaction
-                    .create_antragssteller(antrag.id, person.id)
-                    .await?;
-
-                let now = Utc::now();
-
-                let Some(sitzung) = transaction.find_sitzung_after(now).await? else {
-                    return Ok((antrag, transaction));
-                };
-
-                let top = transaction
-                    .create_top(&antrag.titel, sitzung.id, &params.top_type, &None)
-                    .await?;
-                transaction.add_antrag_to_top(antrag.id, top.id).await?;
-
-                Ok((antrag, transaction))
-            }
-        })
-        .await;
-
-    RestStatus::created_from_result(result)
-}
-
-#[utoipa::path(
-    path = "/api/topmanager/top/{top_id}/antrag/",
-    params(("top_id" = Uuid, Path,)),
-    request_body = CreateAntragParams,
-    responses(
-        (status = 200, description = "Success", body = Antrag),
-        (status = 400, description = "Bad Request"),
-    )
-)]
-#[put("/top/{top_id}/antrag/")]
-async fn create_antrag_for_top(
-    _user: User,
-    db: Data<DatabasePool>,
-    top_id: web::Path<Uuid>,
-    params: web::Json<CreateAntragParams>,
-) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            let top_id = top_id.clone();
-            async move {
-                let antrag = transaction
-                    .create_antrag(&params.titel, &params.antragstext, &params.begründung)
-                    .await?;
-
-                let person = transaction.create_person(&params.antragssteller).await?;
-                transaction
-                    .create_antragssteller(antrag.id, person.id)
-                    .await?;
-
-                transaction.add_antrag_to_top(antrag.id, top_id).await?;
-
-                Ok((antrag, transaction))
-            }
-        })
-        .await;
-
-    RestStatus::created_from_result(result)
-}
-
-#[utoipa::path(
-    path = "/api/topmanager/antrag/",
     responses(
         (status = 200, description = "Success", body = Vec<Antrag>),
-        (status = 400, description = "Bad Request"),
+        (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/antrag/")]
-async fn get_anträge(db: Data<DatabasePool>) -> impl Responder {
-    let anträge = db
-        .transaction(move |mut transaction| async move {
-            Ok((transaction.get_anträge().await?, transaction))
-        })
-        .await;
-
-    RestStatus::ok_from_result(anträge)
+#[get("/")]
+async fn get_anträge(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+    RestStatus::ok_from_result(transaction.anträge().await)
 }
 
 #[utoipa::path(
-    get,
-    path = "/api/topmanager/antrag/{id}/",
     responses(
         (status = 200, description = "Success", body = Antrag),
-        (status = 400, description = "Bad Request"),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/antrag/{id}/")]
-async fn get_antrag(db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
-    let antrag = db
-        .transaction(move |mut transaction| {
-            let id = id.clone();
-            async move { Ok((transaction.find_antrag_by_id(id).await?, transaction)) }
-        })
-        .await;
-
-    RestStatus::ok_from_result(antrag)
+#[get("/{id}/")]
+async fn get_antrag_by_id(
+    id: Path<Uuid>,
+    mut transaction: DatabaseTransaction<'_>,
+) -> impl Responder {
+    RestStatus::ok_from_result(transaction.antrag_by_id(*id).await)
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/antrag/{id}/",
     responses(
         (status = 200, description = "Success", body = Antrag),
-        (status = 400, description = "Bad Request"),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/antrag/{id}/")]
-async fn delete_antrag(_user: User, db: Data<DatabasePool>, id: web::Path<Uuid>) -> impl Responder {
-    let result = db
-        .transaction(move |mut transaction| {
-            let id = id.clone();
-            async move { Ok((transaction.delete_antrag(id).await?, transaction)) }
-        })
-        .await;
-
-    RestStatus::ok_from_result(result)
+#[post("/")]
+async fn create_antrag(
+    params: web::Json<CreateAntragParams>,
+    mut transaction: DatabaseTransaction<'_>,
+) -> impl Responder {
+    RestStatus::ok_from_result(
+        transaction
+            .create_antrag(
+                &params.antragssteller,
+                &params.titel,
+                &params.begründung,
+                &params.antragstext,
+            )
+            .await,
+    )
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/antrag/assoc/",
     responses(
-        (status = 200, description = "Success", body = AntragTopMapping),
-        (status = 400, description = "Bad Request"),
+        (status = 200, description = "Success", body = Antrag),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("/antrag/assoc/")]
-async fn put_antrag_top_mapping(
-    _user: User,
-    db: Data<DatabasePool>,
-    params: web::Json<CreateAntragTopMappingParams>,
+#[patch("/{id}/")]
+async fn patch_antrag(
+    params: web::Json<UpdateAntragParams>,
+    id: Path<Uuid>,
+    mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
-    let antrag = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                Ok((
-                    transaction
-                        .create_antrag_top_mapping(params.antrag_id, params.top_id)
-                        .await?,
-                    transaction,
-                ))
-            }
-        })
-        .await;
-
-    RestStatus::ok_from_result(antrag)
+    RestStatus::ok_from_result(
+        transaction
+            .update_antrag(
+                *id,
+                params.antragssteller.as_deref(),
+                params.titel.as_deref(),
+                params.begründung.as_deref(),
+                params.antragstext.as_deref(),
+            )
+            .await,
+    )
 }
 
 #[utoipa::path(
-    path = "/api/topmanager/antrag/assoc/",
     responses(
-        (status = 200, description = "Success", body = AntragTopMapping),
-        (status = 400, description = "Bad Request"),
+        (status = 200, description = "Success"),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/antrag/assoc/")]
-async fn delete_antrag_top_mapping(
-    _user: User,
-    db: Data<DatabasePool>,
-    params: web::Json<CreateAntragTopMappingParams>,
-) -> impl Responder {
-    let antrag = db
-        .transaction(move |mut transaction| {
-            let params = params.clone();
-            async move {
-                Ok((
-                    transaction
-                        .delete_antrag_top_mapping(params.antrag_id, params.top_id)
-                        .await?,
-                    transaction,
-                ))
-            }
-        })
-        .await;
-
-    RestStatus::ok_from_result(antrag)
+#[delete("/{id}/")]
+async fn delete_antrag(id: Path<Uuid>, mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+    RestStatus::ok_from_result(transaction.delete_antrag(*id).await)
 }

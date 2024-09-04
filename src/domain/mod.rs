@@ -25,7 +25,7 @@ pub enum TopKind {
     Regularia,
     Bericht,
     Normal,
-    Verschiedenes
+    Verschiedenes,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
@@ -45,7 +45,7 @@ pub struct Top {
     pub kind: TopKind,
 }
 
-#[derive(Debug, Serialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, IntoParams, ToSchema, PartialEq)]
 pub struct AntragData {
     pub id: Uuid,
     pub titel: String,
@@ -53,7 +53,7 @@ pub struct AntragData {
     pub begründung: String,
 }
 
-#[derive(Debug, Serialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, IntoParams, ToSchema, PartialEq)]
 pub struct Antrag {
     #[serde(flatten)]
     pub data: AntragData,
@@ -64,15 +64,14 @@ pub struct Antrag {
 pub struct SitzungWithTops {
     #[serde(flatten)]
     pub sitzung: Sitzung,
-    pub tops: Vec<TopWithAnträge>
+    pub tops: Vec<TopWithAnträge>,
 }
-
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct TopWithAnträge {
     #[serde(flatten)]
     pub top: Top,
-    pub anträge: Vec<Antrag>
+    pub anträge: Vec<Antrag>,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
@@ -170,7 +169,7 @@ pub trait SitzungRepo {
 #[cfg_attr(test, automock)]
 pub trait AntragTopMapRepo {
     async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
-    
+
     async fn attach_antrag_to_top(
         &mut self,
         antrag_id: Uuid,
@@ -189,6 +188,8 @@ pub trait AntragRepo {
         reason: &str,
         antragstext: &str,
     ) -> Result<Antrag>;
+
+    async fn anträge(&mut self) -> Result<Vec<Antrag>>;
 
     async fn antrag_by_id(&mut self, id: Uuid) -> Result<Option<Antrag>>;
 
@@ -235,25 +236,16 @@ pub trait PersonRepo {
     ) -> Result<Abmeldung>;
 
     async fn persons(&mut self) -> Result<Vec<Person>>;
-    
+
     async fn roles(&mut self) -> Result<Vec<String>>;
-    
+
     async fn person_by_id(&mut self, id: Uuid) -> Result<Option<Person>>;
 
-    async fn persons_with_role(
-        &mut self,
-        role: &str,
-    ) -> Result<Vec<Person>>;
+    async fn persons_with_role(&mut self, role: &str) -> Result<Vec<Person>>;
 
-    async fn abmeldungen_by_person(
-        &mut self,
-        person_id: Uuid,
-    ) -> Result<Vec<Abmeldung>>;
+    async fn abmeldungen_by_person(&mut self, person_id: Uuid) -> Result<Vec<Abmeldung>>;
 
-    async fn abmeldungen_at(
-        &mut self,
-        date: NaiveDate,
-    ) -> Result<Vec<Abmeldung>>;
+    async fn abmeldungen_at(&mut self, date: NaiveDate) -> Result<Vec<Abmeldung>>;
 
     async fn assign_role_to_person(
         &mut self,
@@ -261,11 +253,7 @@ pub trait PersonRepo {
         role: &str,
     ) -> Result<PersonRoleMapping>;
 
-    async fn revoke_role_from_person(
-        &mut self,
-        person_id: Uuid,
-        role: &str,
-    ) -> Result<()>;
+    async fn revoke_role_from_person(&mut self, person_id: Uuid, role: &str) -> Result<()>;
 
     async fn revoke_abmeldung_from_person(
         &mut self,
@@ -273,11 +261,11 @@ pub trait PersonRepo {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<()>;
-    
+
     async fn update_person<'a>(&mut self, id: Uuid, name: Option<&'a str>) -> Result<Person>;
 
     async fn delete_person(&mut self, id: Uuid) -> Result<()>;
-    
+
     async fn delete_role(&mut self, name: &str) -> Result<()>;
 }
 

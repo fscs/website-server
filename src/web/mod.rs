@@ -14,6 +14,7 @@ use actix_web::{
 };
 use anyhow::Error;
 use serde::Serialize;
+use utoipauto::utoipauto;
 
 use std::fs::File;
 use std::future::Future;
@@ -25,7 +26,6 @@ use utoipa::OpenApi;
 use self::auth::{oauth_client, User};
 use utoipa_swagger_ui::SwaggerUi;
 
-pub(crate) mod abmeldungen;
 pub(crate) mod auth;
 pub(crate) mod calendar;
 pub(crate) mod doorstate;
@@ -150,95 +150,14 @@ impl FromRequest for DatabaseTransaction<'static> {
 }
 
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
+    #[utoipauto(paths = "./src/web")]
     #[derive(OpenApi)]
-    #[openapi(
-        info(
-            title = "FSCS API",
-            description = "Our API to manage the FSCS System",
-            contact(name = "FSCS", email = "fscs@hhu.de", url = "https://new.hhu-fscs.de"),
-            version = "1.0.0"
-        ),
-        paths(
-            doorstate::put_doorstate,
-            doorstate::get_doorstate,
-            person::put_person_role,
-            person::get_persons,
-            person::get_person_by_role,
-            person::create_person,
-            person::patch_person,
-            person::delete_person,
-            person::update_person_role,
-            person::delete_person_role,
-            calendar::get_events,
-            calendar::get_branchen_events,
-            abmeldungen::get_abmeldungen,
-            abmeldungen::put_person_abmeldung,
-            abmeldungen::update_person_abmeldung,
-            abmeldungen::delete_person_abmeldung,
-            abmeldungen::get_abmeldungen_next_sitzungen,
-            abmeldungen::get_abmeldungen_between,
-            topmanager::antrag::create_antrag,
-            topmanager::antrag::create_antrag_for_top,
-            topmanager::antrag::update_antrag,
-            topmanager::antrag::delete_antrag,
-            topmanager::antrag::get_anträge,
-            topmanager::antrag::get_antrag,
-            topmanager::antrag::put_antrag_top_mapping,
-            topmanager::antrag::delete_antrag_top_mapping,
-            topmanager::sitzungen::get_sitzungen,
-            topmanager::sitzungen::get_sitzung,
-            topmanager::sitzungen::get_sitzung_by_date,
-            topmanager::sitzungen::create_sitzung,
-            topmanager::sitzungen::create_top,
-            topmanager::sitzungen::tops_by_sitzung,
-            topmanager::sitzungen::get_next_sitzung,
-            topmanager::sitzungen::delete_sitzung,
-            topmanager::sitzungen::update_sitzung,
-            topmanager::sitzungen::update_top,
-            topmanager::sitzungen::delete_top,
-            topmanager::anträge_by_top,
-            topmanager::get_current_tops_with_anträge,
-            topmanager::get_tops_by_date_with_anträge,
-            topmanager::anträge_by_sitzung,
-            topmanager::get_top,
-        ),
-        components(schemas(
-            doorstate::CreateDoorStateParams,
-            domain::Doorstate,
-            person::CreatePersonRoleParams,
-            person::GetPersonsByRoleParams,
-            person::CreatePersonParams,
-            person::UpdatePersonParams,
-            person::DeletePersonParams,
-            person::UpdatePersonRoleParams,
-            person::DeletePersonRoleParams,
-            domain::Person,
-            calendar::CalendarEvent,
-            domain::Abmeldung,
-            abmeldungen::CreatePersonAbmeldungParams,
-            abmeldungen::GetAbmeldungBetweenParams,
-            topmanager::antrag::CreateAntragParams,
-            topmanager::antrag::UpdateAntragParams,
-            topmanager::antrag::DeleteAntragParams,
-            topmanager::antrag::CreateAntragTopMappingParams,
-            domain::Antrag,
-            domain::Top,
-            domain::PersonRoleMapping,
-            domain::SitzungType,
-            domain::Sitzung,
-            domain::Antragsstellende,
-            topmanager::TopWithAnträge,
-            topmanager::Person,
-            topmanager::CreateTopParams,
-            topmanager::GetTopsByDateParams,
-            topmanager::sitzungen::CreateSitzungParams,
-            topmanager::sitzungen::GetSitzungByDateParams,
-            topmanager::sitzungen::DeleteSitzungParams,
-            topmanager::sitzungen::UpdateSitzungParams,
-            topmanager::sitzungen::UpdateTopParams,
-            topmanager::sitzungen::DeleteTopParams,
-        ))
-    )]
+    #[openapi(info(
+        title = "FSCS API",
+        description = "Our API to manage the FSCS System",
+        contact(name = "FSCS", email = "fscs@hhu.de", url = "https://new.hhu-fscs.de"),
+        version = "1.0.0"
+    ))]
     struct ApiDoc;
 
     HttpServer::new(move || {
@@ -254,9 +173,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                 scope("/api")
                     .service(calendar::service("/calendar"))
                     .service(topmanager::service("/topmanager"))
-                    .service(doorstate::service("/doorstate"))
-                    .service(person::service("/person"))
-                    .service(abmeldungen::service("/abmeldungen")),
+                    .service(person::service("/person")),
             )
             .service(serve_files)
     })
@@ -267,7 +184,10 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     Ok(())
 }
 
-#[get("/{filename:.*}", wrap = "ErrorHandlers::new().handler(StatusCode::NOT_FOUND, file_not_found)")]
+#[get(
+    "/{filename:.*}",
+    wrap = "ErrorHandlers::new().handler(StatusCode::NOT_FOUND, file_not_found)"
+)]
 async fn serve_files(
     req: HttpRequest,
     user: Option<User>,

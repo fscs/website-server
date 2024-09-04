@@ -67,6 +67,40 @@ impl AntragRepo for PgConnection {
         Ok(result)
     }
 
+    async fn anträge(&mut self) -> Result<Vec<Antrag>> {
+        let record = sqlx::query!(
+            r#"
+                SELECT 
+                    id, 
+                    titel, 
+                    antragstext, 
+                    begründung, 
+                    ARRAY_AGG(antragsstellende.person_id) AS creators
+                FROM anträge
+                LEFT JOIN antragsstellende
+                ON anträge.id = antragsstellende.antrags_id
+                GROUP BY anträge.id
+            "#
+        )
+        .fetch_all(self)
+        .await?;
+
+        let result = record
+            .iter()
+            .map(|inner| Antrag {
+                data: AntragData {
+                    id: inner.id,
+                    titel: inner.titel.clone(),
+                    antragstext: inner.antragstext.clone(),
+                    begründung: inner.begründung.clone(),
+                },
+                creators: inner.creators.clone().unwrap_or_default(),
+            })
+            .collect();
+
+        Ok(result)
+    }
+
     async fn antrag_by_id(&mut self, id: Uuid) -> Result<Option<Antrag>> {
         let record = sqlx::query!(
             r#"
@@ -170,11 +204,13 @@ impl AntragRepo for PgConnection {
 
 #[cfg(test)]
 mod test {
+    use std::borrow::BorrowMut;
+
     use anyhow::Result;
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::AntragRepo;
+    use crate::domain::{Antrag, AntragData, AntragRepo};
 
     #[sqlx::test(fixtures("gimme_persons"))]
     async fn create_antrag(pool: PgPool) -> Result<()> {
@@ -201,6 +237,55 @@ mod test {
         assert_eq!(antrag.creators, creators);
 
         assert_eq!(creator_entries, creators);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("gimme_persons", "gimme_antraege"))]
+    async fn anträge(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let anträge = conn.anträge().await?;
+
+        let creators1 = vec![
+            Uuid::parse_str("5a5a134d-9345-4c36-a466-1c3bb806b240").unwrap(),
+            Uuid::parse_str("51288f16-4442-4d7c-9606-3dce198b0601").unwrap(),
+        ];
+        let title1 = "Blumen für Valentin";
+        let reason1 = "Valentin deserves them";
+        let antragstext1 = "get them";
+        let id1 = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
+
+        let antrag1 = Antrag {
+            data: AntragData {
+                titel: title1.to_string(),
+                id: id1,
+                antragstext: antragstext1.to_string(),
+                begründung: reason1.to_string(),
+            },
+            creators: creators1,
+        };
+
+        let creators2 = vec![Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap()];
+        let title2 = "blub";
+        let reason2 = "bulabsb";
+        let antragstext2 = "blub";
+        let id2 = Uuid::parse_str("5c51d5c0-3943-4695-844d-4c47da854fac").unwrap();
+
+        let antrag2 = Antrag {
+            data: AntragData {
+                titel: title2.to_string(),
+                id: id2,
+                antragstext: antragstext2.to_string(),
+                begründung: reason2.to_string(),
+            },
+            creators: creators2,
+        };
+
+        assert_eq!(anträge.len(), 2);
+
+        assert!(anträge.contains(&antrag1));
+        assert!(anträge.contains(&antrag2));
 
         Ok(())
     }
