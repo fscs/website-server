@@ -85,8 +85,6 @@ pub struct DoorState {
 pub struct PersonRoleMapping {
     pub person_id: Uuid,
     pub rolle: String,
-    pub anfangsdatum: NaiveDate,
-    pub ablaufdatum: NaiveDate,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
@@ -245,8 +243,6 @@ pub trait PersonRepo {
     async fn persons_with_role(
         &mut self,
         role: &str,
-        start: NaiveDate,
-        end: NaiveDate,
     ) -> Result<Vec<Person>>;
 
     async fn abmeldungen_by_person(
@@ -258,21 +254,17 @@ pub trait PersonRepo {
         &mut self,
         date: NaiveDate,
     ) -> Result<Vec<Abmeldung>>;
-    
+
     async fn assign_role_to_person(
         &mut self,
         person_id: Uuid,
         role: &str,
-        start: NaiveDate,
-        end: NaiveDate,
     ) -> Result<PersonRoleMapping>;
 
     async fn revoke_role_from_person(
         &mut self,
         person_id: Uuid,
         role: &str,
-        start: NaiveDate,
-        end: NaiveDate,
     ) -> Result<()>;
 
     async fn revoke_abmeldung_from_person(

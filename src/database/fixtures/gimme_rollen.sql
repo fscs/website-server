@@ -4,9 +4,9 @@ INSERT INTO roles (name)
         ('Kooptiert'),
         ('Banana');
 
-INSERT INTO rolemapping (person_id, rolle, anfangsdatum, ablaufdatum)
+INSERT INTO rolemapping (person_id, rolle)
     VALUES
-        ('51288f16-4442-4d7c-9606-3dce198b0601', 'Rat', '2024-09-02', '2024-09-21'),
-        ('5a5a134d-9345-4c36-a466-1c3bb806b240', 'Kooptiert', '2024-09-02', '2024-09-21'),
-        ('51288f16-4442-4d7c-9606-3dce198b0601', 'Kooptiert', '2023-09-02', '2023-09-21');
+        ('51288f16-4442-4d7c-9606-3dce198b0601', 'Rat'),
+        ('5a5a134d-9345-4c36-a466-1c3bb806b240', 'Kooptiert'),
+        ('51288f16-4442-4d7c-9606-3dce198b0601', 'Kooptiert');
         

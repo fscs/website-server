@@ -21,7 +21,7 @@ impl PersonRepo for PgConnection {
 
         Ok(result)
     }
-    
+
     async fn create_role(&mut self, name: &str) -> Result<()> {
         sqlx::query!(
             r#"
@@ -83,7 +83,7 @@ impl PersonRepo for PgConnection {
 
         Ok(result)
     }
-    
+
     async fn roles(&mut self) -> Result<Vec<String>> {
         let result = sqlx::query_scalar!(
             r#"
@@ -111,12 +111,7 @@ impl PersonRepo for PgConnection {
         Ok(result)
     }
 
-    async fn persons_with_role(
-        &mut self,
-        role: &str,
-        start: NaiveDate,
-        end: NaiveDate,
-    ) -> Result<Vec<Person>> {
+    async fn persons_with_role(&mut self, role: &str) -> Result<Vec<Person>> {
         let result = sqlx::query_as!(
             Person,
             r#"
@@ -124,11 +119,9 @@ impl PersonRepo for PgConnection {
                 FROM person
                 JOIN rolemapping
                 ON rolemapping.person_id = person.id
-                WHERE rolemapping.rolle = $1 AND rolemapping.anfangsdatum <= $3 AND rolemapping.ablaufdatum >= $2
+                WHERE rolemapping.rolle = $1
             "#,
             role,
-            start,
-            end
         )
         .fetch_all(self)
         .await?;
@@ -172,20 +165,36 @@ impl PersonRepo for PgConnection {
         &mut self,
         person_id: Uuid,
         role: &str,
-        start: NaiveDate,
-        end: NaiveDate,
     ) -> Result<PersonRoleMapping> {
-        todo!()
+        let result = sqlx::query_as!(
+            PersonRoleMapping,
+            r#"
+                INSERT INTO rolemapping
+                VALUES ($1, $2)
+                RETURNING *
+            "#,
+            person_id,
+            role
+        )
+        .fetch_one(self)
+        .await?;
+
+        Ok(result)
     }
 
-    async fn revoke_role_from_person(
-        &mut self,
-        person_id: Uuid,
-        role: &str,
-        start: NaiveDate,
-        end: NaiveDate,
-    ) -> Result<()> {
-        todo!()
+    async fn revoke_role_from_person(&mut self, person_id: Uuid, role: &str) -> Result<()> {
+        sqlx::query!(
+            r#"
+                DELETE FROM rolemapping
+                WHERE person_id = $1 AND rolle = $2
+            "#,
+            person_id,
+            role
+        )
+        .execute(self)
+        .await?;
+
+        Ok(())
     }
 
     async fn revoke_abmeldung_from_person(
@@ -291,7 +300,7 @@ mod test {
 
         Ok(())
     }
-    
+
     #[sqlx::test]
     async fn create_role(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
@@ -426,54 +435,13 @@ mod test {
     }
 
     #[sqlx::test(fixtures("gimme_persons", "gimme_rollen"))]
-    async fn persons_with_role_left(pool: PgPool) -> Result<()> {
+    async fn persons_with_role(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let role = "Rat";
         let person_id = Uuid::parse_str("51288f16-4442-4d7c-9606-3dce198b0601").unwrap();
 
-        let start = NaiveDate::from_ymd_opt(2024, 08, 01).unwrap();
-        let end = NaiveDate::from_ymd_opt(2024, 09, 10).unwrap();
-
-        let persons = conn.persons_with_role(role, start, end).await?;
-
-        assert_eq!(persons.len(), 1);
-
-        assert_eq!(persons[0].id, person_id);
-
-        Ok(())
-    }
-
-    #[sqlx::test(fixtures("gimme_persons", "gimme_rollen"))]
-    async fn persons_with_role_inner(pool: PgPool) -> Result<()> {
-        let mut conn = pool.acquire().await?;
-
-        let role = "Rat";
-        let person_id = Uuid::parse_str("51288f16-4442-4d7c-9606-3dce198b0601").unwrap();
-
-        let start = NaiveDate::from_ymd_opt(2024, 09, 05).unwrap();
-        let end = NaiveDate::from_ymd_opt(2024, 09, 10).unwrap();
-
-        let persons = conn.persons_with_role(role, start, end).await?;
-
-        assert_eq!(persons.len(), 1);
-
-        assert_eq!(persons[0].id, person_id);
-
-        Ok(())
-    }
-
-    #[sqlx::test(fixtures("gimme_persons", "gimme_rollen"))]
-    async fn persons_with_role_right(pool: PgPool) -> Result<()> {
-        let mut conn = pool.acquire().await?;
-
-        let role = "Rat";
-        let person_id = Uuid::parse_str("51288f16-4442-4d7c-9606-3dce198b0601").unwrap();
-
-        let start = NaiveDate::from_ymd_opt(2024, 09, 01).unwrap();
-        let end = NaiveDate::from_ymd_opt(2024, 10, 10).unwrap();
-
-        let persons = conn.persons_with_role(role, start, end).await?;
+        let persons = conn.persons_with_role(role).await?;
 
         assert_eq!(persons.len(), 1);
 
@@ -520,15 +488,36 @@ mod test {
         Ok(())
     }
 
-    #[sqlx::test(fixtures())]
+    #[sqlx::test(fixtures("gimme_persons", "gimme_rollen"))]
     async fn assign_role_to_person(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
+
+        let person_id = Uuid::parse_str("5a5a134d-9345-4c36-a466-1c3bb806b240").unwrap();
+        let role = "Banana";
+
+        let mapping = conn.assign_role_to_person(person_id, role).await?;
+
+        assert_eq!(mapping.person_id, person_id);
+        assert_eq!(mapping.rolle, role);
+            
         Ok(())
     }
 
-    #[sqlx::test(fixtures())]
+    #[sqlx::test(fixtures("gimme_persons", "gimme_rollen"))]
     async fn revoke_role_from_person(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
+        
+        let person_id = Uuid::parse_str("5a5a134d-9345-4c36-a466-1c3bb806b240").unwrap();
+        let role = "Kooptiert";
+
+        conn.revoke_role_from_person(person_id, role).await?;
+
+        let persons = conn.persons_with_role(role).await?;
+
+        let still_has_role = persons.iter().any(|p| p.id == person_id);
+
+        assert!(!still_has_role);
+        
         Ok(())
     }
 
@@ -669,7 +658,7 @@ mod test {
 
         Ok(())
     }
-    
+
     #[sqlx::test(fixtures("gimme_persons", "gimme_rollen"))]
     async fn delete_role(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
