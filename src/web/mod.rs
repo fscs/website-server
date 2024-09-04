@@ -30,6 +30,7 @@ pub(crate) mod auth;
 pub(crate) mod calendar;
 pub(crate) mod doorstate;
 pub(crate) mod persons;
+pub(crate) mod roles;
 pub(crate) mod sitzungen;
 
 pub(super) enum RestStatus {
@@ -150,7 +151,7 @@ impl FromRequest for DatabaseTransaction<'static> {
 }
 
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
-    #[utoipauto(paths = "./src/web")]
+    #[utoipauto()]
     #[derive(OpenApi)]
     #[openapi(info(
         title = "FSCS API",
@@ -173,6 +174,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                 scope("/api")
                     .service(calendar::service("/calendar"))
                     .service(persons::service("/person"))
+                    .service(roles::service("/roles"))
                     .service(antrag::service("/anträge")),
             )
             .service(serve_files)
