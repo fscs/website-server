@@ -10,12 +10,12 @@ use uuid::Uuid;
 use crate::{
     database::DatabaseTransaction,
     domain::AntragRepo,
-    web::{person::get_persons, RestStatus},
+    web::RestStatus,
 };
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
-        .service(get_persons)
+        .service(get_anträge)
         .service(get_antrag_by_id)
         .service(create_antrag)
         .service(patch_antrag)

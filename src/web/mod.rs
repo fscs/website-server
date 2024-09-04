@@ -16,7 +16,6 @@ use anyhow::Error;
 use serde::Serialize;
 use utoipauto::utoipauto;
 
-use std::fs::File;
 use std::future::Future;
 use std::path::{Component, Path, PathBuf};
 use std::pin::Pin;
@@ -26,11 +25,12 @@ use utoipa::OpenApi;
 use self::auth::{oauth_client, User};
 use utoipa_swagger_ui::SwaggerUi;
 
+pub(crate) mod antrag;
 pub(crate) mod auth;
 pub(crate) mod calendar;
 pub(crate) mod doorstate;
-pub(crate) mod person;
-pub(crate) mod topmanager;
+pub(crate) mod persons;
+pub(crate) mod sitzungen;
 
 pub(super) enum RestStatus {
     Ok(serde_json::Value),
@@ -172,8 +172,8 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .service(
                 scope("/api")
                     .service(calendar::service("/calendar"))
-                    .service(topmanager::service("/topmanager"))
-                    .service(person::service("/person")),
+                    .service(persons::service("/person"))
+                    .service(antrag::service("/anträge")),
             )
             .service(serve_files)
     })
