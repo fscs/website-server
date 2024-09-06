@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::domain::{
     antrag::{Antrag, AntragData},
-    AntragTopMapRepo, AntragTopMapping,
+    antrag_top_map::{AntragTopMapRepo, AntragTopMapping},
 };
 
 impl AntragTopMapRepo for PgConnection {
