@@ -1,4 +1,4 @@
-use actix_web::{delete, get, post, web, Responder, Scope};
+use actix_web::{delete, get, put, web, Responder, Scope};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 
@@ -30,12 +30,13 @@ async fn get_roles(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
 
 #[utoipa::path(
     path = "/api/roles/",
+    params(RoleParams),
     responses(
         (status = 200, description = "Success", body = Role),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/")]
+#[put("/")]
 async fn create_role(
     params: web::Json<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -45,8 +46,10 @@ async fn create_role(
 
 #[utoipa::path(
     path = "/api/roles/",
+    params(RoleParams),
     responses(
         (status = 200, description = "Success"),
+        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -55,5 +58,5 @@ async fn delete_role(
     params: web::Json<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
-    RestStatus::ok_from_result(transaction.delete_role(&params.name).await)
+    RestStatus::ok_or_not_found_from_result(transaction.delete_role(&params.name).await)
 }

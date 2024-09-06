@@ -5,7 +5,7 @@ use actix_web::{
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::{database::DatabaseTransaction, domain::door_state::DoorStateRepo, web::RestStatus};
 
@@ -16,13 +16,13 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(create_doorstate)
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
+#[derive(Deserialize, ToSchema, IntoParams, Debug)]
 pub struct GetDoorStateParams {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
+#[derive(Deserialize, ToSchema, IntoParams, Debug)]
 pub struct CreateDoorStateParams {
     is_open: bool,
 }
@@ -41,7 +41,8 @@ async fn get_doorstate(mut transaction: DatabaseTransaction<'_>) -> impl Respond
 }
 
 #[utoipa::path(
-    path = "/api/doorstate/",
+    path = "/api/doorstate/between",
+    params(GetDoorStateParams),
     responses(
         (status = 200, description = "Success", body = Vec<DoorSatae>),
         (status = 500, description = "Internal Server Error"),
@@ -61,8 +62,9 @@ async fn get_doorstate_between(
 
 #[utoipa::path(
     path = "/api/doorstate/",
+    params(CreateDoorStateParams),
     responses(
-        (status = 200, description = "Success"),
+        (status = 201, description = "Created"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -72,5 +74,5 @@ async fn create_doorstate(
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     let now = chrono::Utc::now();
-    RestStatus::ok_from_result(transaction.create_door_state(now, params.is_open).await)
+    RestStatus::created_from_result(transaction.create_door_state(now, params.is_open).await)
 }

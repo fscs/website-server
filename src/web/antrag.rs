@@ -10,10 +10,15 @@ use uuid::Uuid;
 use crate::{database::DatabaseTransaction, domain::antrag::AntragRepo, web::RestStatus};
 
 pub(crate) fn service(path: &'static str) -> Scope {
-    web::scope(path)
-        .service(get_anträge)
+    let scope = web::scope(path).service(get_anträge).service(create_antrag);
+
+    // must come last
+    register_antrag_id_service(scope)
+}
+
+fn register_antrag_id_service(parent: Scope) -> Scope {
+    parent
         .service(get_antrag_by_id)
-        .service(create_antrag)
         .service(patch_antrag)
         .service(delete_antrag)
 }
@@ -47,25 +52,25 @@ async fn get_anträge(mut transaction: DatabaseTransaction<'_>) -> impl Responde
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{id}",
+    path = "/api/anträge/{antrag_id}",
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{id}/")]
+#[get("/{antrag_id}/")]
 async fn get_antrag_by_id(
-    id: Path<Uuid>,
+    antrag_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
-    RestStatus::ok_from_result(transaction.antrag_by_id(*id).await)
+    RestStatus::ok_or_not_found_from_result(transaction.antrag_by_id(*antrag_id).await)
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{id}",
+    path = "/api/anträge/",
     responses(
-        (status = 200, description = "Success", body = Antrag),
+        (status = 201, description = "Created", body = Antrag),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
@@ -75,7 +80,7 @@ async fn create_antrag(
     params: web::Json<CreateAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
-    RestStatus::ok_from_result(
+    RestStatus::created_from_result(
         transaction
             .create_antrag(
                 &params.antragssteller,
@@ -88,23 +93,23 @@ async fn create_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{id}",
+    path = "/api/anträge/{antrag_id}",
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{id}/")]
+#[patch("/{antrag_id}/")]
 async fn patch_antrag(
     params: web::Json<UpdateAntragParams>,
-    id: Path<Uuid>,
+    antrag_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
-    RestStatus::ok_from_result(
+    RestStatus::ok_or_not_found_from_result(
         transaction
             .update_antrag(
-                *id,
+                *antrag_id,
                 params.antragssteller.as_deref(),
                 params.titel.as_deref(),
                 params.begründung.as_deref(),
@@ -115,14 +120,17 @@ async fn patch_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{id}",
+    path = "/api/anträge/{antrag_id}",
     responses(
         (status = 200, description = "Success"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{id}/")]
-async fn delete_antrag(id: Path<Uuid>, mut transaction: DatabaseTransaction<'_>) -> impl Responder {
-    RestStatus::ok_from_result(transaction.delete_antrag(*id).await)
+#[delete("/{antrag_id}/")]
+async fn delete_antrag(
+    antrag_id: Path<Uuid>,
+    mut transaction: DatabaseTransaction<'_>,
+) -> impl Responder {
+    RestStatus::ok_or_not_found_from_result(transaction.delete_antrag(*antrag_id).await)
 }

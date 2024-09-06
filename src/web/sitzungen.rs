@@ -26,7 +26,7 @@ pub(crate) fn service(path: &'static str) -> Scope {
     register_sitzung_id_service(scope)
 }
 
-pub(crate) fn register_sitzung_id_service(parent: Scope) -> Scope {
+fn register_sitzung_id_service(parent: Scope) -> Scope {
     let scope = parent
         .service(get_sitzung_by_id)
         .service(patch_sitzung_by_id)
@@ -38,7 +38,7 @@ pub(crate) fn register_sitzung_id_service(parent: Scope) -> Scope {
     register_top_id_service(scope)
 }
 
-pub(crate) fn register_top_id_service(parent: Scope) -> Scope {
+fn register_top_id_service(parent: Scope) -> Scope {
     parent
         .service(patch_tops)
         .service(delete_tops)
