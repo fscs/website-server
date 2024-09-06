@@ -2,7 +2,10 @@ use anyhow::Result;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::domain::{Antrag, AntragData, AntragTopMapRepo, AntragTopMapping};
+use crate::domain::{
+    antrag::{Antrag, AntragData},
+    AntragTopMapRepo, AntragTopMapping,
+};
 
 impl AntragTopMapRepo for PgConnection {
     async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>> {

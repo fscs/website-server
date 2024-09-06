@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::domain::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind};
+use crate::domain::sitzung::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind};
 
 impl SitzungRepo for PgConnection {
     async fn create_sitzung(
@@ -272,7 +272,7 @@ mod test {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::{SitzungRepo, SitzungKind, TopKind};
+    use crate::domain::sitzung::{SitzungKind, SitzungRepo, TopKind};
 
     #[sqlx::test]
     async fn create_sitzung(pool: PgPool) -> Result<()> {
@@ -333,9 +333,7 @@ mod test {
         let title = "hallo";
         let kind = TopKind::Normal;
 
-        let top = conn
-            .create_top(sitzung_id, title, None, kind)
-            .await?;
+        let top = conn.create_top(sitzung_id, title, None, kind).await?;
 
         assert_eq!(top.name, title);
         assert_eq!(top.kind, kind);

@@ -2,7 +2,7 @@ use anyhow::Result;
 use sqlx::{PgConnection, QueryBuilder};
 use uuid::Uuid;
 
-use crate::domain::{Antrag, AntragData, AntragRepo};
+use crate::domain::antrag::{Antrag, AntragData, AntragRepo};
 
 async fn insert_antragsstellende(
     conn: &mut PgConnection,
@@ -213,7 +213,7 @@ mod test {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::{Antrag, AntragData, AntragRepo};
+    use crate::domain::antrag::{Antrag, AntragData, AntragRepo};
 
     #[sqlx::test(fixtures("gimme_persons"))]
     async fn create_antrag(pool: PgPool) -> Result<()> {

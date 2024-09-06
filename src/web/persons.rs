@@ -5,7 +5,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::database::DatabaseTransaction;
-use crate::{domain::PersonRepo, web::RestStatus};
+use crate::{domain::person::PersonRepo, web::RestStatus};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)

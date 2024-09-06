@@ -174,7 +174,8 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .service(persons::service("/person"))
                     .service(roles::service("/roles"))
                     .service(antrag::service("/anträge"))
-                    .service(doorstate::service("/doorstate")),
+                    .service(doorstate::service("/doorstate"))
+                    .service(sitzungen::service("/sitzungen")),
             )
             .service(serve_files)
     })

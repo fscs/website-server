@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use utoipa::ToSchema;
 
-use crate::{database::DatabaseTransaction, domain::DoorStateRepo, web::RestStatus};
+use crate::{database::DatabaseTransaction, domain::door_state::DoorStateRepo, web::RestStatus};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
