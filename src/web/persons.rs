@@ -9,8 +9,6 @@ use uuid::Uuid;
 use crate::database::DatabaseTransaction;
 use crate::{domain::person::PersonRepo, web::RestStatus};
 
-// TODO: roles by person
-
 pub(crate) fn service(path: &'static str) -> Scope {
     let scope = web::scope(path)
         .service(get_persons)
@@ -30,6 +28,7 @@ fn register_person_id_service(parent: Scope) -> Scope {
         .service(create_abmeldung)
         .service(revoke_abmeldung)
         .service(get_abmeldungen_by_person)
+        .service(roles_by_person)
 }
 
 #[derive(Deserialize, ToSchema, IntoParams)]
@@ -152,6 +151,25 @@ async fn get_persons_by_role(
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_from_result(transaction.persons_with_role(&params.role).await)
+}
+
+#[utoipa::path(
+    path = "/api/persons/{person_id}/roles",
+    responses(
+        (status = 200, description = "Success", body = Vec<String>),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+#[get("/{person_id}/roles")]
+async fn roles_by_person(
+    person_id: Path<Uuid>,
+    mut transaction: DatabaseTransaction<'_>,
+) -> impl Responder {
+    RestStatus::ok_from_result(
+        transaction
+            .roles_by_person(*person_id)
+            .await,
+    )
 }
 
 #[utoipa::path(
