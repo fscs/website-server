@@ -52,6 +52,6 @@ async fn main() -> anyhow::Result<()> {
     let database = DatabasePool::new(&database_url).await?;
     sqlx::migrate!().run(database.pool()).await?;
 
-    web::start_server(database).await;
+    let _ = web::start_server(database).await;
     Ok(())
 }

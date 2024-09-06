@@ -7,11 +7,7 @@ use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::{
-    database::DatabaseTransaction,
-    domain::AntragRepo,
-    web::RestStatus,
-};
+use crate::{database::DatabaseTransaction, domain::AntragRepo, web::RestStatus};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)

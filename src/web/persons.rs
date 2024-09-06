@@ -1,5 +1,5 @@
 use actix_web::web::{Path, Query};
-use actix_web::{delete, post, web};
+use actix_web::{delete, web};
 use actix_web::{get, patch, Responder, Scope};
 use serde::Deserialize;
 use uuid::Uuid;

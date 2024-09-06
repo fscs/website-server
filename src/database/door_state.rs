@@ -2,7 +2,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
 
-use crate::domain::{DoorStateRepo, DoorState};
+use crate::domain::{DoorState, DoorStateRepo};
 
 impl DoorStateRepo for PgConnection {
     async fn create_door_state(
@@ -75,7 +75,7 @@ mod test {
     #[sqlx::test]
     async fn create_door_state(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
-        
+
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T10:30:00+02:00").unwrap();
         let is_open = false;
 
@@ -90,20 +90,20 @@ mod test {
     #[sqlx::test(fixtures("gimme_door_states"))]
     async fn door_state_at(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
-        
+
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T12:36:00+02:00").unwrap();
 
         let state = conn.door_state_at(datetime.into()).await?.unwrap();
 
-        assert_eq!(state.is_open, true);
+        assert!(state.is_open);
 
         Ok(())
     }
-    
+
     #[sqlx::test(fixtures("gimme_door_states"))]
     async fn door_state_between(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
-        
+
         let start = DateTime::parse_from_rfc3339("2024-09-10T12:32:00+02:00").unwrap();
         let end = DateTime::parse_from_rfc3339("2024-09-10T17:00:00+02:00").unwrap();
 
@@ -111,9 +111,9 @@ mod test {
 
         assert_eq!(states.len(), 3);
 
-        assert_eq!(states[0].is_open, false);
-        assert_eq!(states[1].is_open, true);
-        assert_eq!(states[2].is_open, false);
+        assert!(!states[0].is_open);
+        assert!(states[1].is_open);
+        assert!(!states[2].is_open);
 
         Ok(())
     }

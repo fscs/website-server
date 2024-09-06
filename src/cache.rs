@@ -152,7 +152,7 @@ mod test {
                 let x = a.clone();
                 Box::pin(async move {
                     let mut x = x.lock().unwrap();
-                    *x = *x + 1;
+                    *x += 1;
                     if *x == 1 {
                         Err(1)
                     } else {

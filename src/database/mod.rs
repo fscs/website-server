@@ -5,10 +5,10 @@ use std::future::Future;
 use std::ops::{Deref, DerefMut};
 
 pub mod antrag;
+pub mod antrag_top_map;
 pub mod door_state;
 pub mod persons;
 pub mod sitzungen;
-pub mod antrag_top_map;
 
 #[derive(Clone)]
 pub struct DatabasePool {
@@ -35,6 +35,7 @@ impl<'a> Deref for DatabaseTransaction<'a> {
     }
 }
 
+#[allow(dead_code)]
 impl DatabaseTransaction<'_> {
     pub async fn commit(self) -> Result<()> {
         self.transaction.commit().await?;
@@ -64,6 +65,7 @@ impl DatabasePool {
         })
     }
 
+    #[allow(dead_code)]
     pub async fn transaction<
         'a,
         T: 'static,

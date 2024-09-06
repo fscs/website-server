@@ -543,8 +543,8 @@ mod test {
         let mut conn = pool.acquire().await?;
 
         let person_id = Uuid::parse_str("78be7f57-8340-43e0-bba2-074da360ddf4").unwrap();
-        let start = NaiveDate::from_ymd_opt(2024, 02, 6).unwrap();
-        let end = NaiveDate::from_ymd_opt(2024, 02, 24).unwrap();
+        let start = NaiveDate::from_ymd_opt(2024, 2, 6).unwrap();
+        let end = NaiveDate::from_ymd_opt(2024, 2, 24).unwrap();
 
         conn.revoke_abmeldung_from_person(person_id, start, end)
             .await?;
@@ -560,10 +560,10 @@ mod test {
         let mut conn = pool.acquire().await?;
 
         let person_id = Uuid::parse_str("78be7f57-8340-43e0-bba2-074da360ddf4").unwrap();
-        let start = NaiveDate::from_ymd_opt(2024, 08, 27).unwrap();
-        let end = NaiveDate::from_ymd_opt(2024, 09, 03).unwrap();
+        let start = NaiveDate::from_ymd_opt(2024, 8, 27).unwrap();
+        let end = NaiveDate::from_ymd_opt(2024, 9, 3).unwrap();
 
-        let old_end = NaiveDate::from_ymd_opt(2024, 09, 07).unwrap();
+        let old_end = NaiveDate::from_ymd_opt(2024, 9, 7).unwrap();
 
         conn.revoke_abmeldung_from_person(person_id, start, end)
             .await?;
@@ -582,10 +582,10 @@ mod test {
         let mut conn = pool.acquire().await?;
 
         let person_id = Uuid::parse_str("78be7f57-8340-43e0-bba2-074da360ddf4").unwrap();
-        let start = NaiveDate::from_ymd_opt(2024, 09, 05).unwrap();
-        let end = NaiveDate::from_ymd_opt(2024, 09, 13).unwrap();
+        let start = NaiveDate::from_ymd_opt(2024, 9, 5).unwrap();
+        let end = NaiveDate::from_ymd_opt(2024, 9, 13).unwrap();
 
-        let old_start = NaiveDate::from_ymd_opt(2024, 09, 01).unwrap();
+        let old_start = NaiveDate::from_ymd_opt(2024, 9, 1).unwrap();
 
         conn.revoke_abmeldung_from_person(person_id, start, end)
             .await?;
@@ -604,8 +604,8 @@ mod test {
         let mut conn = pool.acquire().await?;
 
         let person_id = Uuid::parse_str("78be7f57-8340-43e0-bba2-074da360ddf4").unwrap();
-        let start = NaiveDate::from_ymd_opt(2024, 08, 27).unwrap();
-        let end = NaiveDate::from_ymd_opt(2024, 09, 08).unwrap();
+        let start = NaiveDate::from_ymd_opt(2024, 8, 27).unwrap();
+        let end = NaiveDate::from_ymd_opt(2024, 9, 8).unwrap();
 
         conn.revoke_abmeldung_from_person(person_id, start, end)
             .await?;
@@ -621,17 +621,17 @@ mod test {
         let mut conn = pool.acquire().await?;
 
         let person_id = Uuid::parse_str("78be7f57-8340-43e0-bba2-074da360ddf4").unwrap();
-        let start = NaiveDate::from_ymd_opt(2024, 09, 03).unwrap();
-        let end = NaiveDate::from_ymd_opt(2024, 09, 06).unwrap();
+        let start = NaiveDate::from_ymd_opt(2024, 9, 3).unwrap();
+        let end = NaiveDate::from_ymd_opt(2024, 9, 6).unwrap();
 
         conn.revoke_abmeldung_from_person(person_id, start, end)
             .await?;
 
-        let left_start = NaiveDate::from_ymd_opt(2024, 09, 01).unwrap();
-        let left_end = NaiveDate::from_ymd_opt(2024, 09, 03).unwrap();
+        let left_start = NaiveDate::from_ymd_opt(2024, 9, 1).unwrap();
+        let left_end = NaiveDate::from_ymd_opt(2024, 9, 3).unwrap();
 
-        let right_start = NaiveDate::from_ymd_opt(2024, 09, 06).unwrap();
-        let right_end = NaiveDate::from_ymd_opt(2024, 09, 07).unwrap();
+        let right_start = NaiveDate::from_ymd_opt(2024, 9, 6).unwrap();
+        let right_end = NaiveDate::from_ymd_opt(2024, 9, 7).unwrap();
 
         let remaining_abmeldungen = conn.abmeldungen_by_person(person_id).await?;
 

@@ -80,7 +80,7 @@ fn request_calendar<'a>(
     url: &str,
 ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<CalendarEvent>>> + 'a>> {
     let url = url.to_owned();
-    Box::pin((move || async { request_cal(url).await })())
+    Box::pin(async { request_cal(url).await })
 }
 
 async fn request_cal(url: String) -> anyhow::Result<Vec<CalendarEvent>> {

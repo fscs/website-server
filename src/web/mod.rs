@@ -1,23 +1,21 @@
 use crate::database::{DatabasePool, DatabaseTransaction};
 use crate::web::auth::AuthMiddle;
-use crate::{domain, web, ARGS};
+use crate::{web, ARGS};
 use actix_files::NamedFile;
 use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceResponse};
 use actix_web::error::ErrorNotFound;
-use actix_web::http::header::{CacheControl, CacheDirective, ContentType};
-use actix_web::http::{header, StatusCode};
+use actix_web::http::header::{CacheControl, CacheDirective};
+use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::{scope, Data};
-use actix_web::{
-    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
-};
+use actix_web::{get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
 use serde::Serialize;
 use utoipauto::utoipauto;
 
 use std::future::Future;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, PathBuf};
 use std::pin::Pin;
 
 use utoipa::OpenApi;
@@ -175,7 +173,8 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .service(calendar::service("/calendar"))
                     .service(persons::service("/person"))
                     .service(roles::service("/roles"))
-                    .service(antrag::service("/anträge")),
+                    .service(antrag::service("/anträge"))
+                    .service(doorstate::service("/doorstate")),
             )
             .service(serve_files)
     })
@@ -272,7 +271,7 @@ fn file_not_found(
             CacheDirective::MustRevalidate,
             CacheDirective::MaxAge(0),
         ]))
-        .respond_to(&req);
+        .respond_to(req);
 
     Ok(ErrorHandlerResponse::Response(
         srv_res.into_response(http_res),

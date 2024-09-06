@@ -31,7 +31,7 @@ impl AntragTopMapRepo for PgConnection {
             .iter()
             .map(|r| Antrag {
                 data: AntragData {
-                    id: r.id.clone(),
+                    id: r.id,
                     antragstext: r.antragstext.clone(),
                     begründung: r.begründung.clone(),
                     titel: r.titel.clone(),
@@ -66,7 +66,11 @@ impl AntragTopMapRepo for PgConnection {
         Ok(result)
     }
 
-    async fn detach_antrag_from_top(&mut self, antrag_id: Uuid, top_id: Uuid) -> Result<Option<AntragTopMapping>> {
+    async fn detach_antrag_from_top(
+        &mut self,
+        antrag_id: Uuid,
+        top_id: Uuid,
+    ) -> Result<Option<AntragTopMapping>> {
         let result = sqlx::query_as!(
             AntragTopMapping,
             r#"
@@ -114,7 +118,7 @@ mod test {
 
         Ok(())
     }
-    
+
     #[sqlx::test(fixtures(
         "gimme_persons",
         "gimme_sitzungen",
@@ -138,7 +142,7 @@ mod test {
 
         Ok(())
     }
-    
+
     #[sqlx::test(fixtures(
         "gimme_persons",
         "gimme_sitzungen",
@@ -152,7 +156,9 @@ mod test {
         let top_id = Uuid::parse_str("fd6b67df-60f2-453a-9ffc-93514c5ccdb1").unwrap();
         let antrag_id = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
 
-        conn.detach_antrag_from_top(antrag_id, top_id).await?.unwrap();
+        conn.detach_antrag_from_top(antrag_id, top_id)
+            .await?
+            .unwrap();
 
         let anträge = conn.anträge_by_top(top_id).await?;
 

@@ -76,6 +76,7 @@ impl User {
 
 #[derive(serde::Deserialize)]
 struct UserExp {
+    #[allow(dead_code)]
     exp: i64,
 }
 
