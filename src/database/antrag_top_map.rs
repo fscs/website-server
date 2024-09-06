@@ -97,7 +97,7 @@ mod test {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::AntragTopMapRepo;
+    use crate::domain::antrag_top_map::AntragTopMapRepo;
 
     #[sqlx::test(fixtures(
         "gimme_persons",

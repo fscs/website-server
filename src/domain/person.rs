@@ -48,6 +48,8 @@ pub trait PersonRepo {
 
     async fn roles(&mut self) -> Result<Vec<String>>;
 
+    async fn roles_by_person(&mut self, id: Uuid) -> Result<Vec<String>>;
+
     async fn person_by_id(&mut self, id: Uuid) -> Result<Option<Person>>;
 
     async fn persons_with_role(&mut self, role: &str) -> Result<Vec<Person>>;

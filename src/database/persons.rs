@@ -96,6 +96,20 @@ impl PersonRepo for PgConnection {
         Ok(result)
     }
 
+    async fn roles_by_person(&mut self, id: Uuid) -> Result<Vec<String>> {
+        let result = sqlx::query_scalar!(
+            r#"
+                SELECT rolle FROM rolemapping
+                WHERE person_id = $1
+            "#,
+            id
+        )
+        .fetch_all(self)
+        .await?;
+
+        Ok(result)
+    }
+
     async fn person_by_id(&mut self, id: Uuid) -> Result<Option<Person>> {
         let result = sqlx::query_as!(
             Person,
@@ -433,6 +447,20 @@ mod test {
 
         let remaining = conn.abmeldungen_by_person(person_id).await?;
         assert_eq!(remaining.len(), 3);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("gimme_persons", "gimme_rollen"))]
+    async fn roles_by_person(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let id = Uuid::parse_str("51288f16-4442-4d7c-9606-3dce198b0601").unwrap();
+
+        let roles = conn.roles_by_person(id).await?;
+
+        assert!(roles.contains(&"Rat".to_string()));
+        assert!(roles.contains(&"Kooptiert".to_string()));
 
         Ok(())
     }
