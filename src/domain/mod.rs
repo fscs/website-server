@@ -111,6 +111,8 @@ pub struct AntragTopMapping {
     pub top_id: Uuid,
 }
 
+pub trait MyService: SitzungRepo + AntragRepo {}
+
 #[cfg_attr(test, automock)]
 pub trait SitzungRepo {
     async fn create_sitzung(
@@ -176,8 +178,11 @@ pub trait AntragTopMapRepo {
         top_id: Uuid,
     ) -> Result<Option<AntragTopMapping>>;
 
-    async fn detach_antrag_from_top(&mut self, antrag_id: Uuid, top_id: Uuid)
-        -> Result<Option<AntragTopMapping>>;
+    async fn detach_antrag_from_top(
+        &mut self,
+        antrag_id: Uuid,
+        top_id: Uuid,
+    ) -> Result<Option<AntragTopMapping>>;
 }
 
 #[cfg_attr(test, automock)]
