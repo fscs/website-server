@@ -8,7 +8,7 @@ use actix_web::error::ErrorNotFound;
 use actix_web::http::header::{CacheControl, CacheDirective};
 use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
-use actix_web::web::{scope, Data, QueryConfig};
+use actix_web::web::{scope, Data};
 use actix_web::{get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
 use serde::Serialize;
@@ -26,7 +26,7 @@ use utoipa_swagger_ui::SwaggerUi;
 pub(crate) mod antrag;
 pub(crate) mod auth;
 pub(crate) mod calendar;
-pub(crate) mod doorstate;
+pub(crate) mod door_state;
 pub(crate) mod persons;
 pub(crate) mod roles;
 pub(crate) mod sitzungen;
@@ -141,10 +141,10 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .service(
                 scope("/api")
                     .service(calendar::service("/calendar"))
-                    .service(persons::service("/person"))
+                    .service(persons::service("/persons"))
                     .service(roles::service("/roles"))
                     .service(antrag::service("/anträge"))
-                    .service(doorstate::service("/doorstate"))
+                    .service(door_state::service("/doorstate"))
                     .service(sitzungen::service("/sitzungen")),
             )
             .service(serve_files)

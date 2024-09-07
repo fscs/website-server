@@ -1,9 +1,13 @@
-use actix_web::web::{Path, Query};
+use std::borrow::Cow;
+
+use actix_web::web::Path;
 use actix_web::{delete, get, patch, post, web, Responder, Scope};
+use actix_web_validator::{Json as ActixJson, Query};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+use validator::{Validate, ValidationError};
 
 use crate::database::DatabaseTransaction;
 
@@ -47,46 +51,62 @@ fn register_top_id_service(parent: Scope) -> Scope {
         .service(delete_assoc_antrag)
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct CreateSitzungParams {
     timestamp: DateTime<Utc>,
+    #[validate(length(min = 1))]
     location: String,
     kind: SitzungKind,
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct CreateTopParams {
+    #[validate(length(min = 1))]
     name: String,
     kind: TopKind,
     inhalt: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct UpdateSitzungParams {
     timestamp: Option<DateTime<Utc>>,
+    #[validate(length(min = 1))]
     location: Option<String>,
     kind: Option<SitzungKind>,
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct UpdateTopParams {
+    #[validate(length(min = 1))]
     name: Option<String>,
     kind: Option<TopKind>,
     inhalt: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct FirstSitzungAfterParams {
     timestamp: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
+#[validate(schema(function = "validate_sitzung_between_params"))]
 pub struct SitzungBetweenParams {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+fn validate_sitzung_between_params(
+    params: &SitzungBetweenParams,
+) -> core::result::Result<(), ValidationError> {
+    if params.start > params.end {
+        Err(ValidationError::new("sitzung_between_params")
+            .with_message(Cow::Borrowed("start must be before end")))
+    } else {
+        Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct AssocAntragParams {
     antrag_id: Uuid,
 }
@@ -115,7 +135,7 @@ async fn get_sitzungen(mut transaction: DatabaseTransaction<'_>) -> impl Respond
 #[post("/")]
 async fn post_sitzungen(
     _user: User,
-    params: web::Json<CreateSitzungParams>,
+    params: ActixJson<CreateSitzungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::created_from_result(
@@ -198,7 +218,7 @@ async fn get_sitzung_by_id(
 async fn patch_sitzung_by_id(
     _user: User,
     sitzung_id: Path<Uuid>,
-    params: web::Json<UpdateSitzungParams>,
+    params: ActixJson<UpdateSitzungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_or_not_found_from_result(
@@ -262,7 +282,7 @@ async fn get_abmeldungen_by_sitzung(
 async fn post_tops(
     _user: User,
     sitzung_id: Path<Uuid>,
-    params: web::Json<CreateTopParams>,
+    params: ActixJson<CreateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::created_from_result(
@@ -292,7 +312,7 @@ async fn patch_tops(
     _user: User,
     _sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
-    params: web::Json<UpdateTopParams>,
+    params: ActixJson<UpdateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_or_not_found_from_result(
@@ -343,7 +363,7 @@ async fn assoc_antrag(
     _user: User,
     _sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
-    params: web::Json<AssocAntragParams>,
+    params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_or_not_found_from_result(
@@ -369,7 +389,7 @@ async fn delete_assoc_antrag(
     _user: User,
     _sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
-    params: web::Json<AssocAntragParams>,
+    params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_or_not_found_from_result(

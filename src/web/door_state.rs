@@ -1,11 +1,15 @@
+use std::borrow::Cow;
+
 use actix_web::{
     get, post,
-    web::{self, Query},
+    web::{self, Json as ActixJson},
     Responder, Scope,
 };
+use actix_web_validator::Query;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
+use validator::{Validate, ValidationError};
 
 use crate::{
     database::DatabaseTransaction,
@@ -20,10 +24,22 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(create_doorstate)
 }
 
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
+#[validate(schema(function = "validate_doorstate_params"))]
 pub struct GetDoorStateParams {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
+}
+
+fn validate_doorstate_params(
+    params: &GetDoorStateParams,
+) -> core::result::Result<(), ValidationError> {
+    if params.start > params.end {
+        Err(ValidationError::new("doorstate_params")
+            .with_message(Cow::Borrowed("start must be before end")))
+    } else {
+        Ok(())
+    }
 }
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
@@ -78,7 +94,7 @@ async fn get_doorstate_between(
 #[post("/")]
 async fn create_doorstate(
     _user: User,
-    params: web::Json<CreateDoorStateParams>,
+    params: ActixJson<CreateDoorStateParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     let now = chrono::Utc::now();

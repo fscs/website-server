@@ -3,9 +3,11 @@ use actix_web::{
     web::{self, Path},
     Responder, Scope,
 };
+use actix_web_validator::Json as ActixJson;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     database::DatabaseTransaction,
@@ -27,19 +29,25 @@ fn register_antrag_id_service(parent: Scope) -> Scope {
         .service(delete_antrag)
 }
 
-#[derive(Debug, IntoParams, Deserialize, ToSchema)]
+#[derive(Debug, IntoParams, Deserialize, ToSchema, Validate)]
 pub struct CreateAntragParams {
     antragssteller: Vec<Uuid>,
+    #[validate(length(min = 1))] 
     begründung: String,
+    #[validate(length(min = 1))] 
     antragstext: String,
+    #[validate(length(min = 1))] 
     titel: String,
 }
 
-#[derive(Debug, IntoParams, Deserialize, ToSchema)]
+#[derive(Debug, IntoParams, Deserialize, ToSchema, Validate)]
 pub struct UpdateAntragParams {
     antragssteller: Option<Vec<Uuid>>,
+    #[validate(length(min = 1))] 
     begründung: Option<String>,
+    #[validate(length(min = 1))] 
     antragstext: Option<String>,
+    #[validate(length(min = 1))] 
     titel: Option<String>,
 }
 
@@ -83,7 +91,7 @@ async fn get_antrag_by_id(
 #[post("/")]
 async fn create_antrag(
     _user: User,
-    params: web::Json<CreateAntragParams>,
+    params: ActixJson<CreateAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::created_from_result(
@@ -111,7 +119,7 @@ async fn create_antrag(
 #[patch("/{antrag_id}/")]
 async fn patch_antrag(
     _user: User,
-    params: web::Json<UpdateAntragParams>,
+    params: ActixJson<UpdateAntragParams>,
     antrag_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {

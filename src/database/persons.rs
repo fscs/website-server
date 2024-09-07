@@ -3,7 +3,7 @@ use chrono::NaiveDate;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::domain::person::{Abmeldung, Person, PersonRepo, PersonRoleMapping};
+use crate::domain::persons::{Abmeldung, Person, PersonRepo, PersonRoleMapping};
 
 impl PersonRepo for PgConnection {
     async fn create_person(&mut self, name: &str) -> Result<Person> {
@@ -321,7 +321,7 @@ mod test {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::person::PersonRepo;
+    use crate::domain::persons::PersonRepo;
 
     #[sqlx::test]
     async fn create_person(pool: PgPool) -> Result<()> {

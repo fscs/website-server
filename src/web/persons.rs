@@ -1,14 +1,18 @@
-use actix_web::web::{Path, Query};
+use std::borrow::Cow;
+
+use actix_web::web::Path;
 use actix_web::{delete, post, put, web};
 use actix_web::{get, patch, Responder, Scope};
+use actix_web_validator::{Query, Json as ActixJson};
 use chrono::NaiveDate;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+use validator::{Validate, ValidationError};
 
 use crate::database::DatabaseTransaction;
 use crate::web::auth::User;
-use crate::{domain::person::PersonRepo, web::RestStatus};
+use crate::{domain::persons::PersonRepo, web::RestStatus};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     let scope = web::scope(path)
@@ -32,30 +36,46 @@ fn register_person_id_service(parent: Scope) -> Scope {
         .service(roles_by_person)
 }
 
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct PersonsByRoleParams {
+    #[validate(length(min = 1))]
     role: String,
 }
 
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct CreatePersonParams {
+    #[validate(length(min = 1))]
     name: String,
 }
 
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct UpdatePersonParams {
+    #[validate(length(min = 1))]
     name: Option<String>,
 }
 
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct RoleParams {
+    #[validate(length(min = 1))]
     role: String,
 }
 
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
+#[validate(schema(function = "validate_abmeldung_params"))]
 pub struct AbmeldungParams {
     start: NaiveDate,
     end: NaiveDate,
+}
+
+fn validate_abmeldung_params(
+    params: &AbmeldungParams,
+) -> core::result::Result<(), ValidationError> {
+    if params.start > params.end {
+        Err(ValidationError::new("abmeldung_params")
+            .with_message(Cow::Borrowed("start must be before end")))
+    } else {
+        Ok(())
+    }
 }
 
 #[utoipa::path(
@@ -98,7 +118,7 @@ async fn get_person_by_id(
 #[put("/")]
 async fn put_person(
     _user: User,
-    params: web::Json<CreatePersonParams>,
+    params: ActixJson<CreatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::created_from_result(transaction.create_person(params.name.as_str()).await)
@@ -136,7 +156,7 @@ async fn delete_person_by_id(
 async fn patch_person(
     _user: User,
     person_id: Path<Uuid>,
-    params: web::Json<UpdatePersonParams>,
+    params: ActixJson<UpdatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_or_not_found_from_result(
@@ -193,7 +213,7 @@ async fn roles_by_person(
 async fn add_role_to_person(
     _user: User,
     person_id: Path<Uuid>,
-    params: web::Json<RoleParams>,
+    params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_or_not_found_from_result(
@@ -218,7 +238,7 @@ async fn add_role_to_person(
 async fn revoke_role_from_person(
     _user: User,
     person_id: Path<Uuid>,
-    params: web::Json<RoleParams>,
+    params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_or_not_found_from_result(
@@ -257,7 +277,7 @@ async fn get_abmeldungen_by_person(
 async fn create_abmeldung(
     _user: User,
     person_id: Path<Uuid>,
-    params: web::Json<AbmeldungParams>,
+    params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::created_from_result(
@@ -282,7 +302,7 @@ async fn create_abmeldung(
 async fn revoke_abmeldung(
     _user: User,
     person_id: Path<Uuid>,
-    params: web::Json<AbmeldungParams>,
+    params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_or_not_found_from_result(

@@ -33,6 +33,8 @@ utoipa-swagger-ui = { version = "6", features = [ "actix-web" ] }
 blocking = "1"
 mime = "0"
 utoipauto = "0.1"
+actix-web-validator = "6.0"
+validator = { version = "0.18", features = ["derive"] }
 
 [dev-dependencies]
 tokio = { version="1", features = ["full"]}

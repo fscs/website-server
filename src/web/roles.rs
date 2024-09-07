@@ -1,10 +1,12 @@
 use actix_web::{delete, get, put, web, Responder, Scope};
+use actix_web_validator::Json as ActixJson;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
+use validator::Validate;
 
 use crate::{
     database::DatabaseTransaction,
-    domain::person::PersonRepo,
+    domain::persons::PersonRepo,
     web::{auth::User, RestStatus},
 };
 
@@ -15,8 +17,9 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(delete_role)
 }
 
-#[derive(Debug, IntoParams, Deserialize, ToSchema)]
+#[derive(Debug, IntoParams, Deserialize, ToSchema, Validate)]
 pub struct RoleParams {
+    #[validate(length(min = 1))]
     name: String,
 }
 
@@ -45,7 +48,7 @@ async fn get_roles(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
 #[put("/")]
 async fn create_role(
     _user: User,
-    params: web::Json<RoleParams>,
+    params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_from_result(transaction.create_role(&params.name).await)
@@ -65,7 +68,7 @@ async fn create_role(
 #[delete("/")]
 async fn delete_role(
     _user: User,
-    params: web::Json<RoleParams>,
+    params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
     RestStatus::ok_or_not_found_from_result(transaction.delete_role(&params.name).await)
