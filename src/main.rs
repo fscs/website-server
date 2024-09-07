@@ -1,9 +1,9 @@
 #![warn(clippy::shadow_unrelated)]
 
-use std::{convert::identity, path::PathBuf, str::FromStr};
 use clap::Parser;
 use lazy_static::lazy_static;
 use log::LevelFilter;
+use std::{convert::identity, path::PathBuf, str::FromStr};
 
 mod cache;
 mod database;

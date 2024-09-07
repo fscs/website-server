@@ -103,7 +103,9 @@ async fn request_cal(url: String) -> anyhow::Result<Vec<CalendarEvent>> {
                 location: event
                     .get_location()
                     .map(|m| m.to_string().replace('\\', "")),
-                description: event.get_description().map(std::string::ToString::to_string),
+                description: event
+                    .get_description()
+                    .map(std::string::ToString::to_string),
                 start: event.get_start().and_then(dpt_to_date_time),
                 end: event.get_start().and_then(dpt_to_date_time),
             })

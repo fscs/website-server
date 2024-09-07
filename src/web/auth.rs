@@ -243,7 +243,9 @@ struct AuthCookieJar {
 
 impl AuthCookieJar {
     fn access_token(&self) -> Option<&str> {
-        self.jar.get("access_token").map(actix_web::cookie::Cookie::value)
+        self.jar
+            .get("access_token")
+            .map(actix_web::cookie::Cookie::value)
     }
 
     fn set_access_token(&mut self, value: &str) {
@@ -254,7 +256,9 @@ impl AuthCookieJar {
     }
 
     fn refresh_token(&self) -> Option<&str> {
-        self.jar.get("refresh_token").map(actix_web::cookie::Cookie::value)
+        self.jar
+            .get("refresh_token")
+            .map(actix_web::cookie::Cookie::value)
     }
 
     fn set_refresh_token(&mut self, value: &str) {
@@ -387,10 +391,7 @@ fn redirect_url<'a>(path: &str, request: HttpRequest) -> Cow<'a, RedirectUrl> {
     let scheme = request.connection_info().scheme().to_string();
 
     std::borrow::Cow::Owned(
-        RedirectUrl::new(format!(
-            "{scheme}://{host}/auth/callback/?path={path}"
-        ))
-        .unwrap(),
+        RedirectUrl::new(format!("{scheme}://{host}/auth/callback/?path={path}")).unwrap(),
     )
 }
 
