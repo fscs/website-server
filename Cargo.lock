@@ -1221,7 +1221,7 @@ dependencies = [
 
 [[package]]
 name = "fscs-website-backend"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "actix-files",
  "actix-utils",
@@ -1231,7 +1231,7 @@ dependencies = [
  "async-std",
  "blocking",
  "chrono",
- "chrono-tz 0.9.0",
+ "chrono-tz 0.8.6",
  "clap",
  "futures-util",
  "icalendar",

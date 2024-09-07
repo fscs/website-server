@@ -1,8 +1,8 @@
-use anyhow::Result;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 use std::future::Future;
 use std::ops::{Deref, DerefMut};
+
+use anyhow::Result;
+use sqlx::{postgres::PgPoolOptions, PgConnection, PgPool, Postgres, Transaction};
 
 pub mod antrag;
 pub mod antrag_top_map;

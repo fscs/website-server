@@ -1,4 +1,5 @@
-use crate::cache::TimedCache;
+use std::future::Future;
+use std::pin::Pin;
 
 use actix_web::web::Json;
 use actix_web::{get, web, HttpResponseBuilder, Responder, Scope};
@@ -7,9 +8,9 @@ use chrono::{DateTime, NaiveTime, Utc};
 use icalendar::{Component, Event, EventLike};
 use lazy_static::lazy_static;
 use reqwest::StatusCode;
-use std::future::Future;
-use std::pin::Pin;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::cache::TimedCache;
 
 #[derive(serde::Serialize, Clone, IntoParams, ToSchema)]
 pub struct CalendarEvent {

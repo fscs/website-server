@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, pin::Pin, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, future::Future, pin::Pin, sync::Arc};
 
 use actix_utils::future::{ready, Ready};
 use actix_web::{
@@ -10,7 +10,6 @@ use actix_web::{
     web::{self, Data},
     FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
 };
-
 use anyhow::anyhow;
 use chrono::Utc;
 use log::debug;
@@ -20,7 +19,6 @@ use oauth2::{
 };
 use reqwest::header::{self, LOCATION};
 use serde::Deserialize;
-use std::future::Future;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub(crate) struct User {

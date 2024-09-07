@@ -1,6 +1,7 @@
-use crate::database::{DatabasePool, DatabaseTransaction};
-use crate::web::auth::AuthMiddle;
-use crate::{web, ARGS};
+use std::future::Future;
+use std::path::{Component, PathBuf};
+use std::pin::Pin;
+
 use actix_files::NamedFile;
 use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceResponse};
@@ -12,16 +13,9 @@ use actix_web::web::{scope, Data};
 use actix_web::{get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
 use serde::Serialize;
-use utoipauto::utoipauto;
-
-use std::future::Future;
-use std::path::{Component, PathBuf};
-use std::pin::Pin;
-
 use utoipa::OpenApi;
-
-use self::auth::{oauth_client, User};
 use utoipa_swagger_ui::SwaggerUi;
+use utoipauto::utoipauto;
 
 pub(crate) mod antrag;
 pub(crate) mod auth;
@@ -30,6 +24,10 @@ pub(crate) mod door_state;
 pub(crate) mod persons;
 pub(crate) mod roles;
 pub(crate) mod sitzungen;
+
+use crate::database::{DatabasePool, DatabaseTransaction};
+use crate::ARGS;
+use auth::{oauth_client, AuthMiddle, User};
 
 pub(super) enum RestStatus {
     Ok(serde_json::Value),
@@ -131,7 +129,7 @@ struct ApiDoc;
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     HttpServer::new(move || {
         App::new()
-            .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized))
+            .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, auth::not_authorized))
             .wrap(AuthMiddle)
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))

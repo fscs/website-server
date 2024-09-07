@@ -1,39 +1,37 @@
 [package]
 name = "fscs-website-backend"
 authors = [ "Florian Schubert" ]
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 description = "Backend für Knuts neue Webseite"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "uuid", "json", "chrono" ] }
-actix-web = { version = "4.8", features = [ "secure-cookies" ] }
-uuid = { version = "1", features = [ "v4", "serde" ] }
-anyhow = "1"
-actix-utils = "3.0"
 actix-files = "0.6"
-icalendar = { version = "0.16", features = [ "chrono-tz" ]}
-reqwest = { version = "0", features = [ "blocking", "json" ] }
-log = "0"
-chrono = { version = "0", features = [ "serde" ]}
+actix-utils = "3.0"
+actix-web-validator = "6.0"
+actix-web = { version = "4.8", features = [ "secure-cookies" ] }
+anyhow = "1"
+async-std = "1"
+blocking = "1"
 chrono-tz = "0"
+chrono = { version = "0", features = [ "serde" ]}
+clap = { version = "4", features = [ "derive", "color" ] }
+futures-util = "0"
+icalendar = { version = "0.16", features = [ "chrono-tz" ]}
+lazy_static = "1"
+log = "0"
+mime = "0"
+oauth2 = "4"
+pretty_env_logger = "0"
+reqwest = { version = "0", features = [ "blocking", "json" ] }
 serde_json = { version = "1", features = [ "raw_value" ]}
 serde = { version = "1", features = [ "derive" ] }
+sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "uuid", "json", "chrono" ] }
 tera = { version = "1", features = [ "builtins" ] }
-lazy_static = "1"
-futures-util = "0"
-async-std = "1"
-clap = { version = "4", features = [ "derive", "color" ] }
-pretty_env_logger = "0"
-oauth2 = "4"
-utoipa = { version = "4", features = [ "actix_extras", "chrono", "uuid", "openapi_extensions" ] }
 utoipa-swagger-ui = { version = "6", features = [ "actix-web" ] }
-blocking = "1"
-mime = "0"
 utoipauto = "0.1"
-actix-web-validator = "6.0"
+utoipa = { version = "4", features = [ "actix_extras", "chrono", "uuid", "openapi_extensions" ] }
+uuid = { version = "1", features = [ "v4", "serde" ] }
 validator = { version = "0.18", features = ["derive"] }
 
 [dev-dependencies]

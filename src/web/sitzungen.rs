@@ -16,9 +16,7 @@ use crate::domain::{
     antrag_top_map::AntragTopMapRepo,
     sitzung::{SitzungKind, SitzungRepo, TopKind},
 };
-use crate::web::auth::User;
-
-use super::RestStatus;
+use crate::web::{RestStatus, auth::User};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     let scope = web::scope(path)

@@ -1,8 +1,6 @@
 use antrag_top_map::AntragTopMapRepo;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use persons::{Abmeldung, PersonRepo};
-use sitzung::{SitzungRepo, SitzungWithTops, TopWithAnträge};
 use uuid::Uuid;
 
 pub mod antrag;
@@ -10,6 +8,9 @@ pub mod antrag_top_map;
 pub mod door_state;
 pub mod persons;
 pub mod sitzung;
+
+use persons::{Abmeldung, PersonRepo};
+use sitzung::{SitzungRepo, SitzungWithTops, TopWithAnträge};
 
 pub trait SitzungAntragService: SitzungRepo + AntragTopMapRepo {}
 
