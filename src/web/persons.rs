@@ -7,6 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::database::DatabaseTransaction;
+use crate::web::auth::User;
 use crate::{domain::person::PersonRepo, web::RestStatus};
 
 pub(crate) fn service(path: &'static str) -> Scope {
@@ -31,27 +32,27 @@ fn register_person_id_service(parent: Scope) -> Scope {
         .service(roles_by_person)
 }
 
-#[derive(Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct PersonsByRoleParams {
     role: String,
 }
 
-#[derive(Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct CreatePersonParams {
     name: String,
 }
 
-#[derive(Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct UpdatePersonParams {
     name: Option<String>,
 }
 
-#[derive(Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct RoleParams {
     role: String,
 }
 
-#[derive(Deserialize, ToSchema, IntoParams)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct AbmeldungParams {
     start: NaiveDate,
     end: NaiveDate,
@@ -89,11 +90,14 @@ async fn get_person_by_id(
     path = "/api/persons/",
     responses(
         (status = 201, description = "Created", body = Person),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[put("/")]
 async fn put_person(
+    _user: User,
     params: web::Json<CreatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
@@ -104,12 +108,14 @@ async fn put_person(
     path = "/api/persons/{person_id}/",
     responses(
         (status = 200, description = "Success"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[delete("/{person_id}/")]
 async fn delete_person_by_id(
+    _user: User,
     person_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
@@ -120,12 +126,15 @@ async fn delete_person_by_id(
     path = "/api/persons/{person_id}/",
     responses(
         (status = 200, description = "Success", body = Person),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[patch("/{person_id}/")]
 async fn patch_person(
+    _user: User,
     person_id: Path<Uuid>,
     params: web::Json<UpdatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -142,6 +151,7 @@ async fn patch_person(
     params(PersonsByRoleParams),
     responses(
         (status = 200, description = "Success", body = Vec<Person>),
+        (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -173,12 +183,15 @@ async fn roles_by_person(
     params(RoleParams),
     responses(
         (status = 200, description = "Success", body = PersonRoleMapping),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[post("/{person_id}/roles")]
 async fn add_role_to_person(
+    _user: User,
     person_id: Path<Uuid>,
     params: web::Json<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -195,12 +208,15 @@ async fn add_role_to_person(
     params(RoleParams),
     responses(
         (status = 200, description = "Success", body = PersonRoleMapping),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[delete("/{person_id}/roles")]
 async fn revoke_role_from_person(
+    _user: User,
     person_id: Path<Uuid>,
     params: web::Json<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -231,12 +247,15 @@ async fn get_abmeldungen_by_person(
     path = "/api/persons/{person_id}/abmeldungen",
     params(AbmeldungParams),
     responses(
-        (status = 200, description = "Success", body = Abmeldung),
+        (status = 201, description = "Created", body = Abmeldung),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/{person_id}/abmeldungen")]
+#[put("/{person_id}/abmeldungen")]
 async fn create_abmeldung(
+    _user: User,
     person_id: Path<Uuid>,
     params: web::Json<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -253,12 +272,15 @@ async fn create_abmeldung(
     params(AbmeldungParams),
     responses(
         (status = 200, description = "Success", body = Abmeldung),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[delete("/{person_id}/abmeldungen")]
 async fn revoke_abmeldung(
+    _user: User,
     person_id: Path<Uuid>,
     params: web::Json<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,

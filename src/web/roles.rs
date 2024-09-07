@@ -2,7 +2,11 @@ use actix_web::{delete, get, put, web, Responder, Scope};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{database::DatabaseTransaction, domain::person::PersonRepo, web::RestStatus};
+use crate::{
+    database::DatabaseTransaction,
+    domain::person::PersonRepo,
+    web::{auth::User, RestStatus},
+};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
@@ -33,11 +37,14 @@ async fn get_roles(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
     params(RoleParams),
     responses(
         (status = 200, description = "Success", body = Role),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[put("/")]
 async fn create_role(
+    _user: User,
     params: web::Json<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
@@ -49,12 +56,15 @@ async fn create_role(
     params(RoleParams),
     responses(
         (status = 200, description = "Success"),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[delete("/")]
 async fn delete_role(
+    _user: User,
     params: web::Json<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {

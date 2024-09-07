@@ -7,7 +7,11 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{database::DatabaseTransaction, domain::door_state::DoorStateRepo, web::RestStatus};
+use crate::{
+    database::DatabaseTransaction,
+    domain::door_state::DoorStateRepo,
+    web::{auth::User, RestStatus},
+};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
@@ -16,13 +20,13 @@ pub(crate) fn service(path: &'static str) -> Scope {
         .service(create_doorstate)
 }
 
-#[derive(Deserialize, ToSchema, IntoParams, Debug)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct GetDoorStateParams {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 }
 
-#[derive(Deserialize, ToSchema, IntoParams, Debug)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct CreateDoorStateParams {
     is_open: bool,
 }
@@ -45,6 +49,7 @@ async fn get_doorstate(mut transaction: DatabaseTransaction<'_>) -> impl Respond
     params(GetDoorStateParams),
     responses(
         (status = 200, description = "Success", body = Vec<DoorState>),
+        (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -65,11 +70,14 @@ async fn get_doorstate_between(
     params(CreateDoorStateParams),
     responses(
         (status = 201, description = "Created"),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[post("/")]
 async fn create_doorstate(
+    _user: User,
     params: web::Json<CreateDoorStateParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {

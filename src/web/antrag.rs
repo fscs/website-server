@@ -7,7 +7,11 @@ use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::{database::DatabaseTransaction, domain::antrag::AntragRepo, web::RestStatus};
+use crate::{
+    database::DatabaseTransaction,
+    domain::antrag::AntragRepo,
+    web::{auth::User, RestStatus},
+};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     let scope = web::scope(path).service(get_anträge).service(create_antrag);
@@ -71,11 +75,14 @@ async fn get_antrag_by_id(
     path = "/api/anträge/",
     responses(
         (status = 201, description = "Created", body = Antrag),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[post("/")]
 async fn create_antrag(
+    _user: User,
     params: web::Json<CreateAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
@@ -95,12 +102,15 @@ async fn create_antrag(
     path = "/api/anträge/{antrag_id}",
     responses(
         (status = 200, description = "Success", body = Antrag),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[patch("/{antrag_id}/")]
 async fn patch_antrag(
+    _user: User,
     params: web::Json<UpdateAntragParams>,
     antrag_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
@@ -122,12 +132,14 @@ async fn patch_antrag(
     path = "/api/anträge/{antrag_id}",
     responses(
         (status = 200, description = "Success"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[delete("/{antrag_id}/")]
 async fn delete_antrag(
+    _user: User,
     antrag_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {

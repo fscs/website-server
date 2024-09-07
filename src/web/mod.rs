@@ -8,7 +8,7 @@ use actix_web::error::ErrorNotFound;
 use actix_web::http::header::{CacheControl, CacheDirective};
 use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
-use actix_web::web::{scope, Data};
+use actix_web::web::{scope, Data, QueryConfig};
 use actix_web::{get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Error;
 use serde::Serialize;
@@ -120,15 +120,15 @@ impl FromRequest for DatabaseTransaction<'static> {
     }
 }
 
-pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
-    #[utoipauto()]
-    #[derive(OpenApi)]
-    #[openapi(info(
-        title = "FSCS API",
-        contact(name = "HHU Fachschaft Informatik", url = "https://fscs.hhu.de"),
-    ))]
-    struct ApiDoc;
+#[utoipauto()]
+#[derive(OpenApi)]
+#[openapi(info(
+    title = "FSCS API",
+    contact(name = "HHU Fachschaft Informatik", url = "https://fscs.hhu.de"),
+))]
+struct ApiDoc;
 
+pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     HttpServer::new(move || {
         App::new()
             .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, web::auth::not_authorized))

@@ -12,6 +12,7 @@ use crate::domain::{
     antrag_top_map::AntragTopMapRepo,
     sitzung::{SitzungKind, SitzungRepo, TopKind},
 };
+use crate::web::auth::User;
 
 use super::RestStatus;
 
@@ -46,46 +47,46 @@ fn register_top_id_service(parent: Scope) -> Scope {
         .service(delete_assoc_antrag)
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
 pub struct CreateSitzungParams {
     timestamp: DateTime<Utc>,
     location: String,
     kind: SitzungKind,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
 pub struct CreateTopParams {
     name: String,
     kind: TopKind,
     inhalt: Option<serde_json::Value>,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
 pub struct UpdateSitzungParams {
     timestamp: Option<DateTime<Utc>>,
     location: Option<String>,
     kind: Option<SitzungKind>,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
 pub struct UpdateTopParams {
     name: Option<String>,
     kind: Option<TopKind>,
     inhalt: Option<serde_json::Value>,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
 pub struct FirstSitzungAfterParams {
     timestamp: DateTime<Utc>,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
 pub struct SitzungBetweenParams {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
 pub struct AssocAntragParams {
     antrag_id: Uuid,
 }
@@ -106,11 +107,14 @@ async fn get_sitzungen(mut transaction: DatabaseTransaction<'_>) -> impl Respond
     path = "/api/sitzungen/",
     responses(
         (status = 201, description = "Created", body = Sitzung),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[post("/")]
 async fn post_sitzungen(
+    _user: User,
     params: web::Json<CreateSitzungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
@@ -126,6 +130,7 @@ async fn post_sitzungen(
     params(FirstSitzungAfterParams),
     responses(
         (status = 200, description = "Success", body = SitzungWithTops),
+        (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
@@ -145,6 +150,7 @@ async fn get_first_sitzung_after(
     params(SitzungBetweenParams),
     responses(
         (status = 200, description = "Success", body = Vec<Sitzung>),
+        (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -182,12 +188,15 @@ async fn get_sitzung_by_id(
     path = "/api/sitzungen/{sitzung_id}/",
     responses(
         (status = 200, description = "Success", body = Sitzung),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[patch("/{sitzung_id}/")]
 async fn patch_sitzung_by_id(
+    _user: User,
     sitzung_id: Path<Uuid>,
     params: web::Json<UpdateSitzungParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -208,12 +217,14 @@ async fn patch_sitzung_by_id(
     path = "/api/sitzungen/{sitzung_id}/",
     responses(
         (status = 200, description = "Success", body = Sitzung),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[delete("/{sitzung_id}/")]
 async fn delete_sitzung_by_id(
+    _user: User,
     sitzung_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
@@ -242,11 +253,14 @@ async fn get_abmeldungen_by_sitzung(
     path = "/api/sitzungen/{sitzung_id}/tops/",
     responses(
         (status = 201, description = "Created", body = Top),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[post("/{sitzung_id}/tops/")]
 async fn post_tops(
+    _user: User,
     sitzung_id: Path<Uuid>,
     params: web::Json<CreateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -267,12 +281,15 @@ async fn post_tops(
     path = "/api/sitzungen/{sitzung_id}/tops/{top_id}",
     responses(
         (status = 200, description = "Sucess", body = Top),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[patch("/{sitzung_id}/tops/<top_id>")]
 async fn patch_tops(
+    _user: User,
     _sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
     params: web::Json<UpdateTopParams>,
@@ -295,12 +312,14 @@ async fn patch_tops(
     path = "/api/sitzungen/{sitzung_id}/tops/{top_id}",
     responses(
         (status = 200, description = "Sucess", body = Top),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[delete("/{sitzung_id}/tops/<top_id>")]
 async fn delete_tops(
+    _user: User,
     _sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
@@ -313,12 +332,15 @@ async fn delete_tops(
     params(AssocAntragParams),
     responses(
         (status = 200, description = "Sucess", body = AntragTopMapping),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[patch("/{sitzung_id}/tops/<top_id>/assoc")]
 async fn assoc_antrag(
+    _user: User,
     _sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
     params: web::Json<AssocAntragParams>,
@@ -336,12 +358,15 @@ async fn assoc_antrag(
     params(AssocAntragParams),
     responses(
         (status = 200, description = "Sucess", body = AntragTopMapping),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[delete("/{sitzung_id}/tops/<top_id>/assoc")]
 async fn delete_assoc_antrag(
+    _user: User,
     _sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
     params: web::Json<AssocAntragParams>,
