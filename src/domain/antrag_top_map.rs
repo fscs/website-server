@@ -1,6 +1,4 @@
 use anyhow::Result;
-#[cfg(test)]
-use mockall::automock;
 use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -13,7 +11,6 @@ pub struct AntragTopMapping {
     pub top_id: Uuid,
 }
 
-#[cfg_attr(test, automock)]
 pub trait AntragTopMapRepo {
     async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
 

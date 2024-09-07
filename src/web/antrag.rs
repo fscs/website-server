@@ -71,7 +71,6 @@ async fn get_antrag_by_id(
     path = "/api/anträge/",
     responses(
         (status = 201, description = "Created", body = Antrag),
-        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]

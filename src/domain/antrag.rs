@@ -1,6 +1,4 @@
 use anyhow::Result;
-#[cfg(test)]
-use mockall::automock;
 use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -20,7 +18,6 @@ pub struct Antrag {
     pub creators: Vec<Uuid>,
 }
 
-#[cfg_attr(test, automock)]
 pub trait AntragRepo {
     async fn create_antrag(
         &mut self,

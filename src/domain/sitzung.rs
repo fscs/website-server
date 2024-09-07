@@ -1,7 +1,5 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-#[cfg(test)]
-use mockall::automock;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -61,7 +59,6 @@ pub struct TopWithAnträge {
     pub anträge: Vec<Antrag>,
 }
 
-#[cfg_attr(test, automock)]
 pub trait SitzungRepo {
     async fn create_sitzung(
         &mut self,

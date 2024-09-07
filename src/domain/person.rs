@@ -1,7 +1,5 @@
 use anyhow::Result;
 use chrono::NaiveDate;
-#[cfg(test)]
-use mockall::automock;
 use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -31,7 +29,6 @@ pub struct Abmeldung {
     pub ablaufdatum: NaiveDate,
 }
 
-#[cfg_attr(test, automock)]
 pub trait PersonRepo {
     async fn create_person(&mut self, name: &str) -> Result<Person>;
 

@@ -12,6 +12,8 @@ impl PersonRepo for PgConnection {
             r#"
                 INSERT INTO person (name)
                 VALUES ($1)
+                ON CONFLICT
+                DO NOTHING
                 RETURNING *
             "#,
             name
@@ -27,6 +29,8 @@ impl PersonRepo for PgConnection {
             r#"
                 INSERT INTO roles (name)
                 VALUES ($1)
+                ON CONFLICT
+                DO NOTHING
             "#,
             name
         )

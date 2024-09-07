@@ -153,9 +153,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     #[derive(OpenApi)]
     #[openapi(info(
         title = "FSCS API",
-        description = "Our API to manage the FSCS System",
-        contact(name = "FSCS", email = "fscs@hhu.de", url = "https://new.hhu-fscs.de"),
-        version = "1.0.0"
+        contact(name = "HHU Fachschaft Informatik", url = "https://fscs.hhu.de"),
     ))]
     struct ApiDoc;
 

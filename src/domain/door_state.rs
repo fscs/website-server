@@ -1,7 +1,5 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-#[cfg(test)]
-use mockall::automock;
 use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 
@@ -11,7 +9,6 @@ pub struct DoorState {
     pub is_open: bool,
 }
 
-#[cfg_attr(test, automock)]
 pub trait DoorStateRepo {
     async fn create_door_state(
         &mut self,

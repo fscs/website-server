@@ -44,7 +44,7 @@ async fn get_doorstate(mut transaction: DatabaseTransaction<'_>) -> impl Respond
     path = "/api/doorstate/between",
     params(GetDoorStateParams),
     responses(
-        (status = 200, description = "Success", body = Vec<DoorSatae>),
+        (status = 200, description = "Success", body = Vec<DoorState>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
