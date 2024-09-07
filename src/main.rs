@@ -1,15 +1,16 @@
-mod cache;
+#![warn(clippy::shadow_unrelated)]
 
 use std::{convert::identity, path::PathBuf, str::FromStr};
+use clap::Parser;
+use lazy_static::lazy_static;
+use log::LevelFilter;
 
+mod cache;
 mod database;
 mod domain;
 mod web;
 
 use crate::database::DatabasePool;
-use clap::Parser;
-use lazy_static::lazy_static;
-use log::LevelFilter;
 
 #[derive(Parser)]
 struct Args {

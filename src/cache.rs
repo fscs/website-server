@@ -30,7 +30,7 @@ struct DataLastUpdate<T> {
 }
 
 impl<T: Sync> TimedCache<T> {
-    /// Create a TimedCache that generates a Value from the given Function.
+    /// Create a `TimedCache` that generates a Value from the given Function.
     /// The Function is normally not `pure`, it is expected, that the Output can change.
     /// The Duration should be a Time in which, the Output is expected to not change.
     pub(crate) fn with_generator<FN: Fn() -> Pin<Box<dyn Future<Output = T>>> + 'static + Sync>(
@@ -44,7 +44,7 @@ impl<T: Sync> TimedCache<T> {
         }
     }
 
-    /// Get the Value of the TimedCache.
+    /// Get the Value of the `TimedCache`.
     ///
     /// Executes the generator function, if the last time it ran is more than Duration ago.
     ///
@@ -77,15 +77,15 @@ impl<T: Sync> TimedCache<T> {
                     .iter()
                     .any(|d| d.last_updated + self.duration < SystemTime::now())
             {
-                let data = (*self.generator)().await;
+                let new_data = (*self.generator)().await;
 
                 *write = Some(DataLastUpdate {
-                    data,
+                    data: new_data,
                     last_updated: SystemTime::now(),
                 });
             }
-            let data = RwLockWriteGuard::downgrade(write);
-            ReadWrapper(data)
+            let result = RwLockWriteGuard::downgrade(write);
+            ReadWrapper(result)
         }
     }
 }
@@ -108,15 +108,15 @@ impl<T: Sync, E: Sync> TimedCache<Result<T, E>> {
                     .iter()
                     .any(|d| d.last_updated + self.duration < SystemTime::now() || d.data.is_err())
             {
-                let data = (*self.generator)().await;
+                let new_data = (*self.generator)().await;
 
                 *write = Some(DataLastUpdate {
-                    data,
+                    data: new_data,
                     last_updated: SystemTime::now(),
                 });
             }
-            let data = RwLockWriteGuard::downgrade(write);
-            ReadWrapper(data)
+            let result = RwLockWriteGuard::downgrade(write);
+            ReadWrapper(result)
         }
     }
 }
@@ -139,7 +139,7 @@ mod test {
             );
         }
 
-        assert_eq!(*CACHE.get().await, 0)
+        assert_eq!(*CACHE.get().await, 0);
     }
 
     #[tokio::test]
@@ -164,6 +164,6 @@ mod test {
         );
 
         assert!(*cache.try_get().await == Err(1));
-        assert!(*cache.try_get().await == Ok(2))
+        assert!(*cache.try_get().await == Ok(2));
     }
 }

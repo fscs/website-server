@@ -36,7 +36,7 @@ impl User {
     ) -> Result<Self, actix_web::Error> {
         let userinfo = oauth_client
             .reqwest_client
-            .get(oauth_client.user_info.to_owned())
+            .get(oauth_client.user_info.clone())
             .bearer_auth(access_token)
             .send()
             .await
@@ -55,7 +55,7 @@ impl User {
         Ok(User {
             username: userinfo
                 .get("preferred_username")
-                .map(|a| a.to_string())
+                .map(std::string::ToString::to_string)
                 .ok_or_else(|| {
                     debug!("Could not access preferred_username");
                     ErrorInternalServerError("Internal Error")
@@ -66,9 +66,9 @@ impl User {
     }
 
     pub fn is_rat(&self) -> bool {
-        self.userinfo.get("realm_access").map_or(false, |r| {
-            r.get("roles").map_or(false, |r| {
-                r.as_array().map_or(false, |r| r.contains(&"Rat".into()))
+        self.userinfo.get("realm_access").map_or(false, |a| {
+            a.get("roles").map_or(false, |b| {
+                b.as_array().map_or(false, |c| c.contains(&"Rat".into()))
             })
         })
     }
@@ -197,7 +197,7 @@ async fn refresh_authentication(
 
     let cookie_header_str = cookie_header.to_str()?;
 
-    let cookie_header = HeaderValue::from_str(
+    let new_cookie_header = HeaderValue::from_str(
         &(cookie_header_str
             .split(';')
             .filter_map(|c| match c.split_once('=') {
@@ -223,7 +223,7 @@ async fn refresh_authentication(
             + ";"),
     )?;
 
-    req.headers_mut().insert(header::COOKIE, cookie_header);
+    req.headers_mut().insert(header::COOKIE, new_cookie_header);
     req.extensions_mut().clear();
 
     Ok(())
@@ -243,18 +243,18 @@ struct AuthCookieJar {
 
 impl AuthCookieJar {
     fn access_token(&self) -> Option<&str> {
-        self.jar.get("access_token").map(|c| c.value())
+        self.jar.get("access_token").map(actix_web::cookie::Cookie::value)
     }
 
     fn set_access_token(&mut self, value: &str) {
         let mut cookie = Cookie::new("access_token", value.to_string());
         cookie.set_path("/");
         cookie.set_same_site(SameSite::None);
-        self.jar.add(cookie)
+        self.jar.add(cookie);
     }
 
     fn refresh_token(&self) -> Option<&str> {
-        self.jar.get("refresh_token").map(|c| c.value())
+        self.jar.get("refresh_token").map(actix_web::cookie::Cookie::value)
     }
 
     fn set_refresh_token(&mut self, value: &str) {
@@ -300,7 +300,7 @@ impl FromRequest for AuthCookieJar {
             };
 
             for c in cookies.iter() {
-                jar.add_original(c.clone())
+                jar.add_original(c.clone());
             }
 
             Ok(AuthCookieJar {
@@ -388,8 +388,7 @@ fn redirect_url<'a>(path: &str, request: HttpRequest) -> Cow<'a, RedirectUrl> {
 
     std::borrow::Cow::Owned(
         RedirectUrl::new(format!(
-            "{}://{}/auth/callback/?path={}",
-            scheme, host, path
+            "{scheme}://{host}/auth/callback/?path={path}"
         ))
         .unwrap(),
     )

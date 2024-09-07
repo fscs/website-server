@@ -165,11 +165,7 @@ async fn roles_by_person(
     person_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
-    RestStatus::ok_from_result(
-        transaction
-            .roles_by_person(*person_id)
-            .await,
-    )
+    RestStatus::ok_from_result(transaction.roles_by_person(*person_id).await)
 }
 
 #[utoipa::path(
@@ -228,11 +224,7 @@ async fn get_abmeldungen_by_person(
     person_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> impl Responder {
-    RestStatus::ok_from_result(
-        transaction
-            .abmeldungen_by_person(*person_id)
-            .await,
-    )
+    RestStatus::ok_from_result(transaction.abmeldungen_by_person(*person_id).await)
 }
 
 #[utoipa::path(

@@ -93,34 +93,6 @@ impl Responder for RestStatus {
     }
 }
 
-impl DatabaseTransaction<'_> {
-    pub(crate) async fn rest_ok<T: Serialize>(self, result: anyhow::Result<T>) -> RestStatus {
-        match result {
-            Ok(r) => match self.commit().await {
-                Ok(()) => match serde_json::to_value(r) {
-                    Ok(v) => RestStatus::Ok(v),
-                    Err(e) => RestStatus::Error(e.into()),
-                },
-                Err(e) => RestStatus::Error(e),
-            },
-            Err(e) => RestStatus::Error(e),
-        }
-    }
-
-    pub(crate) async fn rest_created<T: Serialize>(self, result: anyhow::Result<T>) -> RestStatus {
-        match result {
-            Ok(r) => match self.commit().await {
-                Ok(()) => match serde_json::to_value(r) {
-                    Ok(v) => RestStatus::Created(v),
-                    Err(e) => RestStatus::Error(e.into()),
-                },
-                Err(e) => RestStatus::Error(e),
-            },
-            Err(e) => RestStatus::Error(e),
-        }
-    }
-}
-
 impl FromRequest for DatabaseTransaction<'static> {
     type Error = actix_web::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
@@ -246,7 +218,7 @@ async fn serve_files(
             .customize()
             .insert_header(CacheControl(vec![
                 CacheDirective::Extension("immutable".to_string(), None),
-                CacheDirective::MaxAge(31536000),
+                CacheDirective::MaxAge(31_536_000),
             ]))
             .respond_to(&req)
     };

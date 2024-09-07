@@ -29,7 +29,7 @@ pub async fn top_with_anträge(
 
     let anträge = repo.anträge_by_top(top_id).await?;
 
-    return Ok(Some(TopWithAnträge { top, anträge }));
+    Ok(Some(TopWithAnträge { top, anträge }))
 }
 
 pub async fn sitzung_with_tops(
@@ -50,10 +50,10 @@ pub async fn sitzung_with_tops(
         tops_with_anträge.push(top_and_anträge);
     }
 
-    return Ok(Some(SitzungWithTops {
+    Ok(Some(SitzungWithTops {
         sitzung,
         tops: tops_with_anträge,
-    }));
+    }))
 }
 
 pub async fn sitzung_after_with_tops(
@@ -74,10 +74,10 @@ pub async fn sitzung_after_with_tops(
         tops_with_anträge.push(top_and_anträge);
     }
 
-    return Ok(Some(SitzungWithTops {
+    Ok(Some(SitzungWithTops {
         sitzung,
         tops: tops_with_anträge,
-    }));
+    }))
 }
 
 pub async fn abmeldungen_by_sitzung(
@@ -90,5 +90,5 @@ pub async fn abmeldungen_by_sitzung(
 
     let abmeldungen = repo.abmeldungen_at(sitzung.datetime.date_naive()).await?;
 
-    return Ok(Some(abmeldungen))
+    Ok(Some(abmeldungen))
 }
