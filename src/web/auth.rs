@@ -362,14 +362,27 @@ pub(crate) fn oauth_client() -> OauthClient {
     let singning_key = std::env::var("SIGNING_KEY").expect("No SIGNING_KEY set");
 
     OauthClient {
-        client: BasicClient::new(ClientId::new(client_id),
+        client: BasicClient::new(
+            ClientId::new(client_id),
             Some(ClientSecret::new(client_secret)),
-            AuthUrl::new("https://login.inphima.de/auth/realms/FSCS-Intern/protocol/openid-connect/auth".to_string()).unwrap(),
-            Some(TokenUrl::new("https://login.inphima.de/auth/realms/FSCS-Intern/protocol/openid-connect/token".to_string()).unwrap())),
-            reqwest_client: reqwest::Client::new(),
-            user_info: "https://login.inphima.de/auth/realms/FSCS-Intern/protocol/openid-connect/userinfo".to_string(),
-            singning_key: Key::from(singning_key.as_bytes())
-        }
+            AuthUrl::new(
+                "https://login.inphima.de/realms/FSCS-Intern/protocol/openid-connect/auth"
+                    .to_string(),
+            )
+            .unwrap(),
+            Some(
+                TokenUrl::new(
+                    "https://login.inphima.de/realms/FSCS-Intern/protocol/openid-connect/token"
+                        .to_string(),
+                )
+                .unwrap(),
+            ),
+        ),
+        reqwest_client: reqwest::Client::new(),
+        user_info: "https://login.inphima.de/realms/FSCS-Intern/protocol/openid-connect/userinfo"
+            .to_string(),
+        singning_key: Key::from(singning_key.as_bytes()),
+    }
 }
 
 pub(crate) fn service(path: &'static str) -> actix_web::Scope {
