@@ -1,9 +1,8 @@
 #![warn(clippy::shadow_unrelated)]
 
 use clap::Parser;
-use lazy_static::lazy_static;
 use log::LevelFilter;
-use std::{convert::identity, path::PathBuf, str::FromStr};
+use std::{convert::identity, path::PathBuf, str::FromStr, sync::LazyLock};
 
 mod cache;
 mod database;
@@ -32,9 +31,7 @@ struct Args {
     database_url: Option<String>,
 }
 
-lazy_static! {
-    static ref ARGS: Args = Args::parse();
-}
+static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {

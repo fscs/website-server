@@ -7,7 +7,7 @@ use std::time::{Duration, SystemTime};
 
 pub(crate) struct TimedCache<T: Sync> {
     data_last_updated: RwLock<Option<DataLastUpdate<T>>>,
-    generator: Box<dyn Fn() -> Pin<Box<dyn Future<Output = T>>> + 'static + Sync>,
+    generator: Box<dyn Fn() -> Pin<Box<dyn Future<Output = T>>> + 'static + Sync + Send>,
     duration: Duration,
 }
 
@@ -33,7 +33,9 @@ impl<T: Sync> TimedCache<T> {
     /// Create a `TimedCache` that generates a Value from the given Function.
     /// The Function is normally not `pure`, it is expected, that the Output can change.
     /// The Duration should be a Time in which, the Output is expected to not change.
-    pub(crate) fn with_generator<FN: Fn() -> Pin<Box<dyn Future<Output = T>>> + 'static + Sync>(
+    pub(crate) fn with_generator<
+        FN: Fn() -> Pin<Box<dyn Future<Output = T>>> + 'static + Sync + Send,
+    >(
         generator: FN,
         duration: Duration,
     ) -> Self {

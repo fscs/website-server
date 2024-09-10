@@ -1235,7 +1235,6 @@ dependencies = [
  "clap",
  "futures-util",
  "icalendar",
- "lazy_static",
  "log",
  "mime",
  "oauth2",

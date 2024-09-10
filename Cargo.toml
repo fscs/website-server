@@ -18,7 +18,6 @@ chrono = { version = "0", features = [ "serde" ]}
 clap = { version = "4", features = [ "derive", "color" ] }
 futures-util = "0"
 icalendar = { version = "0.16", features = [ "chrono-tz" ]}
-lazy_static = "1"
 log = "0"
 mime = "0"
 oauth2 = "4"

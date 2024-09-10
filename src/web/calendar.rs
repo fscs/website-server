@@ -1,13 +1,12 @@
-use std::future::Future;
-use std::pin::Pin;
-
 use actix_web::web::Json;
 use actix_web::{get, web, HttpResponseBuilder, Responder, Scope};
 use anyhow::anyhow;
 use chrono::{DateTime, NaiveTime, Utc};
 use icalendar::{Component, Event, EventLike};
-use lazy_static::lazy_static;
 use reqwest::StatusCode;
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::LazyLock;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::cache::TimedCache;
@@ -36,15 +35,14 @@ pub(crate) fn service(path: &'static str) -> Scope {
 )]
 #[get("/")]
 async fn get_events() -> impl Responder {
-    lazy_static! {
-        static ref CACHE: TimedCache<anyhow::Result<Vec<CalendarEvent>>> =
-            TimedCache::with_generator(
-                || {
-                    request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CAx5MEp7cGrQ6cEe?export")
-                },
-                std::time::Duration::from_secs(60 * 60 * 4)
-            );
-    }
+    static CACHE: LazyLock<TimedCache<anyhow::Result<Vec<CalendarEvent>>>> = LazyLock::new(|| {
+        TimedCache::with_generator(
+            || {
+                request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CAx5MEp7cGrQ6cEe?export")
+            },
+            std::time::Duration::from_secs(60 * 60 * 4),
+        )
+    });
     let Ok(ref x) = *CACHE.get().await else {
         return HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR)
             .body("Could not access Calendar");
@@ -61,15 +59,15 @@ async fn get_events() -> impl Responder {
 )]
 #[get("/branchen/")]
 async fn get_branchen_events() -> impl Responder {
-    lazy_static! {
-        static ref CACHE: TimedCache<anyhow::Result<Vec<CalendarEvent>>> =
-            TimedCache::with_generator(
-                || {
-                    request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CKpykNdtKHkA6Z9B?export")
-                },
-                std::time::Duration::from_secs(60 * 60)
-            );
-    }
+    static CACHE: LazyLock<TimedCache<anyhow::Result<Vec<CalendarEvent>>>> = LazyLock::new(|| {
+        TimedCache::with_generator(
+            || {
+                request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CKpykNdtKHkA6Z9B?export")
+            },
+            std::time::Duration::from_secs(60 * 60),
+        )
+    });
+
     let Ok(ref x) = *CACHE.try_get().await else {
         return HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR)
             .body("Could not access Calendar");
