@@ -132,30 +132,22 @@ where
             // authorized ? continue to the next middleware/ErrorHandlerResponse
             match service.call(req).await {
                 Ok(mut res) if updated_cookies => {
-                    res.headers_mut().append(
-                        header::SET_COOKIE,
+                    for cookie in [
+                        jar.refresh_token(),
+                        jar.access_token(),
+                        jar.jar.get("user").map(Cookie::value),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|cookie| {
                         HeaderValue::from_str(&format!(
                             "refresh_token={}; SameSite=None; Path=/",
-                            jar.refresh_token().unwrap()
+                            cookie
                         ))
-                        .unwrap(),
-                    );
-                    res.headers_mut().append(
-                        header::SET_COOKIE,
-                        HeaderValue::from_str(&format!(
-                            "access_token={}; SameSite=None; Path=/",
-                            jar.access_token().unwrap()
-                        ))
-                        .unwrap(),
-                    );
-                    res.headers_mut().append(
-                        header::SET_COOKIE,
-                        HeaderValue::from_str(&format!(
-                            "user={}; SameSite=None; Path=/",
-                            jar.jar.get("user").unwrap().value()
-                        ))
-                        .unwrap(),
-                    );
+                        .ok()
+                    }) {
+                        res.headers_mut().append(header::SET_COOKIE, cookie);
+                    }
                     Ok(res)
                 }
                 c => c,
