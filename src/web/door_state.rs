@@ -84,6 +84,7 @@ async fn get_doorstate_between(
 #[utoipa::path(
     path = "/api/doorstate/",
     params(CreateDoorStateParams),
+    request_body = CreateDoorStateParams,
     responses(
         (status = 201, description = "Created"),
         (status = 400, description = "Bad Request"),

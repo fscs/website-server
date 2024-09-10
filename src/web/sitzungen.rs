@@ -123,6 +123,7 @@ async fn get_sitzungen(mut transaction: DatabaseTransaction<'_>) -> impl Respond
 
 #[utoipa::path(
     path = "/api/sitzungen/",
+    request_body = CreateSitzungParams,
     responses(
         (status = 201, description = "Created", body = Sitzung),
         (status = 400, description = "Bad Request"),
@@ -204,6 +205,7 @@ async fn get_sitzung_by_id(
 
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/",
+    request_body = UpdateSitzungParams,
     responses(
         (status = 200, description = "Success", body = Sitzung),
         (status = 400, description = "Bad Request"),
@@ -269,6 +271,7 @@ async fn get_abmeldungen_by_sitzung(
 
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/tops/",
+    request_body = CreateTopParams,
     responses(
         (status = 201, description = "Created", body = Top),
         (status = 400, description = "Bad Request"),
@@ -297,6 +300,7 @@ async fn post_tops(
 
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/tops/{top_id}",
+    request_body = UpdateTopParams,
     responses(
         (status = 200, description = "Sucess", body = Top),
         (status = 400, description = "Bad Request"),
@@ -348,6 +352,7 @@ async fn delete_tops(
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc",
     params(AssocAntragParams),
+    request_body = AssocAntragParams,
     responses(
         (status = 200, description = "Sucess", body = AntragTopMapping),
         (status = 400, description = "Bad Request"),
@@ -374,6 +379,7 @@ async fn assoc_antrag(
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc",
     params(AssocAntragParams),
+    request_body = AssocAntragParams,
     responses(
         (status = 200, description = "Sucess", body = AntragTopMapping),
         (status = 400, description = "Bad Request"),

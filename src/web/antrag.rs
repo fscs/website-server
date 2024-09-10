@@ -81,6 +81,7 @@ async fn get_antrag_by_id(
 
 #[utoipa::path(
     path = "/api/anträge/",
+    request_body = CreateAntragParams,
     responses(
         (status = 201, description = "Created", body = Antrag),
         (status = 400, description = "Bad Request"),
@@ -108,6 +109,7 @@ async fn create_antrag(
 
 #[utoipa::path(
     path = "/api/anträge/{antrag_id}",
+    request_body = UpdateAntragParams,
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 400, description = "Bad Request"),

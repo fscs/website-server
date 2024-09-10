@@ -108,6 +108,7 @@ async fn get_person_by_id(
 
 #[utoipa::path(
     path = "/api/persons/",
+    request_body = CreatePersonParams,
     responses(
         (status = 201, description = "Created", body = Person),
         (status = 400, description = "Bad Request"),
@@ -144,6 +145,7 @@ async fn delete_person_by_id(
 
 #[utoipa::path(
     path = "/api/persons/{person_id}/",
+    request_body = UpdatePersonParams,
     responses(
         (status = 200, description = "Success", body = Person),
         (status = 400, description = "Bad Request"),
@@ -201,6 +203,7 @@ async fn roles_by_person(
 #[utoipa::path(
     path = "/api/persons/{person_id}/roles",
     params(RoleParams),
+    request_body = RoleParams,
     responses(
         (status = 200, description = "Success", body = PersonRoleMapping),
         (status = 400, description = "Bad Request"),
@@ -226,6 +229,7 @@ async fn add_role_to_person(
 #[utoipa::path(
     path = "/api/persons/{person_id}/roles",
     params(RoleParams),
+    request_body = RoleParams,
     responses(
         (status = 200, description = "Success", body = PersonRoleMapping),
         (status = 400, description = "Bad Request"),
@@ -266,6 +270,7 @@ async fn get_abmeldungen_by_person(
 #[utoipa::path(
     path = "/api/persons/{person_id}/abmeldungen",
     params(AbmeldungParams),
+    request_body = AbmeldungParams,
     responses(
         (status = 201, description = "Created", body = Abmeldung),
         (status = 400, description = "Bad Request"),
@@ -290,6 +295,7 @@ async fn create_abmeldung(
 #[utoipa::path(
     path = "/api/persons/{person_id}/abmeldungen",
     params(AbmeldungParams),
+    request_body = AbmeldungParams,
     responses(
         (status = 200, description = "Success", body = Abmeldung),
         (status = 400, description = "Bad Request"),
