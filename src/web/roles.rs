@@ -5,8 +5,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::{
-    database::DatabaseTransaction,
-    domain::persons::PersonRepo,
+    database::{DatabaseConnection, DatabaseTransaction},
+    domain::{persons::PersonRepo, Result},
     web::{auth::User, RestStatus},
 };
 
@@ -31,8 +31,10 @@ pub struct RoleParams {
     )
 )]
 #[get("/")]
-async fn get_roles(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
-    RestStatus::ok_from_result(transaction.roles().await)
+async fn get_roles(mut conn: DatabaseConnection) -> Result<impl Responder> {
+    let result = conn.roles().await?;
+
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -40,7 +42,7 @@ async fn get_roles(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
     params(RoleParams),
     request_body = RoleParams,
     responses(
-        (status = 200, description = "Success", body = Role),
+        (status = 201, description = "Created", body = Role),
         (status = 400, description = "Bad Request"),
         (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
@@ -51,8 +53,12 @@ async fn create_role(
     _user: User,
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_from_result(transaction.create_role(&params.name).await)
+) -> Result<impl Responder> {
+    let result = transaction.create_role(params.name.as_str()).await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Created(Some(result)))
 }
 
 #[utoipa::path(
@@ -72,6 +78,10 @@ async fn delete_role(
     _user: User,
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(transaction.delete_role(&params.name).await)
+) -> Result<impl Responder> {
+    let result = transaction.delete_role(params.name.as_str()).await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }

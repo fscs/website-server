@@ -12,8 +12,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::{Validate, ValidationError};
 
 use crate::{
-    database::DatabaseTransaction,
-    domain::door_state::DoorStateRepo,
+    database::{DatabaseConnection, DatabaseTransaction},
+    domain::{door_state::DoorStateRepo, Result},
     web::{auth::User, RestStatus},
 };
 
@@ -55,9 +55,11 @@ pub struct CreateDoorStateParams {
     )
 )]
 #[get("/")]
-async fn get_doorstate(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
+async fn get_doorstate(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let now = chrono::Utc::now();
-    RestStatus::ok_from_result(transaction.door_state_at(now).await)
+    let result = conn.door_state_at(now).await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -72,13 +74,11 @@ async fn get_doorstate(mut transaction: DatabaseTransaction<'_>) -> impl Respond
 #[get("/between/")]
 async fn get_doorstate_between(
     params: Query<GetDoorStateParams>,
-    mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_from_result(
-        transaction
-            .door_state_between(params.start, params.end)
-            .await,
-    )
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = conn.door_state_between(params.start, params.end).await?;
+
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -97,7 +97,11 @@ async fn create_doorstate(
     _user: User,
     params: ActixJson<CreateDoorStateParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
+) -> Result<impl Responder> {
     let now = chrono::Utc::now();
-    RestStatus::created_from_result(transaction.create_door_state(now, params.is_open).await)
+    let result = transaction.create_door_state(now, params.is_open).await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Created(Some(result)))
 }

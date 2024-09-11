@@ -1,7 +1,8 @@
-use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
+
+use super::Result;
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct DoorState {

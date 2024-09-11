@@ -1,7 +1,8 @@
 use std::future::Future;
 use std::ops::{Deref, DerefMut};
 
-use anyhow::Result;
+use crate::domain::Result;
+use sqlx::pool::PoolConnection;
 use sqlx::{postgres::PgPoolOptions, PgConnection, PgPool, Postgres, Transaction};
 
 pub mod antrag;
@@ -13,6 +14,24 @@ pub mod sitzungen;
 #[derive(Clone)]
 pub struct DatabasePool {
     pool: PgPool,
+}
+
+pub struct DatabaseConnection {
+    connection: PoolConnection<Postgres>,
+}
+
+impl DerefMut for DatabaseConnection {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.connection
+    }
+}
+
+impl Deref for DatabaseConnection {
+    type Target = PgConnection;
+
+    fn deref(&self) -> &Self::Target {
+        &self.connection
+    }
 }
 
 #[must_use]
@@ -57,6 +76,12 @@ impl DatabasePool {
 
     pub fn pool(&self) -> &PgPool {
         &self.pool
+    }
+
+    pub async fn aquire(&self) -> Result<DatabaseConnection> {
+        Ok(DatabaseConnection {
+            connection: self.pool().acquire().await?,
+        })
     }
 
     pub async fn start_transaction(&self) -> Result<DatabaseTransaction<'static>> {

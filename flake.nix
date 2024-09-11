@@ -181,6 +181,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             cargo
+            rustc
             cargo-binutils
             sqlx-cli
             postgresql

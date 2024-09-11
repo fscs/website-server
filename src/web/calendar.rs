@@ -1,9 +1,8 @@
 use actix_web::web::Json;
-use actix_web::{get, web, HttpResponseBuilder, Responder, Scope};
+use actix_web::{get, web, HttpResponse, Responder, Scope};
 use anyhow::anyhow;
 use chrono::{DateTime, NaiveTime, Utc};
 use icalendar::{Component, Event, EventLike};
-use reqwest::StatusCode;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::LazyLock;
@@ -44,10 +43,9 @@ async fn get_events() -> impl Responder {
         )
     });
     let Ok(ref x) = *CACHE.get().await else {
-        return HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR)
-            .body("Could not access Calendar");
+        return HttpResponse::InternalServerError().body("Could not access Calendar");
     };
-    HttpResponseBuilder::new(StatusCode::OK).json(Json(x.clone()))
+    HttpResponse::Ok().json(Json(x.clone()))
 }
 
 #[utoipa::path(
@@ -69,10 +67,9 @@ async fn get_branchen_events() -> impl Responder {
     });
 
     let Ok(ref x) = *CACHE.try_get().await else {
-        return HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR)
-            .body("Could not access Calendar");
+        return HttpResponse::InternalServerError().body("Could not access Calendar");
     };
-    HttpResponseBuilder::new(StatusCode::OK).json(Json(x.clone()))
+    HttpResponse::Ok().json(Json(x.clone()))
 }
 
 fn request_calendar<'a>(

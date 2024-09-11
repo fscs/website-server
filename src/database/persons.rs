@@ -1,9 +1,11 @@
-use anyhow::Result;
 use chrono::NaiveDate;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::domain::persons::{Abmeldung, Person, PersonRepo, PersonRoleMapping};
+use crate::domain::{
+    persons::{Abmeldung, Person, PersonRepo, PersonRoleMapping},
+    Result,
+};
 
 impl PersonRepo for PgConnection {
     async fn create_person(&mut self, name: &str) -> Result<Person> {

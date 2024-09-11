@@ -1,6 +1,5 @@
 INSERT INTO roles (name)
     VALUES
-        ('Rat'),
         ('Kooptiert'),
         ('Banana');
 

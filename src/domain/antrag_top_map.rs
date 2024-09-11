@@ -1,9 +1,9 @@
-use anyhow::Result;
 use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use super::antrag::Antrag;
+use super::Result;
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct AntragTopMapping {

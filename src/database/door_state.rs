@@ -1,8 +1,10 @@
-use anyhow::Result;
 use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
 
-use crate::domain::door_state::{DoorState, DoorStateRepo};
+use crate::domain::{
+    door_state::{DoorState, DoorStateRepo},
+    Result,
+};
 
 impl DoorStateRepo for PgConnection {
     async fn create_door_state(

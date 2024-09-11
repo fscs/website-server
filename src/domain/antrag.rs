@@ -1,7 +1,8 @@
-use anyhow::Result;
 use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+
+use super::Result;
 
 #[derive(Debug, Serialize, IntoParams, ToSchema, PartialEq)]
 pub struct AntragData {

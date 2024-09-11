@@ -1,18 +1,21 @@
 use std::borrow::Cow;
 
 use actix_web::web::Path;
-use actix_web::{delete, post, put, web};
+use actix_web::{delete, put, web};
 use actix_web::{get, patch, Responder, Scope};
-use actix_web_validator::{Query, Json as ActixJson};
+use actix_web_validator::{Json as ActixJson, Query};
 use chrono::NaiveDate;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
-use crate::database::DatabaseTransaction;
+use crate::database::{DatabaseConnection, DatabaseTransaction};
 use crate::web::auth::User;
-use crate::{domain::persons::PersonRepo, web::RestStatus};
+use crate::{
+    domain::{persons::PersonRepo, Result},
+    web::RestStatus,
+};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     let scope = web::scope(path)
@@ -86,8 +89,10 @@ fn validate_abmeldung_params(
     )
 )]
 #[get("/")]
-async fn get_persons(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
-    RestStatus::ok_from_result(transaction.persons().await)
+async fn get_persons(mut conn: DatabaseConnection) -> Result<impl Responder> {
+    let result = conn.persons().await?;
+
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -101,9 +106,11 @@ async fn get_persons(mut transaction: DatabaseTransaction<'_>) -> impl Responder
 #[get("/{person_id}/")]
 async fn get_person_by_id(
     person_id: Path<Uuid>,
-    mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(transaction.person_by_id(*person_id).await)
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = conn.person_by_id(*person_id).await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -121,8 +128,12 @@ async fn put_person(
     _user: User,
     params: ActixJson<CreatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::created_from_result(transaction.create_person(params.name.as_str()).await)
+) -> Result<impl Responder> {
+    let result = transaction.create_person(params.name.as_str()).await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Created(Some(result)))
 }
 
 #[utoipa::path(
@@ -139,8 +150,12 @@ async fn delete_person_by_id(
     _user: User,
     person_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(transaction.delete_person(*person_id).await)
+) -> Result<impl Responder> {
+    let result = transaction.delete_person(*person_id).await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -160,12 +175,14 @@ async fn patch_person(
     person_id: Path<Uuid>,
     params: ActixJson<UpdatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        transaction
-            .update_person(*person_id, params.name.as_deref())
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .update_person(*person_id, params.name.as_deref())
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -180,9 +197,11 @@ async fn patch_person(
 #[get("/by-role/")]
 async fn get_persons_by_role(
     params: Query<PersonsByRoleParams>,
-    mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_from_result(transaction.persons_with_role(&params.role).await)
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = conn.persons_with_role(params.role.as_str()).await?;
+
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -195,9 +214,11 @@ async fn get_persons_by_role(
 #[get("/{person_id}/roles")]
 async fn roles_by_person(
     person_id: Path<Uuid>,
-    mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_from_result(transaction.roles_by_person(*person_id).await)
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = conn.roles_by_person(*person_id).await?;
+
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -212,18 +233,20 @@ async fn roles_by_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/{person_id}/roles")]
+#[put("/{person_id}/roles")]
 async fn add_role_to_person(
     _user: User,
     person_id: Path<Uuid>,
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        transaction
-            .assign_role_to_person(*person_id, params.role.as_str())
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .assign_role_to_person(*person_id, params.role.as_str())
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -244,12 +267,14 @@ async fn revoke_role_from_person(
     person_id: Path<Uuid>,
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        transaction
-            .revoke_role_from_person(*person_id, params.role.as_str())
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .revoke_role_from_person(*person_id, params.role.as_str())
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -262,9 +287,11 @@ async fn revoke_role_from_person(
 #[get("/{person_id}/abmeldungen")]
 async fn get_abmeldungen_by_person(
     person_id: Path<Uuid>,
-    mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_from_result(transaction.abmeldungen_by_person(*person_id).await)
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = conn.abmeldungen_by_person(*person_id).await?;
+
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -284,12 +311,14 @@ async fn create_abmeldung(
     person_id: Path<Uuid>,
     params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::created_from_result(
-        transaction
-            .create_abmeldung(*person_id, params.start, params.end)
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .create_abmeldung(*person_id, params.start, params.end)
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Created(Some(result)))
 }
 
 #[utoipa::path(
@@ -310,10 +339,12 @@ async fn revoke_abmeldung(
     person_id: Path<Uuid>,
     params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        transaction
-            .revoke_abmeldung_from_person(*person_id, params.start, params.end)
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .revoke_abmeldung_from_person(*person_id, params.start, params.end)
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }

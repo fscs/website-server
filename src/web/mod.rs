@@ -10,8 +10,9 @@ use actix_web::http::header::{CacheControl, CacheDirective};
 use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::{scope, Data};
-use actix_web::{get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder};
-use anyhow::Error;
+use actix_web::{
+    get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
+};
 use serde::Serialize;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -25,68 +26,31 @@ pub(crate) mod persons;
 pub(crate) mod roles;
 pub(crate) mod sitzungen;
 
-use crate::database::{DatabasePool, DatabaseTransaction};
+use crate::database::{DatabaseConnection, DatabasePool, DatabaseTransaction};
+use crate::domain::Error;
 use crate::ARGS;
 use auth::{oauth_client, AuthMiddle, User};
 
-pub(super) enum RestStatus {
-    Ok(serde_json::Value),
-    Created(serde_json::Value),
-    NotFound,
-    Error(anyhow::Error),
+pub(super) enum RestStatus<T: Serialize> {
+    Success(Option<T>),
+    Created(Option<T>),
 }
 
-impl RestStatus {
-    fn created_from_result<T: Serialize>(result: anyhow::Result<T>) -> RestStatus {
-        match result {
-            Ok(antrag) => match serde_json::to_value(antrag) {
-                Ok(value) => RestStatus::Created(value),
-                Err(e) => RestStatus::Error(e.into()),
-            },
-            Err(e) => RestStatus::Error(e),
-        }
-    }
+impl ResponseError for Error {}
 
-    fn ok_from_result<T: Serialize>(result: anyhow::Result<T>) -> RestStatus {
-        match result {
-            Ok(antrag) => match serde_json::to_value(antrag) {
-                Ok(value) => RestStatus::Ok(value),
-                Err(e) => RestStatus::Error(e.into()),
-            },
-            Err(e) => RestStatus::Error(e),
-        }
-    }
-
-    fn ok_or_not_found_from_result<T: Serialize>(result: anyhow::Result<Option<T>>) -> RestStatus {
-        match result {
-            Ok(Some(antrag)) => match serde_json::to_value(antrag) {
-                Ok(value) => RestStatus::Ok(value),
-                Err(e) => RestStatus::Error(e.into()),
-            },
-            Ok(None) => RestStatus::NotFound,
-            Err(e) => RestStatus::Error(e),
-        }
-    }
-}
-
-impl Responder for RestStatus {
+impl<T: Serialize> Responder for RestStatus<T> {
     type Body = BoxBody;
 
-    fn respond_to(self, req: &HttpRequest) -> HttpResponse<Self::Body> {
+    fn respond_to(self, _: &HttpRequest) -> HttpResponse<Self::Body> {
         match self {
-            RestStatus::Ok(value) => HttpResponse::Ok().json(value),
-            RestStatus::Created(value) => {
-                log::debug!("Created: {:?}", value.as_str());
-                HttpResponse::Created().json(value)
-            }
-            RestStatus::NotFound => {
-                log::debug!("Resource {} not found", req.path());
-                HttpResponse::NotFound().body("Not Found")
-            }
-            RestStatus::Error(error) => {
-                log::error!("{:?}", error);
-                HttpResponse::InternalServerError().body("Internal Server Error")
-            }
+            RestStatus::Success(value) => match value {
+                Some(inner) => HttpResponse::Ok().json(inner),
+                None => HttpResponse::NotFound().body("Not Found"),
+            },
+            RestStatus::Created(value) => match value {
+                Some(inner) => HttpResponse::Created().json(inner),
+                None => HttpResponse::NotFound().body("Not Found"),
+            },
         }
     }
 }
@@ -101,6 +65,34 @@ impl FromRequest for DatabaseTransaction<'static> {
             if let Some(pool) = req.app_data::<Data<DatabasePool>>() {
                 match pool.start_transaction().await {
                     Ok(transaction) => Ok(transaction),
+                    Err(err) => {
+                        log::debug!("{:?}", err);
+                        Err(actix_web::error::ErrorInternalServerError(
+                            "Could not access Database",
+                        ))
+                    }
+                }
+            } else {
+                log::debug!("Failed to extract the DatabasePool");
+                Err(actix_web::error::ErrorInternalServerError(
+                    "Requested application data is not configured correctly",
+                ))
+            }
+        })
+    }
+}
+
+impl FromRequest for DatabaseConnection {
+    type Error = actix_web::Error;
+
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+
+    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
+        let req = req.clone();
+        Box::pin(async move {
+            if let Some(pool) = req.app_data::<Data<DatabasePool>>() {
+                match pool.aquire().await {
+                    Ok(conn) => Ok(conn),
                     Err(err) => {
                         log::debug!("{:?}", err);
                         Err(actix_web::error::ErrorInternalServerError(

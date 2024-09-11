@@ -1,8 +1,9 @@
-use anyhow::Result;
 use chrono::NaiveDate;
 use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+
+use super::Result;
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct PersonRoleMapping {

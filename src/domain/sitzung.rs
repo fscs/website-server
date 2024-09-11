@@ -1,10 +1,10 @@
-use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use super::antrag::Antrag;
+use super::Result;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
 #[sqlx(type_name = "sitzungkind", rename_all = "lowercase")]

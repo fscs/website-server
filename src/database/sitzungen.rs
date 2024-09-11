@@ -1,9 +1,11 @@
-use anyhow::Result;
 use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::domain::sitzung::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind};
+use crate::domain::{
+    sitzung::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind},
+    Result,
+};
 
 impl SitzungRepo for PgConnection {
     async fn create_sitzung(

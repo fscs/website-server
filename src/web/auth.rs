@@ -4,8 +4,9 @@ use actix_utils::future::{ready, Ready};
 use actix_web::{
     cookie::{Cookie, CookieJar, Key, SameSite},
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    error::{ErrorInternalServerError, ErrorUnauthorized},
+    error::{self, ErrorInternalServerError, ErrorUnauthorized},
     get,
+    http::header,
     middleware::ErrorHandlerResponse,
     web::{self, Data},
     FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
@@ -17,7 +18,6 @@ use oauth2::{
     basic::BasicClient, http::HeaderValue, reqwest::async_http_client, AuthUrl, AuthorizationCode,
     ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl,
 };
-use reqwest::header::{self, LOCATION};
 use serde::Deserialize;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
@@ -290,7 +290,7 @@ impl FromRequest for AuthCookieJar {
             let mut jar = CookieJar::new();
 
             let Ok(cookies) = req.cookies() else {
-                return Err(actix_web::error::ErrorBadRequest("Can not Access Cookies"));
+                return Err(error::ErrorBadRequest("Can not Access Cookies"));
             };
 
             for c in cookies.iter() {
@@ -414,7 +414,7 @@ async fn login(
         .url();
 
     HttpResponse::Found()
-        .append_header((actix_web::http::header::LOCATION, auth_url.to_string()))
+        .append_header((header::LOCATION, auth_url.to_string()))
         .cookie(
             Cookie::build("csrf", csrf_token.secret())
                 .same_site(SameSite::None)
@@ -438,7 +438,7 @@ async fn logout() -> impl Responder {
         .cookie(cookie_u)
         .cookie(cookie_at)
         .cookie(cookie_rt)
-        .append_header((actix_web::http::header::LOCATION, "/"))
+        .append_header((header::LOCATION, "/"))
         .finish()
 }
 
@@ -488,7 +488,7 @@ async fn callback(
     auth_jar.set_user_info(&user);
 
     let mut ressponse_builder = HttpResponse::Found();
-    ressponse_builder.append_header((actix_web::http::header::LOCATION, path));
+    ressponse_builder.append_header((header::LOCATION, path));
 
     //info!("{:?}", auth_jar.delta());
     for cookie in auth_jar.delta() {
@@ -508,7 +508,7 @@ pub fn not_authorized<B>(
     let mut res = ServiceResponse::new(req, res).map_into_left_body();
 
     res.headers_mut().append(
-        LOCATION,
+        header::LOCATION,
         HeaderValue::from_str(&format!("/auth/login/?path={path}"))
             .map_err(|_| ErrorInternalServerError("Invalid Path"))?,
     );

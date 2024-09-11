@@ -1,8 +1,10 @@
-use anyhow::Result;
 use sqlx::{PgConnection, QueryBuilder};
 use uuid::Uuid;
 
-use crate::domain::antrag::{Antrag, AntragData, AntragRepo};
+use crate::domain::{
+    antrag::{Antrag, AntragData, AntragRepo},
+    Result,
+};
 
 async fn insert_antragsstellende(
     conn: &mut PgConnection,

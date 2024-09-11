@@ -1,10 +1,10 @@
-use anyhow::Result;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
     antrag::{Antrag, AntragData},
     antrag_top_map::{AntragTopMapRepo, AntragTopMapping},
+    Result,
 };
 
 impl AntragTopMapRepo for PgConnection {

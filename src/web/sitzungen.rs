@@ -9,14 +9,15 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
-use crate::database::DatabaseTransaction;
+use crate::database::{DatabaseConnection, DatabaseTransaction};
 
 use crate::domain::{
     self,
     antrag_top_map::AntragTopMapRepo,
     sitzung::{SitzungKind, SitzungRepo, TopKind},
+    Result,
 };
-use crate::web::{RestStatus, auth::User};
+use crate::web::{auth::User, RestStatus};
 
 pub(crate) fn service(path: &'static str) -> Scope {
     let scope = web::scope(path)
@@ -117,8 +118,10 @@ pub struct AssocAntragParams {
     )
 )]
 #[get("/")]
-async fn get_sitzungen(mut transaction: DatabaseTransaction<'_>) -> impl Responder {
-    RestStatus::ok_from_result(transaction.sitzungen().await)
+async fn get_sitzungen(mut conn: DatabaseConnection) -> Result<impl Responder> {
+    let result = conn.sitzungen().await?;
+
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -136,12 +139,14 @@ async fn post_sitzungen(
     _user: User,
     params: ActixJson<CreateSitzungParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::created_from_result(
-        transaction
-            .create_sitzung(params.timestamp, params.location.as_str(), params.kind)
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .create_sitzung(params.timestamp, params.location.as_str(), params.kind)
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Created(Some(result)))
 }
 
 #[utoipa::path(
@@ -157,11 +162,11 @@ async fn post_sitzungen(
 #[get("/first-after/")]
 async fn get_first_sitzung_after(
     params: Query<FirstSitzungAfterParams>,
-    mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        domain::sitzung_after_with_tops(&mut *transaction, params.timestamp).await,
-    )
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = domain::sitzung_after_with_tops(&mut *conn, params.timestamp).await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -176,13 +181,11 @@ async fn get_first_sitzung_after(
 #[get("/between/")]
 async fn get_sitzungen_between(
     params: Query<SitzungBetweenParams>,
-    mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_from_result(
-        transaction
-            .sitzungen_between(params.start, params.end)
-            .await,
-    )
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = conn.sitzungen_between(params.start, params.end).await?;
+
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -196,11 +199,11 @@ async fn get_sitzungen_between(
 #[get("/{sitzung_id}/")]
 async fn get_sitzung_by_id(
     sitzung_id: Path<Uuid>,
-    mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        domain::sitzung_with_tops(&mut *transaction, *sitzung_id).await,
-    )
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = domain::sitzung_with_tops(&mut *conn, *sitzung_id).await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -220,17 +223,19 @@ async fn patch_sitzung_by_id(
     sitzung_id: Path<Uuid>,
     params: ActixJson<UpdateSitzungParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        transaction
-            .update_sitzung(
-                *sitzung_id,
-                params.timestamp,
-                params.location.as_deref(),
-                params.kind,
-            )
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .update_sitzung(
+            *sitzung_id,
+            params.timestamp,
+            params.location.as_deref(),
+            params.kind,
+        )
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -247,8 +252,12 @@ async fn delete_sitzung_by_id(
     _user: User,
     sitzung_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(transaction.delete_sitzung(*sitzung_id).await)
+) -> Result<impl Responder> {
+    let result = transaction.delete_sitzung(*sitzung_id).await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -262,11 +271,11 @@ async fn delete_sitzung_by_id(
 #[get("/{sitzung_id}/abmeldungen/")]
 async fn get_abmeldungen_by_sitzung(
     sitzung_id: Path<Uuid>,
-    mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        domain::abmeldungen_by_sitzung(&mut *transaction, *sitzung_id).await,
-    )
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = domain::abmeldungen_by_sitzung(&mut *conn, *sitzung_id).await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -285,17 +294,19 @@ async fn post_tops(
     sitzung_id: Path<Uuid>,
     params: ActixJson<CreateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::created_from_result(
-        transaction
-            .create_top(
-                *sitzung_id,
-                params.name.as_str(),
-                params.inhalt.as_ref(),
-                params.kind,
-            )
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .create_top(
+            *sitzung_id,
+            params.name.as_str(),
+            params.inhalt.as_ref(),
+            params.kind,
+        )
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Created(Some(result)))
 }
 
 #[utoipa::path(
@@ -316,18 +327,20 @@ async fn patch_tops(
     top_id: Path<Uuid>,
     params: ActixJson<UpdateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        transaction
-            .update_top(
-                *top_id,
-                None, // we dont allow moving tops
-                params.name.as_deref(),
-                params.inhalt.as_ref(),
-                params.kind,
-            )
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .update_top(
+            *top_id,
+            None, // we dont allow moving tops
+            params.name.as_deref(),
+            params.inhalt.as_ref(),
+            params.kind,
+        )
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -345,8 +358,12 @@ async fn delete_tops(
     _sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(transaction.delete_top(*top_id).await)
+) -> Result<impl Responder> {
+    let result = transaction.delete_top(*top_id).await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -368,12 +385,14 @@ async fn assoc_antrag(
     top_id: Path<Uuid>,
     params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        transaction
-            .attach_antrag_to_top(params.antrag_id, *top_id)
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .attach_antrag_to_top(params.antrag_id, *top_id)
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(
@@ -395,10 +414,12 @@ async fn delete_assoc_antrag(
     top_id: Path<Uuid>,
     params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
-) -> impl Responder {
-    RestStatus::ok_or_not_found_from_result(
-        transaction
-            .detach_antrag_from_top(params.antrag_id, *top_id)
-            .await,
-    )
+) -> Result<impl Responder> {
+    let result = transaction
+        .detach_antrag_from_top(params.antrag_id, *top_id)
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(RestStatus::Success(result))
 }

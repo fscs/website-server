@@ -1,5 +1,4 @@
 use antrag_top_map::AntragTopMapRepo;
-use anyhow::Result;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -11,6 +10,16 @@ pub mod sitzung;
 
 use persons::{Abmeldung, PersonRepo};
 use sitzung::{SitzungRepo, SitzungWithTops, TopWithAnträge};
+
+pub type Result<T> = core::result::Result<T, Error>;
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("database returned an error: {0}")]
+    Database(#[from] sqlx::Error),
+    #[error("io error")]
+    Io(#[from] std::io::Error),
+}
 
 pub trait SitzungAntragService: SitzungRepo + AntragTopMapRepo {}
 
