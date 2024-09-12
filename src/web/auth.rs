@@ -65,10 +65,10 @@ impl User {
     }
 
     pub fn is_rat(&self) -> bool {
-        self.userinfo.get("realm_access").map_or(false, |a| {
-            a.get("roles").map_or(false, |b| {
-                b.as_array().map_or(false, |c| c.contains(&"Rat".into()))
-            })
+        self.userinfo.get("groups").map_or(false, |group| {
+            group
+                .as_array()
+                .map_or(false, |c| c.contains(&"FS_Rat_Informatik".into()))
         })
     }
 }
