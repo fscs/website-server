@@ -39,7 +39,6 @@ async fn get_roles(mut conn: DatabaseConnection) -> Result<impl Responder> {
 
 #[utoipa::path(
     path = "/api/roles/",
-    params(RoleParams),
     request_body = RoleParams,
     responses(
         (status = 201, description = "Created", body = Role),
@@ -63,7 +62,6 @@ async fn create_role(
 
 #[utoipa::path(
     path = "/api/roles/",
-    params(RoleParams),
     request_body = RoleParams,
     responses(
         (status = 200, description = "Success"),
