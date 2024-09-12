@@ -29,6 +29,12 @@ struct Args {
     log_level: String,
     #[arg(short, long)]
     database_url: Option<String>,
+    #[arg(short, long)]
+    auth_url: String,
+    #[arg(short, long)]
+    token_url: String,
+    #[arg(short, long)]
+    user_info: String,
 }
 
 static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);

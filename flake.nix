@@ -3,22 +3,24 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     flake-utils.url = "github:numtide/flake-utils";
-    
+
     crane.url = "github:ipetkov/crane";
   };
 
-  outputs = {
-    self,
-    flake-utils,
-    crane,
-    nixpkgs,
-  }:
+  outputs =
+    { self
+    , flake-utils
+    , crane
+    , nixpkgs
+    ,
+    }:
     flake-utils.lib.eachDefaultSystem (
-      system: let
+      system:
+      let
         pkgs = import nixpkgs {
           inherit system;
         };
-        
+
         craneLib = crane.mkLib pkgs;
         inherit (pkgs) lib;
 
@@ -60,22 +62,23 @@
         # artifacts from above.
         my-crate = craneLib.buildPackage (commonArgs
           // {
-            inherit cargoArtifacts;
+          inherit cargoArtifacts;
 
-            nativeBuildInputs = with pkgs; [pkg-config];
-            buildInputs =
-              [
-                pkgs.openssl
-                # Add additional build inputs here
-              ]
-              ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-                # Additional darwin specific inputs can be set here
-                pkgs.libiconv
-              ];
+          nativeBuildInputs = with pkgs; [ pkg-config ];
+          buildInputs =
+            [
+              pkgs.openssl
+              # Add additional build inputs here
+            ]
+            ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+              # Additional darwin specific inputs can be set here
+              pkgs.libiconv
+            ];
 
-            doCheck = false;
-          });
-      in rec {
+          doCheck = false;
+        });
+      in
+      rec {
         checks = {
           inherit my-crate;
         };
@@ -86,31 +89,6 @@
         defaultPackage = my-crate;
 
         packages = {
-          docker = pkgs.dockerTools.buildImage {
-            name = "fscs-website";
-            tag = "latest";
-
-            config = {
-              Env = ["SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"];
-              Cmd = [
-                "${defaultPackage}/bin/fscs-website-backend"
-                "--host"
-                "0.0.0.0"
-                "--port"
-                "8080"
-                "--content-dir"
-                "test/static"
-                "--private-content-dir"
-                "test/static_auth"
-                "--hidden-content-dir"
-                "test/hidden_static"
-              ];
-              ExposedPorts = {
-                "8080/tcp" = {};
-              };
-            };
-          };
-
           database = pkgs.writeScriptBin "run.sh" ''
             #!/usr/bin/env bash
             DATA_DIR="$PWD/db/data"
@@ -159,7 +137,7 @@
             fi
 
             echo Starting the server
-            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --content-dir test/static --private-content-dir test/static_auth --hidden-content-dir test/static_hidden $@
+            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --content-dir test/static --private-content-dir test/static_auth --hidden-content-dir test/static_hidden --auth-url https://auth.inphima.de/application/o/authorize/ --token-url https://auth.inphima.de/application/o/token/ --user-info https://auth.inphima.de/application/o/userinfo/
 
             if [ "$ALREADY_RUNNING" = false ]; then
               echo Stopping the Database

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, future::Future, pin::Pin, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, env::Args, future::Future, pin::Pin, sync::Arc};
 
 use actix_utils::future::{ready, Ready};
 use actix_web::{
@@ -19,6 +19,8 @@ use oauth2::{
     ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl,
 };
 use serde::Deserialize;
+
+use crate::ARGS;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub(crate) struct User {
@@ -49,7 +51,6 @@ impl User {
                 actix_web::error::ErrorUnauthorized("Internal Error")
             })?;
 
-        debug!("{:?}", userinfo);
         Ok(User {
             username: userinfo
                 .get("preferred_username")
@@ -357,22 +358,11 @@ pub(crate) fn oauth_client() -> OauthClient {
         client: BasicClient::new(
             ClientId::new(client_id),
             Some(ClientSecret::new(client_secret)),
-            AuthUrl::new(
-                "https://login.inphima.de/realms/FSCS-Intern/protocol/openid-connect/auth"
-                    .to_string(),
-            )
-            .unwrap(),
-            Some(
-                TokenUrl::new(
-                    "https://login.inphima.de/realms/FSCS-Intern/protocol/openid-connect/token"
-                        .to_string(),
-                )
-                .unwrap(),
-            ),
+            AuthUrl::new(ARGS.auth_url.clone()).unwrap(),
+            Some(TokenUrl::new(ARGS.token_url.clone()).unwrap()),
         ),
         reqwest_client: reqwest::Client::new(),
-        user_info: "https://login.inphima.de/realms/FSCS-Intern/protocol/openid-connect/userinfo"
-            .to_string(),
+        user_info: ARGS.user_info.clone(),
         singning_key: Key::from(singning_key.as_bytes()),
     }
 }
@@ -410,6 +400,7 @@ async fn login(
         .client
         .authorize_url(CsrfToken::new_random)
         .add_scope(oauth2::Scope::new("openid".to_string()))
+        .add_scope(oauth2::Scope::new("profile".to_string()))
         .set_redirect_uri(redirect_url(&path, request))
         .url();
 
