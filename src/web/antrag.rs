@@ -66,7 +66,7 @@ async fn get_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}",
+    path = "/api/anträge/{antrag_id}/",
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 404, description = "Not Found"),
