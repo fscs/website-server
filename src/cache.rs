@@ -127,21 +127,18 @@ impl<T: Sync, E: Sync> TimedCache<Result<T, E>> {
 mod test {
     use std::sync::Arc;
 
-    use lazy_static::lazy_static;
     use std::sync::Mutex;
 
     use crate::cache::TimedCache;
 
     #[tokio::test]
     async fn test_cache() {
-        lazy_static! {
-            static ref CACHE: TimedCache<u64> = TimedCache::with_generator(
-                || Box::pin(async { 0 }),
-                std::time::Duration::from_secs(60)
-            );
-        }
+        let cache = TimedCache::with_generator(
+            || Box::pin(async { 0 }),
+            std::time::Duration::from_secs(60),
+        );
 
-        assert_eq!(*CACHE.get().await, 0);
+        assert_eq!(*cache.get().await, 0);
     }
 
     #[tokio::test]
