@@ -28,13 +28,13 @@ pub(crate) fn service(path: &'static str) -> Scope {
 
 fn register_person_id_service(parent: Scope) -> Scope {
     parent
+        .service(revoke_abmeldung)
+        .service(revoke_role_from_person)
         .service(delete_person_by_id)
         .service(get_person_by_id)
         .service(patch_person)
         .service(add_role_to_person)
-        .service(revoke_role_from_person)
         .service(create_abmeldung)
-        .service(revoke_abmeldung)
         .service(get_abmeldungen_by_person)
         .service(roles_by_person)
 }
