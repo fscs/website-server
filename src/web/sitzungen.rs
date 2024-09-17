@@ -310,7 +310,7 @@ async fn post_tops(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}",
+    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/",
     request_body = UpdateTopParams,
     responses(
         (status = 200, description = "Sucess", body = Top),
@@ -320,7 +320,7 @@ async fn post_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}/tops/<top_id>")]
+#[patch("/{sitzung_id}/tops/{top_id}/")]
 async fn patch_tops(
     _user: User,
     _sitzung_id: Path<Uuid>,
@@ -344,7 +344,7 @@ async fn patch_tops(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}",
+    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/",
     responses(
         (status = 200, description = "Sucess", body = Top),
         (status = 401, description = "Unauthorized"),
@@ -352,7 +352,7 @@ async fn patch_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}/tops/<top_id>")]
+#[delete("/{sitzung_id}/tops/<top_id>/")]
 async fn delete_tops(
     _user: User,
     _sitzung_id: Path<Uuid>,
@@ -367,7 +367,7 @@ async fn delete_tops(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc",
+    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc/",
     params(AssocAntragParams),
     request_body = AssocAntragParams,
     responses(
@@ -378,7 +378,7 @@ async fn delete_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}/tops/<top_id>/assoc")]
+#[patch("/{sitzung_id}/tops/<top_id>/assoc/")]
 async fn assoc_antrag(
     _user: User,
     _sitzung_id: Path<Uuid>,
@@ -396,7 +396,7 @@ async fn assoc_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc",
+    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc/",
     params(AssocAntragParams),
     request_body = AssocAntragParams,
     responses(
@@ -407,7 +407,7 @@ async fn assoc_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}/tops/<top_id>/assoc")]
+#[delete("/{sitzung_id}/tops/<top_id>/assoc/")]
 async fn delete_assoc_antrag(
     _user: User,
     _sitzung_id: Path<Uuid>,

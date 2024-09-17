@@ -63,7 +63,7 @@ async fn get_doorstate(mut conn: DatabaseConnection) -> Result<impl Responder> {
 }
 
 #[utoipa::path(
-    path = "/api/doorstate/between",
+    path = "/api/doorstate/between/",
     params(GetDoorStateParams),
     responses(
         (status = 200, description = "Success", body = Vec<DoorState>),

@@ -114,7 +114,7 @@ async fn create_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}",
+    path = "/api/anträge/{antrag_id}/",
     request_body = UpdateAntragParams,
     responses(
         (status = 200, description = "Success", body = Antrag),
@@ -147,7 +147,7 @@ async fn patch_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}",
+    path = "/api/anträge/{antrag_id}/",
     responses(
         (status = 200, description = "Success"),
         (status = 401, description = "Unauthorized"),
