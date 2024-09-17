@@ -6,4 +6,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: nixbuild/nix-quick-install-action@v28
+      - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix flake check
