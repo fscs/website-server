@@ -223,7 +223,7 @@ async fn roles_by_person(
 
 #[utoipa::path(
     path = "/api/persons/{person_id}/roles/",
-    params(RoleParams),
+    params(("person_id" = Uuid, Path, description = "person_id")),
     request_body = RoleParams,
     responses(
         (status = 200, description = "Success", body = PersonRoleMapping),
@@ -251,7 +251,7 @@ async fn add_role_to_person(
 
 #[utoipa::path(
     path = "/api/persons/{person_id}/roles/",
-    params(RoleParams),
+    params(("person_id" = Uuid, Path, description = "person_id")),
     request_body = RoleParams,
     responses(
         (status = 200, description = "Success", body = PersonRoleMapping),
@@ -296,7 +296,7 @@ async fn get_abmeldungen_by_person(
 
 #[utoipa::path(
     path = "/api/persons/{person_id}/abmeldungen/",
-    params(AbmeldungParams),
+    params(("person_id" = Uuid, Path, description = "person_id")),
     request_body = AbmeldungParams,
     responses(
         (status = 201, description = "Created", body = Abmeldung),
@@ -323,7 +323,7 @@ async fn create_abmeldung(
 
 #[utoipa::path(
     path = "/api/persons/{person_id}/abmeldungen/",
-    params(AbmeldungParams),
+    params(("person_id" = Uuid, Path, description = "person_id")),
     request_body = AbmeldungParams,
     responses(
         (status = 200, description = "Success", body = Abmeldung),
