@@ -273,6 +273,10 @@ async fn get_abmeldungen_by_sitzung(
     sitzung_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
+    if let None = conn.sitzung_by_id(*sitzung_id).await? {
+        return Ok(RestStatus::Success(None));
+    }
+    
     let result = domain::abmeldungen_by_sitzung(&mut *conn, *sitzung_id).await?;
 
     Ok(RestStatus::Success(result))
@@ -285,6 +289,7 @@ async fn get_abmeldungen_by_sitzung(
         (status = 201, description = "Created", body = Top),
         (status = 400, description = "Bad Request"),
         (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -295,6 +300,10 @@ async fn post_tops(
     params: ActixJson<CreateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+        return Ok(RestStatus::Success(None));
+    }
+     
     let result = transaction
         .create_top(
             *sitzung_id,
@@ -323,11 +332,15 @@ async fn post_tops(
 #[patch("/{sitzung_id}/tops/{top_id}/")]
 async fn patch_tops(
     _user: User,
-    _sitzung_id: Path<Uuid>,
+    sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
     params: ActixJson<UpdateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+        return Ok(RestStatus::Success(None));
+    }
+     
     let result = transaction
         .update_top(
             *top_id,
@@ -355,10 +368,14 @@ async fn patch_tops(
 #[delete("/{sitzung_id}/tops/<top_id>/")]
 async fn delete_tops(
     _user: User,
-    _sitzung_id: Path<Uuid>,
+    sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+        return Ok(RestStatus::Success(None));
+    }
+     
     let result = transaction.delete_top(*top_id).await?;
 
     transaction.commit().await?;
@@ -381,11 +398,19 @@ async fn delete_tops(
 #[patch("/{sitzung_id}/tops/<top_id>/assoc/")]
 async fn assoc_antrag(
     _user: User,
-    _sitzung_id: Path<Uuid>,
+    sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
     params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+        return Ok(RestStatus::Success(None));
+    }
+    
+    if let None = transaction.top_by_id(*top_id).await? {
+        return Ok(RestStatus::Success(None));
+    }
+     
     let result = transaction
         .attach_antrag_to_top(params.antrag_id, *top_id)
         .await?;
@@ -410,11 +435,19 @@ async fn assoc_antrag(
 #[delete("/{sitzung_id}/tops/<top_id>/assoc/")]
 async fn delete_assoc_antrag(
     _user: User,
-    _sitzung_id: Path<Uuid>,
+    sitzung_id: Path<Uuid>,
     top_id: Path<Uuid>,
     params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+        return Ok(RestStatus::Success(None));
+    }
+    
+    if let None = transaction.top_by_id(*top_id).await? {
+        return Ok(RestStatus::Success(None));
+    }
+     
     let result = transaction
         .detach_antrag_from_top(params.antrag_id, *top_id)
         .await?;
