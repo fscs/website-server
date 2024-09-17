@@ -185,8 +185,8 @@ impl PersonRepo for PgConnection {
         &mut self,
         person_id: Uuid,
         role: &str,
-    ) -> Result<Option<PersonRoleMapping>> {
-        let result = sqlx::query_as!(
+    ) -> Result<()> {
+        sqlx::query_as!(
             PersonRoleMapping,
             r#"
                 INSERT INTO rolemapping
@@ -201,15 +201,15 @@ impl PersonRepo for PgConnection {
         .fetch_optional(self)
         .await?;
 
-        Ok(result)
+        Ok(())
     }
 
     async fn revoke_role_from_person(
         &mut self,
         person_id: Uuid,
         role: &str,
-    ) -> Result<Option<PersonRoleMapping>> {
-        let result = sqlx::query_as!(
+    ) -> Result<()> {
+        sqlx::query_as!(
             PersonRoleMapping,
             r#"
                 DELETE FROM rolemapping
@@ -222,7 +222,7 @@ impl PersonRepo for PgConnection {
         .fetch_optional(self)
         .await?;
 
-        Ok(result)
+        Ok(())
     }
 
     async fn revoke_abmeldung_from_person(
@@ -230,8 +230,8 @@ impl PersonRepo for PgConnection {
         person_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
-    ) -> Result<Option<Abmeldung>> {
-        let result = sqlx::query_as!(
+    ) -> Result<()> {
+        sqlx::query_as!(
             Abmeldung,
             r#"
                 WITH overlap AS (
@@ -258,7 +258,7 @@ impl PersonRepo for PgConnection {
         .fetch_optional(self)
         .await?;
 
-        Ok(result)
+        Ok(())
     }
 
     async fn update_person<'a>(
@@ -546,10 +546,11 @@ mod test {
         let person_id = Uuid::parse_str("5a5a134d-9345-4c36-a466-1c3bb806b240").unwrap();
         let role = "Banana";
 
-        let mapping = conn.assign_role_to_person(person_id, role).await?.unwrap();
+        conn.assign_role_to_person(person_id, role).await?;
 
-        assert_eq!(mapping.person_id, person_id);
-        assert_eq!(mapping.rolle, role);
+        let persons_by_role = conn.persons_with_role(role).await?;
+
+        assert!(persons_by_role.iter().any(|p| p.id == person_id));
 
         Ok(())
     }

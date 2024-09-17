@@ -60,20 +60,20 @@ pub trait PersonRepo {
         &mut self,
         person_id: Uuid,
         role: &str,
-    ) -> Result<Option<PersonRoleMapping>>;
+    ) -> Result<()>;
 
     async fn revoke_role_from_person(
         &mut self,
         person_id: Uuid,
         role: &str,
-    ) -> Result<Option<PersonRoleMapping>>;
+    ) -> Result<()>;
 
     async fn revoke_abmeldung_from_person(
         &mut self,
         person_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
-    ) -> Result<Option<Abmeldung>>;
+    ) -> Result<()>;
 
     async fn update_person<'a>(
         &mut self,

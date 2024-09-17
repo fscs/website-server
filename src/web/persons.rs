@@ -208,6 +208,7 @@ async fn get_persons_by_role(
     path = "/api/persons/{person_id}/roles/",
     responses(
         (status = 200, description = "Success", body = Vec<String>),
+        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -216,6 +217,10 @@ async fn roles_by_person(
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
+    if let None = conn.person_by_id(*person_id).await? {
+        return Ok(RestStatus::Success(None))
+    }
+    
     let result = conn.roles_by_person(*person_id).await?;
 
     Ok(RestStatus::Success(Some(result)))
@@ -240,13 +245,17 @@ async fn add_role_to_person(
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    if let None = transaction.person_by_id(*person_id).await? {
+        return Ok(RestStatus::Success(None))
+    }
+
     let result = transaction
         .assign_role_to_person(*person_id, params.role.as_str())
         .await?;
 
     transaction.commit().await?;
 
-    Ok(RestStatus::Success(result))
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
@@ -268,19 +277,24 @@ async fn revoke_role_from_person(
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    if let None = transaction.person_by_id(*person_id).await? {
+        return Ok(RestStatus::Success(None))
+    }
+
     let result = transaction
         .revoke_role_from_person(*person_id, params.role.as_str())
         .await?;
 
     transaction.commit().await?;
 
-    Ok(RestStatus::Success(result))
+    Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
     path = "/api/persons/{person_id}/abmeldungen/",
     responses(
         (status = 200, description = "Success", body = Abmeldung),
+        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -289,6 +303,10 @@ async fn get_abmeldungen_by_person(
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
+    if let None = conn.person_by_id(*person_id).await? {
+        return Ok(RestStatus::Success(None))
+    }
+
     let result = conn.abmeldungen_by_person(*person_id).await?;
 
     Ok(RestStatus::Success(Some(result)))
@@ -301,6 +319,7 @@ async fn get_abmeldungen_by_person(
     responses(
         (status = 201, description = "Created", body = Abmeldung),
         (status = 400, description = "Bad Request"),
+        (status = 404, description = "Not Found"),
         (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
     )
@@ -312,6 +331,10 @@ async fn create_abmeldung(
     params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    if let None = transaction.person_by_id(*person_id).await? {
+        return Ok(RestStatus::Success(None))
+    }
+
     let result = transaction
         .create_abmeldung(*person_id, params.start, params.end)
         .await?;
@@ -340,11 +363,15 @@ async fn revoke_abmeldung(
     params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    if let None = transaction.person_by_id(*person_id).await? {
+        return Ok(RestStatus::Success(None))
+    }
+    
     let result = transaction
         .revoke_abmeldung_from_person(*person_id, params.start, params.end)
         .await?;
 
     transaction.commit().await?;
 
-    Ok(RestStatus::Success(result))
+    Ok(RestStatus::Success(Some(result)))
 }
