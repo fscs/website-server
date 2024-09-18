@@ -273,7 +273,7 @@ async fn get_abmeldungen_by_sitzung(
     sitzung_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
-    if let None = conn.sitzung_by_id(*sitzung_id).await? {
+    if conn.sitzung_by_id(*sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
 
@@ -300,7 +300,7 @@ async fn post_tops(
     params: ActixJson<CreateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+    if transaction.sitzung_by_id(*sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
 
@@ -337,7 +337,7 @@ async fn patch_tops(
     params: ActixJson<UpdateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+    if transaction.sitzung_by_id(*sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
 
@@ -373,7 +373,7 @@ async fn delete_tops(
 ) -> Result<impl Responder> {
     let (sitzung_id, top_id) = path_params.into_inner();
     
-    if let None = transaction.sitzung_by_id(sitzung_id).await? {
+    if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
 
@@ -404,11 +404,11 @@ async fn assoc_antrag(
 ) -> Result<impl Responder> {
     let (sitzung_id, top_id) = path_params.into_inner();
     
-    if let None = transaction.sitzung_by_id(sitzung_id).await? {
+    if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
 
-    if let None = transaction.top_by_id(top_id).await? {
+    if transaction.top_by_id(top_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
 
@@ -441,11 +441,11 @@ async fn delete_assoc_antrag(
 ) -> Result<impl Responder> {
     let (sitzung_id, top_id) = path_params.into_inner();
     
-    if let None = transaction.sitzung_by_id(sitzung_id).await? {
+    if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
 
-    if let None = transaction.top_by_id(top_id).await? {
+    if transaction.top_by_id(top_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
 

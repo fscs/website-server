@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, env::Args, future::Future, pin::Pin, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, future::Future, pin::Pin, sync::Arc};
 
 use actix_utils::future::{ready, Ready};
 use actix_web::{
@@ -71,12 +71,6 @@ impl User {
                 .map_or(false, |c| c.contains(&"FS_Rat_Informatik".into()))
         })
     }
-}
-
-#[derive(serde::Deserialize)]
-struct UserExp {
-    #[allow(dead_code)]
-    exp: i64,
 }
 
 pub struct AuthMiddle;

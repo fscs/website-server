@@ -53,11 +53,11 @@ async fn create_role(
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    let result = transaction.create_role(params.name.as_str()).await?;
+    transaction.create_role(params.name.as_str()).await?;
 
     transaction.commit().await?;
 
-    Ok(RestStatus::Created(Some(result)))
+    Ok(RestStatus::Created(Some(())))
 }
 
 #[utoipa::path(

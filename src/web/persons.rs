@@ -217,7 +217,7 @@ async fn roles_by_person(
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
-    if let None = conn.person_by_id(*person_id).await? {
+    if conn.person_by_id(*person_id).await?.is_none() {
         return Ok(RestStatus::Success(None))
     }
     
@@ -244,17 +244,17 @@ async fn add_role_to_person(
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if let None = transaction.person_by_id(*person_id).await? {
+    if transaction.person_by_id(*person_id).await?.is_none() {
         return Ok(RestStatus::Success(None))
     }
 
-    let result = transaction
+    transaction
         .assign_role_to_person(*person_id, params.role.as_str())
         .await?;
 
     transaction.commit().await?;
 
-    Ok(RestStatus::Success(Some(result)))
+    Ok(RestStatus::Success(Some(())))
 }
 
 #[utoipa::path(
@@ -275,17 +275,17 @@ async fn revoke_role_from_person(
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if let None = transaction.person_by_id(*person_id).await? {
+    if transaction.person_by_id(*person_id).await?.is_none() {
         return Ok(RestStatus::Success(None))
     }
 
-    let result = transaction
+    transaction
         .revoke_role_from_person(*person_id, params.role.as_str())
         .await?;
 
     transaction.commit().await?;
 
-    Ok(RestStatus::Success(Some(result)))
+    Ok(RestStatus::Success(Some(())))
 }
 
 #[utoipa::path(
@@ -301,7 +301,7 @@ async fn get_abmeldungen_by_person(
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
-    if let None = conn.person_by_id(*person_id).await? {
+    if conn.person_by_id(*person_id).await?.is_none() {
         return Ok(RestStatus::Success(None))
     }
 
@@ -328,7 +328,7 @@ async fn create_abmeldung(
     params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if let None = transaction.person_by_id(*person_id).await? {
+    if transaction.person_by_id(*person_id).await?.is_none() {
         return Ok(RestStatus::Success(None))
     }
 
@@ -360,15 +360,15 @@ async fn revoke_abmeldung(
     params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if let None = transaction.person_by_id(*person_id).await? {
+    if transaction.person_by_id(*person_id).await?.is_none() {
         return Ok(RestStatus::Success(None))
     }
     
-    let result = transaction
+    transaction
         .revoke_abmeldung_from_person(*person_id, params.start, params.end)
         .await?;
 
     transaction.commit().await?;
 
-    Ok(RestStatus::Success(Some(result)))
+    Ok(RestStatus::Success(Some(())))
 }
