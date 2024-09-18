@@ -365,7 +365,7 @@ async fn patch_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}/tops/<top_id>/")]
+#[delete("/{sitzung_id}/tops/{top_id}/")]
 async fn delete_tops(
     _user: User,
     sitzung_id: Path<Uuid>,
