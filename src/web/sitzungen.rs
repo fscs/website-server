@@ -276,7 +276,7 @@ async fn get_abmeldungen_by_sitzung(
     if let None = conn.sitzung_by_id(*sitzung_id).await? {
         return Ok(RestStatus::Success(None));
     }
-    
+
     let result = domain::abmeldungen_by_sitzung(&mut *conn, *sitzung_id).await?;
 
     Ok(RestStatus::Success(result))
@@ -303,7 +303,7 @@ async fn post_tops(
     if let None = transaction.sitzung_by_id(*sitzung_id).await? {
         return Ok(RestStatus::Success(None));
     }
-     
+
     let result = transaction
         .create_top(
             *sitzung_id,
@@ -340,7 +340,7 @@ async fn patch_tops(
     if let None = transaction.sitzung_by_id(*sitzung_id).await? {
         return Ok(RestStatus::Success(None));
     }
-     
+
     let result = transaction
         .update_top(
             *top_id,
@@ -375,7 +375,7 @@ async fn delete_tops(
     if let None = transaction.sitzung_by_id(*sitzung_id).await? {
         return Ok(RestStatus::Success(None));
     }
-     
+
     let result = transaction.delete_top(*top_id).await?;
 
     transaction.commit().await?;
@@ -395,7 +395,7 @@ async fn delete_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}/tops/<top_id>/assoc/")]
+#[patch("/{sitzung_id}/tops/{top_id}/assoc/")]
 async fn assoc_antrag(
     _user: User,
     sitzung_id: Path<Uuid>,
@@ -406,11 +406,11 @@ async fn assoc_antrag(
     if let None = transaction.sitzung_by_id(*sitzung_id).await? {
         return Ok(RestStatus::Success(None));
     }
-    
+
     if let None = transaction.top_by_id(*top_id).await? {
         return Ok(RestStatus::Success(None));
     }
-     
+
     let result = transaction
         .attach_antrag_to_top(params.antrag_id, *top_id)
         .await?;
@@ -432,7 +432,7 @@ async fn assoc_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}/tops/<top_id>/assoc/")]
+#[delete("/{sitzung_id}/tops/{top_id}/assoc/")]
 async fn delete_assoc_antrag(
     _user: User,
     sitzung_id: Path<Uuid>,
@@ -443,11 +443,11 @@ async fn delete_assoc_antrag(
     if let None = transaction.sitzung_by_id(*sitzung_id).await? {
         return Ok(RestStatus::Success(None));
     }
-    
+
     if let None = transaction.top_by_id(*top_id).await? {
         return Ok(RestStatus::Success(None));
     }
-     
+
     let result = transaction
         .detach_antrag_from_top(params.antrag_id, *top_id)
         .await?;
