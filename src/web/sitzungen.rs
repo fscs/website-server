@@ -368,15 +368,16 @@ async fn patch_tops(
 #[delete("/{sitzung_id}/tops/{top_id}/")]
 async fn delete_tops(
     _user: User,
-    sitzung_id: Path<Uuid>,
-    top_id: Path<Uuid>,
+    path_params: Path<(Uuid, Uuid)>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+    let (sitzung_id, top_id) = path_params.into_inner();
+    
+    if let None = transaction.sitzung_by_id(sitzung_id).await? {
         return Ok(RestStatus::Success(None));
     }
 
-    let result = transaction.delete_top(*top_id).await?;
+    let result = transaction.delete_top(top_id).await?;
 
     transaction.commit().await?;
 
@@ -385,7 +386,6 @@ async fn delete_tops(
 
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc/",
-    params(AssocAntragParams),
     request_body = AssocAntragParams,
     responses(
         (status = 200, description = "Sucess", body = AntragTopMapping),
@@ -398,21 +398,22 @@ async fn delete_tops(
 #[patch("/{sitzung_id}/tops/{top_id}/assoc/")]
 async fn assoc_antrag(
     _user: User,
-    sitzung_id: Path<Uuid>,
-    top_id: Path<Uuid>,
+    path_params: Path<(Uuid, Uuid)>,
     params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+    let (sitzung_id, top_id) = path_params.into_inner();
+    
+    if let None = transaction.sitzung_by_id(sitzung_id).await? {
         return Ok(RestStatus::Success(None));
     }
 
-    if let None = transaction.top_by_id(*top_id).await? {
+    if let None = transaction.top_by_id(top_id).await? {
         return Ok(RestStatus::Success(None));
     }
 
     let result = transaction
-        .attach_antrag_to_top(params.antrag_id, *top_id)
+        .attach_antrag_to_top(params.antrag_id, top_id)
         .await?;
 
     transaction.commit().await?;
@@ -422,7 +423,6 @@ async fn assoc_antrag(
 
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc/",
-    params(AssocAntragParams),
     request_body = AssocAntragParams,
     responses(
         (status = 200, description = "Sucess", body = AntragTopMapping),
@@ -435,21 +435,22 @@ async fn assoc_antrag(
 #[delete("/{sitzung_id}/tops/{top_id}/assoc/")]
 async fn delete_assoc_antrag(
     _user: User,
-    sitzung_id: Path<Uuid>,
-    top_id: Path<Uuid>,
+    path_params: Path<(Uuid, Uuid)>,
     params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if let None = transaction.sitzung_by_id(*sitzung_id).await? {
+    let (sitzung_id, top_id) = path_params.into_inner();
+    
+    if let None = transaction.sitzung_by_id(sitzung_id).await? {
         return Ok(RestStatus::Success(None));
     }
 
-    if let None = transaction.top_by_id(*top_id).await? {
+    if let None = transaction.top_by_id(top_id).await? {
         return Ok(RestStatus::Success(None));
     }
 
     let result = transaction
-        .detach_antrag_from_top(params.antrag_id, *top_id)
+        .detach_antrag_from_top(params.antrag_id, top_id)
         .await?;
 
     transaction.commit().await?;
