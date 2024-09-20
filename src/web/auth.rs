@@ -394,6 +394,7 @@ async fn login(
         .client
         .authorize_url(CsrfToken::new_random)
         .add_scope(oauth2::Scope::new("openid".to_string()))
+        .add_scope(oauth2::Scope::new("offline_access".to_string()))
         .add_scope(oauth2::Scope::new("profile".to_string()))
         .set_redirect_uri(redirect_url(&path, request))
         .url();
