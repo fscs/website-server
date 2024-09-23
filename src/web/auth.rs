@@ -18,8 +18,7 @@ use oauth2::{
     basic::BasicClient, http::HeaderValue, reqwest::async_http_client, AuthUrl, AuthorizationCode,
     ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl,
 };
-use regex::{Regex, RegexSet};
-use reqwest::header::{self, LOCATION};
+use regex::Regex;
 use serde::Deserialize;
 
 use crate::ARGS;
@@ -132,16 +131,15 @@ where
                     for cookie in [
                         jar.refresh_token().map(|r| format!("refresh_token={r}")),
                         jar.access_token().map(|a| format!("access_token={a}")),
-                        jar.jar.get("user").map(Cookie::value).map(|u| format!("user_info={u}")),
+                        jar.jar
+                            .get("user")
+                            .map(Cookie::value)
+                            .map(|u| format!("user_info={u}")),
                     ]
                     .into_iter()
                     .flatten()
                     .filter_map(|cookie| {
-                        HeaderValue::from_str(&format!(
-                            "{}; SameSite=None; Path=/",
-                            cookie
-                        ))
-                        .ok()
+                        HeaderValue::from_str(&format!("{}; SameSite=None; Path=/", cookie)).ok()
                     }) {
                         res.headers_mut().append(header::SET_COOKIE, cookie);
                     }
@@ -196,7 +194,8 @@ async fn refresh_authentication(
         "{cookie_header}refresh_token={refresh_token};access_token={access_token};user={user}",
     );
 
-    req.headers_mut().insert(header::COOKIE, cookie_header);
+    req.headers_mut()
+        .insert(header::COOKIE, HeaderValue::from_str(&cookie_header)?);
     req.extensions_mut().clear();
     Ok(())
 }
