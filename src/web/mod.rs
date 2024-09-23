@@ -17,6 +17,7 @@ use serde::Serialize;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use utoipauto::utoipauto;
+use validator::ValidateRequired;
 
 pub(crate) mod antrag;
 pub(crate) mod auth;
@@ -119,7 +120,7 @@ impl FromRequest for DatabaseConnection {
 struct ApiDoc;
 
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         App::new()
             .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, auth::not_authorized))
             .wrap(AuthMiddle)
@@ -138,10 +139,16 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .service(sitzungen::service("/sitzungen")),
             )
             .service(serve_files)
-    })
-    .bind((ARGS.host.as_str(), ARGS.port))?
-    .run()
-    .await?;
+    });
+    if let Some(j) = ARGS.j {
+        server
+            .workers(j)
+            .bind((ARGS.host.as_str(), ARGS.port))?
+            .run()
+            .await?;
+    } else {
+        server.bind((ARGS.host.as_str(), ARGS.port))?.run().await?;
+    }
 
     Ok(())
 }

@@ -7,14 +7,16 @@
     crane.url = "github:ipetkov/crane";
   };
 
-  outputs = {
-    self,
-    flake-utils,
-    crane,
-    nixpkgs,
-  }:
+  outputs =
+    { self
+    , flake-utils
+    , crane
+    , nixpkgs
+    ,
+    }:
     flake-utils.lib.eachDefaultSystem (
-      system: let
+      system:
+      let
         pkgs = import nixpkgs {
           inherit system;
         };
@@ -60,50 +62,51 @@
         # artifacts from above.
         my-crate = craneLib.buildPackage (commonArgs
           // {
-            inherit cargoArtifacts;
+          inherit cargoArtifacts;
 
-            nativeBuildInputs = with pkgs; [pkg-config];
-            buildInputs =
-              [
-                pkgs.openssl
-                # Add additional build inputs here
-              ]
-              ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-                # Additional darwin specific inputs can be set here
-                pkgs.libiconv
-              ];
+          nativeBuildInputs = with pkgs; [ pkg-config ];
+          buildInputs =
+            [
+              pkgs.openssl
+              # Add additional build inputs here
+            ]
+            ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+              # Additional darwin specific inputs can be set here
+              pkgs.libiconv
+            ];
 
-            doCheck = false;
-          });
-      in rec {
+          doCheck = false;
+        });
+      in
+      rec {
         checks = {
           inherit my-crate;
           test = craneLib.mkCargoDerivation (commonArgs
             // {
-              inherit cargoArtifacts;
+            inherit cargoArtifacts;
 
-              pnameSuffix = "-test";
+            pnameSuffix = "-test";
 
-              buildPhaseCargoCommand = ''
-                TEMP_DIR=$(mktemp -d)
-                DATA_DIR=$TEMP_DIR/data
-                SOCKET_DIR="$TEMP_DIR/sockets"
-                SOCKET_URL="$(echo $SOCKET_DIR | sed 's/\//%2f/g')"
-                export DATABASE_URL="postgresql://$SOCKET_URL:5432/postgres"
+            buildPhaseCargoCommand = ''
+              TEMP_DIR=$(mktemp -d)
+              DATA_DIR=$TEMP_DIR/data
+              SOCKET_DIR="$TEMP_DIR/sockets"
+              SOCKET_URL="$(echo $SOCKET_DIR | sed 's/\//%2f/g')"
+              export DATABASE_URL="postgresql://$SOCKET_URL:5432/postgres"
 
-                mkdir -p "$DATA_DIR" "$SOCKET_DIR"
+              mkdir -p "$DATA_DIR" "$SOCKET_DIR"
 
-                ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
+              ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
 
-                ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
+              ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
                 
-                ${pkgs.sqlx-cli}/bin/sqlx migrate run
+              ${pkgs.sqlx-cli}/bin/sqlx migrate run
 
-                cargoWithProfile test --locked
+              cargoWithProfile test --locked
 
-                ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
-              '';
-            });
+              ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
+            '';
+          });
         };
 
         formatter = pkgs.alejandra;
@@ -157,6 +160,7 @@
 
             echo Starting the server
             ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --content-dir test/static --private-content-dir test/static_auth --hidden-content-dir test/static_hidden --auth-url https://auth.inphima.de/application/o/authorize/ --token-url https://auth.inphima.de/application/o/token/ --user-info https://auth.inphima.de/application/o/userinfo/
+
 
             if [ ! "$ALREADY_RUNNING" -eq 0  ]; then
               echo Stopping the Database

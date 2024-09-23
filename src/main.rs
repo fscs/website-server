@@ -35,6 +35,8 @@ struct Args {
     token_url: String,
     #[arg(short, long)]
     user_info: String,
+    #[arg(long)]
+    j: Option<usize>,
 }
 
 static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
