@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, future::Future, pin::Pin, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, future::Future, pin::Pin, str::FromStr, sync::Arc};
 
 use actix_utils::future::{ready, Ready};
 use actix_web::{
@@ -18,6 +18,8 @@ use oauth2::{
     basic::BasicClient, http::HeaderValue, reqwest::async_http_client, AuthUrl, AuthorizationCode,
     ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl,
 };
+use regex::{Regex, RegexSet};
+use reqwest::header::{self, LOCATION};
 use serde::Deserialize;
 
 use crate::ARGS;
@@ -128,15 +130,15 @@ where
             match service.call(req).await {
                 Ok(mut res) if updated_cookies => {
                     for cookie in [
-                        jar.refresh_token(),
-                        jar.access_token(),
-                        jar.jar.get("user").map(Cookie::value),
+                        jar.refresh_token().map(|r| format!("refresh_token={r}")),
+                        jar.access_token().map(|a| format!("access_token={a}")),
+                        jar.jar.get("user").map(Cookie::value).map(|u| format!("user_info={u}")),
                     ]
                     .into_iter()
                     .flatten()
                     .filter_map(|cookie| {
                         HeaderValue::from_str(&format!(
-                            "refresh_token={}; SameSite=None; Path=/",
+                            "{}; SameSite=None; Path=/",
                             cookie
                         ))
                         .ok()
@@ -167,50 +169,35 @@ async fn refresh_authentication(
         .request_async(async_http_client)
         .await?;
 
-    jar.set_refresh_token(token.refresh_token().map_or("/", |a| a.secret()));
-    jar.set_access_token(token.access_token().secret());
+    let refresh_token = token.refresh_token().map_or("/", |a| a.secret());
+    let access_token = token.access_token().secret();
+    jar.set_refresh_token(refresh_token);
+    jar.set_access_token(access_token);
 
     let user = User::from_token(token.access_token().secret(), oauth_client)
         .await
         .map_err(|e| anyhow!("{:?}", e))?;
     jar.set_user_info(&user);
+    let user = jar.jar.get("user").unwrap().value();
 
     let cookie_header = req
         .headers_mut()
         .get_mut(header::COOKIE)
         .ok_or(anyhow!("Could not read Cookies"))?;
 
-    let cookie_header_str = cookie_header.to_str()?;
+    let cookie_header = cookie_header.to_str()?;
 
-    let new_cookie_header = HeaderValue::from_str(
-        &(cookie_header_str
-            .split(';')
-            .filter_map(|c| match c.split_once('=') {
-                Some((c, _)) if c.contains("refresh_token") => None,
-                Some((c, _)) if c.contains("access_token") => None,
-                Some((c, _)) if c.contains("user") => None,
-                _ => Some(c.to_owned()),
-            })
-            .fold(
-                format!(
-                    "refresh_token={}; access_token={}; user={}",
-                    jar.refresh_token()
-                        .ok_or(anyhow!("Could not access refresh_token"))?,
-                    jar.access_token()
-                        .ok_or(anyhow!("Could not access access_token"))?,
-                    jar.jar
-                        .get("user")
-                        .ok_or(anyhow!("Could not access user"))?
-                        .value()
-                ),
-                |a, b| a + ";" + &b,
-            )
-            + ";"),
-    )?;
+    let regex = Regex::from_str("(refresh_token=[.--;]*;)|(access_token=[.--;]*;)|(user=[.--;]*;)")
+        .unwrap();
 
-    req.headers_mut().insert(header::COOKIE, new_cookie_header);
+    let cookie_header = regex.replace_all(cookie_header, "");
+
+    let cookie_header = format!(
+        "{cookie_header}refresh_token={refresh_token};access_token={access_token};user={user}",
+    );
+
+    req.headers_mut().insert(header::COOKIE, cookie_header);
     req.extensions_mut().clear();
-
     Ok(())
 }
 

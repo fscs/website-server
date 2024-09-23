@@ -30,6 +30,7 @@ utoipauto = "0.1"
 utoipa = { version = "4", features = [ "actix_extras", "chrono", "uuid", "openapi_extensions" ] }
 uuid = { version = "1", features = [ "v4", "serde" ] }
 validator = { version = "0.18", features = ["derive"] }
+regex = { version = "1"}
 
 [dev-dependencies]
 tokio = { version="1", features = ["full"]}
