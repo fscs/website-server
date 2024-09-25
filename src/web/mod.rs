@@ -8,7 +8,7 @@ use actix_web::dev::{Payload, ServiceResponse};
 use actix_web::error::ErrorNotFound;
 use actix_web::http::header::{CacheControl, CacheDirective};
 use actix_web::http::StatusCode;
-use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
+use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers, Logger};
 use actix_web::web::{scope, Data};
 use actix_web::{
     get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
@@ -124,6 +124,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
         App::new()
             .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, auth::not_authorized))
             .wrap(AuthMiddle)
+            .wrap(Logger::default())
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
             .service(auth::service("/auth"))
