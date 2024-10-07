@@ -52,7 +52,7 @@ fn register_top_id_service(parent: Scope) -> Scope {
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct CreateSitzungParams {
-    timestamp: DateTime<Utc>,
+    datetime: DateTime<Utc>,
     #[validate(length(min = 1))]
     location: String,
     kind: SitzungKind,
@@ -68,7 +68,7 @@ pub struct CreateTopParams {
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct UpdateSitzungParams {
-    timestamp: Option<DateTime<Utc>>,
+    datetime: Option<DateTime<Utc>>,
     #[validate(length(min = 1))]
     location: Option<String>,
     kind: Option<SitzungKind>,
@@ -141,7 +141,7 @@ async fn post_sitzungen(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     let result = transaction
-        .create_sitzung(params.timestamp, params.location.as_str(), params.kind)
+        .create_sitzung(params.datetime, params.location.as_str(), params.kind)
         .await?;
 
     transaction.commit().await?;
@@ -227,7 +227,7 @@ async fn patch_sitzung_by_id(
     let result = transaction
         .update_sitzung(
             *sitzung_id,
-            params.timestamp,
+            params.datetime,
             params.location.as_deref(),
             params.kind,
         )
