@@ -318,9 +318,10 @@ impl FromRequest for User {
                     .await
                     .map_err(|e| {
                         debug!("{:?}", e);
-                        ErrorUnauthorized("Invalid access_token")
+                        ErrorUnauthorized("Invalid Bearer access_token")
                     });
             }
+            //check for cookies only if no Authorization header is present
 
             let jar = AuthCookieJar::extract(&req).await?;
 
