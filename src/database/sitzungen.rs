@@ -209,6 +209,7 @@ impl SitzungRepo for PgConnection {
         name: Option<&'a str>,
         inhalt: Option<&'a serde_json::Value>,
         kind: Option<TopKind>,
+        weight: Option<i64>,
     ) -> Result<Option<Top>> {
         let result = sqlx::query_as!(
             Top,

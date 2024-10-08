@@ -80,6 +80,7 @@ pub struct UpdateTopParams {
     name: Option<String>,
     kind: Option<TopKind>,
     inhalt: Option<serde_json::Value>,
+    weight: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
@@ -348,6 +349,7 @@ async fn patch_tops(
             params.name.as_deref(),
             params.inhalt.as_ref(),
             params.kind,
+            params.weight,
         )
         .await?;
 
@@ -372,7 +374,7 @@ async fn delete_tops(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     let (sitzung_id, top_id) = path_params.into_inner();
-    
+
     if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
@@ -403,7 +405,7 @@ async fn assoc_antrag(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     let (sitzung_id, top_id) = path_params.into_inner();
-    
+
     if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
@@ -440,7 +442,7 @@ async fn delete_assoc_antrag(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     let (sitzung_id, top_id) = path_params.into_inner();
-    
+
     if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }

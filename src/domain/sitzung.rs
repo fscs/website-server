@@ -106,6 +106,7 @@ pub trait SitzungRepo {
         name: Option<&'a str>,
         inhalt: Option<&'a serde_json::Value>,
         kind: Option<TopKind>,
+        weight: Option<i64>,
     ) -> Result<Option<Top>>;
 
     async fn delete_sitzung(&mut self, id: Uuid) -> Result<Option<Sitzung>>;
