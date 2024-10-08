@@ -486,7 +486,7 @@ mod test {
         let new_name = "neuer name lmao";
 
         let top = conn
-            .update_top(top_id, None, Some(new_name), None, None)
+            .update_top(top_id, None, Some(new_name), None, None, None)
             .await?
             .unwrap();
 
