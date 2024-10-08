@@ -333,18 +333,19 @@ async fn post_tops(
 #[patch("/{sitzung_id}/tops/{top_id}/")]
 async fn patch_tops(
     _user: User,
-    sitzung_id: Path<Uuid>,
-    top_id: Path<Uuid>,
+    path_params: Path<(Uuid, Uuid)>,
     params: ActixJson<UpdateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if transaction.sitzung_by_id(*sitzung_id).await?.is_none() {
+    let (sitzung_id, top_id) = path_params.into_inner();
+    
+    if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }
 
     let result = transaction
         .update_top(
-            *top_id,
+            top_id,
             None, // we dont allow moving tops
             params.name.as_deref(),
             params.inhalt.as_ref(),
