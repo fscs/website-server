@@ -296,6 +296,32 @@ impl FromRequest for User {
     ) -> Self::Future {
         let req = req.clone();
         Box::pin(async move {
+            //check for Authoization header
+            if let Some(header) = req.headers().get("Authorization") {
+                let header = header
+                    .to_str()
+                    .map_err(|_| ErrorUnauthorized("Invalid Header"))?;
+                let parts: Vec<&str> = header.split_whitespace().collect();
+                if parts.len() != 2 {
+                    return Err(ErrorUnauthorized("Invalid Header"));
+                }
+                if parts[0] != "Bearer" {
+                    return Err(ErrorUnauthorized("Invalid Header"));
+                }
+                let access_token = parts[1];
+                let oauth_client = req.app_data::<Data<OauthClient>>().ok_or(
+                    actix_web::error::ErrorInternalServerError(
+                        "Broken config please Contact an Admin",
+                    ),
+                )?;
+                return User::from_token(access_token, oauth_client)
+                    .await
+                    .map_err(|e| {
+                        debug!("{:?}", e);
+                        ErrorUnauthorized("Invalid access_token")
+                    });
+            }
+
             let jar = AuthCookieJar::extract(&req).await?;
 
             if let Some(user) = jar.user_info() {
