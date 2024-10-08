@@ -219,7 +219,8 @@ impl SitzungRepo for PgConnection {
                     sitzung_id = COALESCE($2, sitzung_id),
                     name = COALESCE($3, name),
                     kind = COALESCE($4, kind),
-                    inhalt = COALESCE($5, inhalt)
+                    inhalt = COALESCE($5, inhalt),
+                    weight = COALESCE($6, weight)
                 WHERE id = $1 
                 RETURNING id, name, weight, inhalt, kind AS "kind!: TopKind"
             "#,
@@ -228,6 +229,7 @@ impl SitzungRepo for PgConnection {
             name,
             kind as Option<TopKind>,
             inhalt,
+            weight
         )
         .fetch_optional(self)
         .await?;

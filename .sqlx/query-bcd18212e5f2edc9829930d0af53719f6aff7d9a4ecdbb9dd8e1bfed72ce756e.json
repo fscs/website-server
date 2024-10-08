@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                UPDATE tops \n                SET \n                    sitzung_id = COALESCE($2, sitzung_id),\n                    name = COALESCE($3, name),\n                    kind = COALESCE($4, kind),\n                    inhalt = COALESCE($5, inhalt)\n                WHERE id = $1 \n                RETURNING id, name, weight, inhalt, kind AS \"kind!: TopKind\"\n            ",
+  "query": "\n                UPDATE tops \n                SET \n                    sitzung_id = COALESCE($2, sitzung_id),\n                    name = COALESCE($3, name),\n                    kind = COALESCE($4, kind),\n                    inhalt = COALESCE($5, inhalt),\n                    weight = COALESCE($6, weight)\n                WHERE id = $1 \n                RETURNING id, name, weight, inhalt, kind AS \"kind!: TopKind\"\n            ",
   "describe": {
     "columns": [
       {
@@ -59,7 +59,8 @@
             }
           }
         },
-        "Jsonb"
+        "Jsonb",
+        "Int8"
       ]
     },
     "nullable": [
@@ -70,5 +71,5 @@
       false
     ]
   },
-  "hash": "e11c2df607332e479e20cc6ceaa1d60db861df732ef6ed190dfc4cc2f7db4147"
+  "hash": "bcd18212e5f2edc9829930d0af53719f6aff7d9a4ecdbb9dd8e1bfed72ce756e"
 }
