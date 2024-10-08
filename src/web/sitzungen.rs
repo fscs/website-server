@@ -36,6 +36,7 @@ fn register_sitzung_id_service(parent: Scope) -> Scope {
         .service(patch_sitzung_by_id)
         .service(delete_sitzung_by_id)
         .service(get_abmeldungen_by_sitzung)
+        .service(get_tops)
         .service(post_tops);
 
     // must come last
@@ -285,6 +286,30 @@ async fn get_abmeldungen_by_sitzung(
 
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/tops/",
+    responses(
+        (status = 200, description = "Success", body = Vec<TopWithAnträge>),
+        (status = 400, description = "Bad Request"),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+#[get("/{sitzung_id}/tops/")]
+async fn get_tops(
+    _user: User,
+    sitzung_id: Path<Uuid>,
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    if conn.sitzung_by_id(*sitzung_id).await?.is_none() {
+        return Ok(RestStatus::Success(None));
+    }
+
+    let result = domain::top_with_anträge_by_sitzung(&mut *conn, *sitzung_id).await?;
+
+    Ok(RestStatus::Success(Some(result)))
+}
+
+#[utoipa::path(
+    path = "/api/sitzungen/{sitzung_id}/tops/",
     request_body = CreateTopParams,
     responses(
         (status = 201, description = "Created", body = Top),
@@ -338,7 +363,7 @@ async fn patch_tops(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     let (sitzung_id, top_id) = path_params.into_inner();
-    
+
     if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
         return Ok(RestStatus::Success(None));
     }

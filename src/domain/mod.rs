@@ -42,14 +42,10 @@ pub async fn top_with_anträge(
     Ok(Some(TopWithAnträge { top, anträge }))
 }
 
-pub async fn sitzung_with_tops(
+pub async fn top_with_anträge_by_sitzung(
     repo: &mut impl SitzungAntragService,
     sitzung_id: Uuid,
-) -> Result<Option<SitzungWithTops>> {
-    let Some(sitzung) = repo.sitzung_by_id(sitzung_id).await? else {
-        return Ok(None);
-    };
-
+) -> Result<Vec<TopWithAnträge>> {
     let tops = repo.tops_by_sitzung(sitzung_id).await?;
 
     let mut tops_with_anträge = vec![];
@@ -59,6 +55,19 @@ pub async fn sitzung_with_tops(
 
         tops_with_anträge.push(top_and_anträge);
     }
+
+    Ok(tops_with_anträge)
+}
+
+pub async fn sitzung_with_tops(
+    repo: &mut impl SitzungAntragService,
+    sitzung_id: Uuid,
+) -> Result<Option<SitzungWithTops>> {
+    let Some(sitzung) = repo.sitzung_by_id(sitzung_id).await? else {
+        return Ok(None);
+    };
+
+    let tops_with_anträge = top_with_anträge_by_sitzung(repo, sitzung_id).await?;
 
     Ok(Some(SitzungWithTops {
         sitzung,
