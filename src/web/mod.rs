@@ -126,7 +126,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                 Cors::default()
                     .allowed_origin_fn(|o, _| {
                         let bytes = o.as_bytes();
-                        
+
                         bytes.ends_with(b".hhu-fscs.de")
                     })
                     .allow_any_method()
