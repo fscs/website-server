@@ -16,7 +16,7 @@ pub struct AntragData {
 pub struct Antrag {
     #[serde(flatten)]
     pub data: AntragData,
-    pub creators: Option<Vec<Uuid>>,
+    pub creators: Vec<Uuid>,
 }
 
 pub trait AntragRepo {
