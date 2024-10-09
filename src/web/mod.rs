@@ -2,6 +2,7 @@ use std::future::Future;
 use std::path::{Component, PathBuf};
 use std::pin::Pin;
 
+use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::body::BoxBody;
 use actix_web::dev::{Payload, ServiceResponse};
@@ -17,7 +18,6 @@ use serde::Serialize;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use utoipauto::utoipauto;
-use validator::ValidateRequired;
 
 pub(crate) mod antrag;
 pub(crate) mod auth;
@@ -124,6 +124,16 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
         App::new()
             .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, auth::not_authorized))
             .wrap(AuthMiddle)
+            .wrap(
+                Cors::default()
+                    .allowed_origin_fn(|o, _| {
+                        let bytes = o.as_bytes();
+                        
+                        bytes.ends_with(b".hhu-fscs.de")
+                    })
+                    .allow_any_method()
+                    .allow_any_header(),
+            )
             .wrap(Logger::default())
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
