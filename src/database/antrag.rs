@@ -11,6 +11,10 @@ async fn insert_antragsstellende(
     antrag_id: Uuid,
     creators: &[Uuid],
 ) -> Result<()> {
+    if creators.is_empty() {
+        return Ok(());
+    }
+    
     let mut query_builder =
         QueryBuilder::new("INSERT INTO antragsstellende (antrags_id, person_id) ");
 
@@ -242,6 +246,29 @@ mod test {
         assert_eq!(antrag.creators, creators);
 
         assert_eq!(creator_entries, creators);
+
+        Ok(())
+    }
+    
+    #[sqlx::test(fixtures("gimme_persons"))]
+    async fn create_antrag_no_creators(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let title = "Blumen für Valentin";
+        let reason = "Valentin deserves them";
+        let antragstext = "get them";
+
+        let antrag = conn
+            .create_antrag(&[], title, reason, antragstext)
+            .await?;
+
+        let creator_entries = super::query_antragsstellende(&mut conn, antrag.data.id).await?;
+
+        assert_eq!(antrag.data.titel, title);
+        assert_eq!(antrag.data.antragstext, antragstext);
+        assert_eq!(antrag.data.begründung, reason);
+        
+        assert!(antrag.creators.is_empty());
 
         Ok(())
     }
