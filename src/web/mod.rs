@@ -130,8 +130,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                         bytes.ends_with(b".hhu-fscs.de")
                     })
                     .allow_any_method()
-                    .allow_any_header()
-                    .supports_credentials(),
+                    .allow_any_header(),
             )
             .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, auth::not_authorized))
             .wrap(AuthMiddle)
