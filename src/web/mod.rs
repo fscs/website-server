@@ -122,8 +122,6 @@ struct ApiDoc;
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     let server = HttpServer::new(move || {
         App::new()
-            .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, auth::not_authorized))
-            .wrap(AuthMiddle)
             .wrap(
                 Cors::default()
                     .allowed_origin_fn(|o, _| {
@@ -134,6 +132,8 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .allow_any_method()
                     .allow_any_header(),
             )
+            .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, auth::not_authorized))
+            .wrap(AuthMiddle)
             .wrap(Logger::default())
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
