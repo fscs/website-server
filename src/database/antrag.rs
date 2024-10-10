@@ -14,7 +14,7 @@ async fn insert_antragsstellende(
     if creators.is_empty() {
         return Ok(());
     }
-    
+
     let mut query_builder =
         QueryBuilder::new("INSERT INTO antragsstellende (antrags_id, person_id) ");
 
@@ -74,70 +74,59 @@ impl AntragRepo for PgConnection {
     }
 
     async fn anträge(&mut self) -> Result<Vec<Antrag>> {
-        let record = sqlx::query!(
+        let anträge = sqlx::query_as!(
+            AntragData,
             r#"
-                SELECT 
-                    id, 
-                    titel, 
-                    antragstext, 
-                    begründung, 
-                    ARRAY_AGG(antragsstellende.person_id) AS creators
+                SELECT
+                    id,
+                    titel,
+                    antragstext,
+                    begründung
                 FROM anträge
-                LEFT JOIN antragsstellende
-                ON anträge.id = antragsstellende.antrags_id
-                GROUP BY anträge.id
             "#
         )
-        .fetch_all(self)
+        .fetch_all(&mut *self)
         .await?;
 
-        let result = record
-            .iter()
-            .map(|inner| Antrag {
-                data: AntragData {
-                    id: inner.id,
-                    titel: inner.titel.clone(),
-                    antragstext: inner.antragstext.clone(),
-                    begründung: inner.begründung.clone(),
-                },
-                creators: inner.creators.clone().unwrap_or_default(),
+        let mut result = Vec::new();
+
+        for data in anträge {
+            let creators = query_antragsstellende(&mut *self, data.id).await?;
+
+            result.push(Antrag {
+                data: data.clone(),
+                creators,
             })
-            .collect();
+        }
 
         Ok(result)
     }
 
     async fn antrag_by_id(&mut self, id: Uuid) -> Result<Option<Antrag>> {
-        let record = sqlx::query!(
+        let Some(data) = sqlx::query_as!(
+            AntragData,
             r#"
                 SELECT 
-                    anträge.id, 
-                    anträge.titel, 
-                    anträge.antragstext, 
-                    anträge.begründung, 
-                    ARRAY_AGG(antragsstellende.person_id) AS creators
+                    anträge.id,
+                    anträge.titel,
+                    anträge.antragstext,
+                    anträge.begründung
                 FROM anträge
-                LEFT JOIN antragsstellende
-                ON anträge.id = antragsstellende.antrags_id
-                WHERE anträge.id = $1
-                GROUP BY anträge.id
+                WHERE id = $1
             "#,
-            id,
+            id
         )
-        .fetch_optional(self)
-        .await?;
+        .fetch_optional(&mut *self)
+        .await?
+        else {
+            return Ok(None);
+        };
 
-        let result = record.map(|inner| Antrag {
-            data: AntragData {
-                id: inner.id,
-                titel: inner.titel,
-                antragstext: inner.antragstext,
-                begründung: inner.begründung,
-            },
-            creators: inner.creators.unwrap_or_default(),
-        });
+        let creators = query_antragsstellende(&mut *self, data.id).await?;
 
-        Ok(result)
+        let result = Antrag { data, creators };
+
+        Ok(Some(result))
     }
 
     async fn update_antrag<'a>(
@@ -249,7 +238,7 @@ mod test {
 
         Ok(())
     }
-    
+
     #[sqlx::test(fixtures("gimme_persons"))]
     async fn create_antrag_no_creators(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
@@ -258,17 +247,37 @@ mod test {
         let reason = "Valentin deserves them";
         let antragstext = "get them";
 
-        let antrag = conn
-            .create_antrag(&[], title, reason, antragstext)
-            .await?;
-
-        let creator_entries = super::query_antragsstellende(&mut conn, antrag.data.id).await?;
+        let antrag = conn.create_antrag(&[], title, reason, antragstext).await?;
 
         assert_eq!(antrag.data.titel, title);
         assert_eq!(antrag.data.antragstext, antragstext);
         assert_eq!(antrag.data.begründung, reason);
-        
+
         assert!(antrag.creators.is_empty());
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("gimme_persons", "antrag_empty_creators"))]
+    async fn antrag_by_id_empty_creators(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let id = Uuid::parse_str("f70917d9-8269-4a81-bb9b-785c3910f268").unwrap();
+
+        let antrag = conn.antrag_by_id(id).await?.unwrap();
+
+        assert_eq!(antrag.data.id, id);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("gimme_persons", "antrag_empty_creators"))]
+    async fn anträge_empty_creators(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let antrag = conn.anträge().await?;
+
+        assert!(!antrag.is_empty());
 
         Ok(())
     }

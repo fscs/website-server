@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use super::Result;
 
-#[derive(Debug, Serialize, IntoParams, ToSchema, PartialEq)]
+#[derive(Debug, Serialize, IntoParams, ToSchema, PartialEq, Clone)]
 pub struct AntragData {
     pub id: Uuid,
     pub titel: String,
