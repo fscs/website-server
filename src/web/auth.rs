@@ -496,21 +496,3 @@ async fn callback(
 
     ressponse_builder.finish()
 }
-
-pub fn not_authorized<B>(
-    res: actix_web::dev::ServiceResponse<B>,
-) -> actix_web::Result<actix_web::middleware::ErrorHandlerResponse<B>> {
-    let (req, mut res) = res.into_parts();
-    let path = req.path().to_string();
-    *res.status_mut() = actix_web::http::StatusCode::FOUND;
-
-    let mut res = ServiceResponse::new(req, res).map_into_left_body();
-
-    res.headers_mut().append(
-        header::LOCATION,
-        HeaderValue::from_str(&format!("/auth/login/?path={path}"))
-            .map_err(|_| ErrorInternalServerError("Invalid Path"))?,
-    );
-
-    Ok(ErrorHandlerResponse::Response(res))
-}

@@ -133,7 +133,6 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .allow_any_header()
                     .supports_credentials(),
             )
-            .wrap(ErrorHandlers::new().handler(StatusCode::UNAUTHORIZED, auth::not_authorized))
             .wrap(AuthMiddle)
             .wrap(Logger::default())
             .app_data(Data::new(database.clone()))
