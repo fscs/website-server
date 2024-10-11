@@ -7,41 +7,38 @@ use crate::domain::{
     Result,
 };
 
+use super::antrag::query_antragsstellende;
+
 impl AntragTopMapRepo for PgConnection {
     async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>> {
-        let records = sqlx::query!(
+        let anträge = sqlx::query_as!(
+            AntragData,
             r#"
-                SELECT 
-                    anträge.id, 
-                    anträge.antragstext, 
-                    anträge.begründung, 
-                    anträge.titel, 
-                    ARRAY_AGG(antragsstellende.person_id) AS creators
+                SELECT
+                    anträge.id,
+                    anträge.antragstext,
+                    anträge.begründung,
+                    anträge.titel
                 FROM anträge
-                JOIN antragstop 
-                ON anträge.id = antragstop.antrag_id 
-                JOIN antragsstellende
-                ON anträge.id = antragsstellende.antrags_id
+                JOIN antragstop
+                ON anträge.id = antragstop.antrag_id
                 WHERE antragstop.top_id = $1
-                GROUP BY anträge.id
             "#,
             top_id
         )
-        .fetch_all(self)
+        .fetch_all(&mut *self)
         .await?;
 
-        let result = records
-            .iter()
-            .map(|r| Antrag {
-                data: AntragData {
-                    id: r.id,
-                    antragstext: r.antragstext.clone(),
-                    begründung: r.begründung.clone(),
-                    titel: r.titel.clone(),
-                },
-                creators: r.creators.clone().unwrap_or_default(),
+        let mut result = Vec::new();
+
+        for data in anträge {
+            let creators = query_antragsstellende(&mut *self, data.id).await?;
+
+            result.push(Antrag {
+                data: data.clone(),
+                creators,
             })
-            .collect();
+        }
 
         Ok(result)
     }
@@ -114,6 +111,29 @@ mod test {
         let anträge = conn.anträge_by_top(top_id).await?;
 
         let antrag_id = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
+
+        assert_eq!(anträge.len(), 1);
+
+        assert!(anträge.iter().any(|e| e.data.id == antrag_id));
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(
+        "gimme_persons",
+        "gimme_sitzungen",
+        "gimme_tops",
+        "antrag_empty_creators",
+        "antrag_empty_creators_map",
+    ))]
+    async fn anträge_by_top_empty_creators(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let top_id = Uuid::parse_str("fd6b67df-60f2-453a-9ffc-93514c5ccdb1").unwrap();
+
+        let anträge = conn.anträge_by_top(top_id).await?;
+
+        let antrag_id = Uuid::parse_str("f70917d9-8269-4a81-bb9b-785c3910f268").unwrap();
 
         assert_eq!(anträge.len(), 1);
 
