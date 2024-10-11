@@ -11,12 +11,15 @@ use validator::Validate;
 
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
-    domain::{antrag::AntragRepo, Result},
+    domain::{antrag::AntragRepo, antrag_top_map::AntragTopMapRepo, Result},
     web::{auth::User, RestStatus},
 };
 
 pub(crate) fn service(path: &'static str) -> Scope {
-    let scope = web::scope(path).service(get_anträge).service(create_antrag);
+    let scope = web::scope(path)
+        .service(get_anträge)
+        .service(create_antrag)
+        .service(get_orphan_anträge);
 
     // must come last
     register_antrag_id_service(scope)
@@ -61,6 +64,20 @@ pub struct UpdateAntragParams {
 #[get("/")]
 async fn get_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.anträge().await?;
+
+    Ok(RestStatus::Success(Some(result)))
+}
+
+#[utoipa::path(
+    path = "/api/anträge/orphans",
+    responses(
+        (status = 200, description = "Success", body = Vec<Antrag>),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+#[get("/orphans")]
+async fn get_orphan_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
+    let result = conn.orphan_anträge().await?;
 
     Ok(RestStatus::Success(Some(result)))
 }

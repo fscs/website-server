@@ -43,6 +43,38 @@ impl AntragTopMapRepo for PgConnection {
         Ok(result)
     }
 
+    async fn orphan_anträge(&mut self) -> Result<Vec<Antrag>> {
+        let anträge = sqlx::query_as!(
+            AntragData,
+            r#"
+                SELECT
+                    anträge.id,
+                    anträge.antragstext,
+                    anträge.begründung,
+                    anträge.titel
+                FROM anträge
+                LEFT JOIN antragstop
+                ON anträge.id = antragstop.antrag_id
+                WHERE antragstop.antrag_id IS NULL
+            "#,
+        )
+        .fetch_all(&mut *self)
+        .await?;
+
+        let mut result = Vec::new();
+
+        for data in anträge {
+            let creators = query_antragsstellende(&mut *self, data.id).await?;
+
+            result.push(Antrag {
+                data: data.clone(),
+                creators,
+            })
+        }
+
+        Ok(result)
+    }
+
     async fn attach_antrag_to_top(
         &mut self,
         antrag_id: Uuid,
@@ -115,6 +147,27 @@ mod test {
         assert_eq!(anträge.len(), 1);
 
         assert!(anträge.iter().any(|e| e.data.id == antrag_id));
+
+        Ok(())
+    }
+    
+    #[sqlx::test(fixtures(
+        "gimme_persons",
+        "gimme_sitzungen",
+        "gimme_tops",
+        "gimme_antraege",
+        "gimme_antrag_mappings"
+    ))]
+    async fn orphan_anträge(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let orphans = conn.orphan_anträge().await?;
+
+        let antrag_id = Uuid::parse_str("5c51d5c0-3943-4695-844d-4c47da854fac").unwrap();
+
+        assert_eq!(orphans.len(), 1);
+
+        assert!(orphans.iter().any(|e| e.data.id == antrag_id));
 
         Ok(())
     }

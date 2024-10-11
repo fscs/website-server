@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    anträge.id,\n                    anträge.antragstext,\n                    anträge.begründung,\n                    anträge.titel\n                FROM anträge\n                LEFT JOIN antragstop\n                ON anträge.id = antragstop.antrag_id\n                WHERE antragstop.antrag_id IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "antragstext",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "begründung",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "titel",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d84a798de7c7868a3238b1685e4b82a8bab69c321c4675046f0ad236ba4f68ab"
+}

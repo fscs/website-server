@@ -14,6 +14,8 @@ pub struct AntragTopMapping {
 pub trait AntragTopMapRepo {
     async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
 
+    async fn orphan_anträge(&mut self) -> Result<Vec<Antrag>>;
+
     async fn attach_antrag_to_top(
         &mut self,
         antrag_id: Uuid,
