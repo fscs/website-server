@@ -7,7 +7,6 @@ use actix_web::{
     error::{self, ErrorInternalServerError, ErrorUnauthorized},
     get,
     http::header,
-    middleware::ErrorHandlerResponse,
     web::{self, Data},
     FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
 };

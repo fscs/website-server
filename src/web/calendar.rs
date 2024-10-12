@@ -93,18 +93,16 @@ async fn request_cal(url: String) -> anyhow::Result<Vec<CalendarEvent>> {
             _ => None,
         })
         .filter_map(|event| is_after(event, Utc::now()))
-        .filter_map(|event| {
-            Some(CalendarEvent {
-                summary: event.get_summary().map(std::string::ToString::to_string),
-                location: event
-                    .get_location()
-                    .map(|m| m.to_string().replace('\\', "")),
-                description: event
-                    .get_description()
-                    .map(std::string::ToString::to_string),
-                start: event.get_start().and_then(dpt_to_date_time),
-                end: event.get_start().and_then(dpt_to_date_time),
-            })
+        .map(|event| CalendarEvent {
+            summary: event.get_summary().map(std::string::ToString::to_string),
+            location: event
+                .get_location()
+                .map(|m| m.to_string().replace('\\', "")),
+            description: event
+                .get_description()
+                .map(std::string::ToString::to_string),
+            start: event.get_start().and_then(dpt_to_date_time),
+            end: event.get_start().and_then(dpt_to_date_time),
         })
         .collect::<Vec<_>>();
 
