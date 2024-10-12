@@ -78,7 +78,7 @@
           doCheck = false;
         });
       in
-      rec {
+      {
         checks = {
           inherit my-crate;
           test = craneLib.mkCargoDerivation (commonArgs
@@ -111,10 +111,11 @@
 
         formatter = pkgs.alejandra;
 
-        # For `nix build` & `nix run`:
         defaultPackage = my-crate;
 
-        packages = {
+        packages = rec {
+          default = my-crate;
+        
           database = pkgs.writeScriptBin "run.sh" ''
             #!/usr/bin/env bash
             DATA_DIR="$PWD/db/data"
@@ -159,7 +160,7 @@
             fi
 
             echo Starting the server
-            ${defaultPackage}/bin/fscs-website-backend \
+            ${default}/bin/fscs-website-backend \
               --database-url $DATABASE_URL \
               --content-dir test/static \
               --private-content-dir test/static_auth \
