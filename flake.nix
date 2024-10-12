@@ -191,10 +191,9 @@
           buildInputs = with pkgs; [
             cargo
             rustc
-            cargo-binutils
+            rustfmt
             sqlx-cli
             postgresql
-            docker-compose
           ];
         };
       }
