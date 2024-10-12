@@ -21,10 +21,6 @@ struct Args {
     host: String,
     #[arg(long, required = true)]
     content_dir: PathBuf,
-    #[arg(long, required = true)]
-    private_content_dir: PathBuf,
-    #[arg(long, required = true)]
-    hidden_content_dir: PathBuf,
     #[arg(long, default_value_t = {"Info".to_string()})]
     log_level: String,
     #[arg(short, long)]
@@ -39,7 +35,18 @@ struct Args {
     workers: Option<usize>,
 }
 
+struct ContentDir {
+    public: PathBuf,
+    hidden: PathBuf,
+    protected: PathBuf,
+}
+
 static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
+static CONTENT_DIR: LazyLock<ContentDir> = LazyLock::new(|| ContentDir {
+    public: ARGS.content_dir.join("public"),
+    hidden: ARGS.content_dir.join("hidden"),
+    protected: ARGS.content_dir.join("protected"),
+});
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
@@ -56,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let database = DatabasePool::new(&database_url).await?;
-    
+
     let mut transaction = database.start_transaction().await?;
     sqlx::migrate!().run(&mut *transaction).await?;
     transaction.commit().await?;

@@ -29,7 +29,7 @@ pub(crate) mod sitzungen;
 
 use crate::database::{DatabaseConnection, DatabasePool, DatabaseTransaction};
 use crate::domain::Error;
-use crate::ARGS;
+use crate::{ARGS, CONTENT_DIR};
 use auth::{oauth_client, AuthMiddle, User};
 
 pub(super) enum RestStatus<T: Serialize> {
@@ -174,10 +174,10 @@ async fn serve_files(
     // decide what the user gets to see
     let base_dir = match user {
         Some(user) => match user.is_rat() {
-            true => ARGS.private_content_dir.as_path(),
-            false => ARGS.hidden_content_dir.as_path(),
+            true => CONTENT_DIR.protected.as_path(),
+            false => CONTENT_DIR.hidden.as_path(),
         },
-        None => ARGS.content_dir.as_path(),
+        None => CONTENT_DIR.public.as_path(),
     };
 
     let sub_path: PathBuf = req.match_info().query("filename").parse().unwrap();
@@ -196,7 +196,7 @@ async fn serve_files(
         path
     };
 
-    let Ok(file) = NamedFile::open(actual_path) else {
+    let Ok(file) = NamedFile::open(actual_path.as_path()) else {
         return Err(ErrorNotFound("not found"));
     };
 

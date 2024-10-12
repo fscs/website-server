@@ -162,9 +162,7 @@
             echo Starting the server
             ${default}/bin/fscs-website-backend \
               --database-url $DATABASE_URL \
-              --content-dir test/static \
-              --private-content-dir test/static_auth \
-              --hidden-content-dir test/static_hidden \
+              --content-dir test \
               --auth-url https://auth.inphima.de/application/o/authorize/ \
               --token-url https://auth.inphima.de/application/o/token/ \
               --user-info https://auth.inphima.de/application/o/userinfo/ \
