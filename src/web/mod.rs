@@ -151,15 +151,14 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             )
             .service(serve_files)
     });
-    if let Some(j) = ARGS.j {
-        server
-            .workers(j)
-            .bind((ARGS.host.as_str(), ARGS.port))?
-            .run()
-            .await?;
+
+    let server = if let Some(workers) = ARGS.workers {
+        server.workers(workers)
     } else {
-        server.bind((ARGS.host.as_str(), ARGS.port))?.run().await?;
-    }
+        server
+    };
+
+    server.bind((ARGS.host.as_str(), ARGS.port))?.run().await?;
 
     Ok(())
 }

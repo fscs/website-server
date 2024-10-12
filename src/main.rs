@@ -35,8 +35,8 @@ struct Args {
     token_url: String,
     #[arg(short, long)]
     user_info: String,
-    #[arg(long)]
-    j: Option<usize>,
+    #[arg(short = 'j', long)]
+    workers: Option<usize>,
 }
 
 static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
@@ -56,6 +56,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let database = DatabasePool::new(&database_url).await?;
+    
     let mut transaction = database.start_transaction().await?;
     sqlx::migrate!().run(&mut *transaction).await?;
     transaction.commit().await?;
