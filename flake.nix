@@ -159,7 +159,15 @@
             fi
 
             echo Starting the server
-            ${defaultPackage}/bin/fscs-website-backend --database-url $DATABASE_URL --content-dir test/static --private-content-dir test/static_auth --hidden-content-dir test/static_hidden --auth-url https://auth.inphima.de/application/o/authorize/ --token-url https://auth.inphima.de/application/o/token/ --user-info https://auth.inphima.de/application/o/userinfo/
+            ${defaultPackage}/bin/fscs-website-backend \
+              --database-url $DATABASE_URL \
+              --content-dir test/static \
+              --private-content-dir test/static_auth \
+              --hidden-content-dir test/static_hidden \
+              --auth-url https://auth.inphima.de/application/o/authorize/ \
+              --token-url https://auth.inphima.de/application/o/token/ \
+              --user-info https://auth.inphima.de/application/o/userinfo/ \
+              $@
 
 
             if [ ! "$ALREADY_RUNNING" -eq 0  ]; then
