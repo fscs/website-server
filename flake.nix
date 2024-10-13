@@ -76,6 +76,8 @@
             ];
 
           doCheck = false;
+
+          meta.mainProgram = "fscs-website-backend";
         });
       in
       {
@@ -110,8 +112,6 @@
         };
 
         formatter = pkgs.alejandra;
-
-        defaultPackage = my-crate;
 
         packages = rec {
           default = my-crate;
@@ -185,6 +185,8 @@
           drv = self.packages.${system}.database;
           exePath = "/bin/run.sh";
         };
+
+        nixosModules.fscswebsite = import ./module.nix;
 
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
