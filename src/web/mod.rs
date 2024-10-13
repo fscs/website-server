@@ -237,7 +237,7 @@ fn file_not_found(
     srv_res: ServiceResponse<BoxBody>,
 ) -> actix_web::Result<ErrorHandlerResponse<BoxBody>> {
     let req = srv_res.request();
-    let path = ARGS.content_dir.join("de/404.html");
+    let path = CONTENT_DIR.public.join("de/404.html");
 
     let file = NamedFile::open(path).unwrap();
 
