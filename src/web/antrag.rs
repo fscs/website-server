@@ -69,13 +69,13 @@ async fn get_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
 }
 
 #[utoipa::path(
-    path = "/api/anträge/orphans",
+    path = "/api/anträge/orphans/",
     responses(
         (status = 200, description = "Success", body = Vec<Antrag>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/orphans")]
+#[get("/orphans/")]
 async fn get_orphan_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.orphan_anträge().await?;
 
