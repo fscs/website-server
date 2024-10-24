@@ -6,12 +6,14 @@ edition = "2021"
 description = "Backend für Knuts neue Webseite"
 
 [dependencies]
-actix-files = "0.6"
+actix-cors = "0"
+actix-files = {version = "0", features = [ "experimental-io-uring"]}
+actix-http = "3"
 actix-utils = "3"
-async-std = "1"
-actix-web-validator = "6.0"
-actix-web = { version = "4.8", features = [ "secure-cookies", "rustls" ] }
+actix-web-validator = "6"
+actix-web = { version = "4", features = [ "secure-cookies", "rustls" ] }
 anyhow = "1"
+async-std = "1"
 chrono-tz = "0"
 chrono = { version = "0", features = [ "serde" ]}
 clap = { version = "4", features = [ "derive", "color" ] }
@@ -20,6 +22,7 @@ log = "0"
 mime = "0"
 oauth2 = "4"
 pretty_env_logger = "0"
+regex = { version = "1"}
 reqwest = { version = "0", features = ["blocking", "json", "rustls-tls", "http2", "macos-system-configuration", "charset"], default-features = false }
 serde_json = { version = "1", features = [ "raw_value" ]}
 serde = { version = "1", features = [ "derive" ] }
@@ -30,8 +33,6 @@ utoipauto = "0.1"
 utoipa = { version = "4", features = [ "actix_extras", "chrono", "uuid", "openapi_extensions" ] }
 uuid = { version = "1", features = [ "v4", "serde" ] }
 validator = { version = "0.18", features = ["derive"] }
-regex = { version = "1"}
-actix-cors = "0.7"
 
 [dev-dependencies]
 tokio = { version="1", features = ["full"]}
