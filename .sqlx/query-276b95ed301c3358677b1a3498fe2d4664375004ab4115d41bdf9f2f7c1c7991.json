@@ -10,7 +10,22 @@
       },
       {
         "ordinal": 1,
-        "name": "name",
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "matrix_id",
         "type_info": "Text"
       }
     ],
@@ -21,7 +36,10 @@
     },
     "nullable": [
       false,
-      false
+      false,
+      false,
+      false,
+      true
     ]
   },
   "hash": "276b95ed301c3358677b1a3498fe2d4664375004ab4115d41bdf9f2f7c1c7991"

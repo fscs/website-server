@@ -48,13 +48,25 @@ pub struct PersonsByRoleParams {
 #[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct CreatePersonParams {
     #[validate(length(min = 1))]
-    name: String,
+    first_name: String,
+    #[validate(length(min = 1))]
+    last_name: String,
+    #[validate(length(min = 1))]
+    user_name: String,
+    #[validate(length(min = 1))]
+    matrix_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct UpdatePersonParams {
     #[validate(length(min = 1))]
-    name: Option<String>,
+    first_name: Option<String>,
+    #[validate(length(min = 1))]
+    last_name: Option<String>,
+    #[validate(length(min = 1))]
+    user_name: Option<String>,
+    #[validate(length(min = 1))]
+    matrix_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
@@ -89,7 +101,7 @@ fn validate_abmeldung_params(
     )
 )]
 #[get("/")]
-async fn get_persons(mut conn: DatabaseConnection) -> Result<impl Responder> {
+async fn get_persons(_user: User, mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.persons().await?;
 
     Ok(RestStatus::Success(Some(result)))
@@ -105,6 +117,7 @@ async fn get_persons(mut conn: DatabaseConnection) -> Result<impl Responder> {
 )]
 #[get("/{person_id}/")]
 async fn get_person_by_id(
+    _user: User,
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
@@ -129,7 +142,14 @@ async fn put_person(
     params: ActixJson<CreatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    let result = transaction.create_person(params.name.as_str()).await?;
+    let result = transaction
+        .create_person(
+            params.first_name.as_str(),
+            params.last_name.as_str(),
+            params.user_name.as_str(),
+            params.matrix_id.as_deref(),
+        )
+        .await?;
 
     transaction.commit().await?;
 
@@ -177,7 +197,13 @@ async fn patch_person(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     let result = transaction
-        .update_person(*person_id, params.name.as_deref())
+        .update_person(
+            *person_id,
+            params.first_name.as_deref(),
+            params.last_name.as_deref(),
+            params.user_name.as_deref(),
+            params.matrix_id.as_deref(),
+        )
         .await?;
 
     transaction.commit().await?;
@@ -196,6 +222,7 @@ async fn patch_person(
 )]
 #[get("/by-role/")]
 async fn get_persons_by_role(
+    _user: User,
     params: Query<PersonsByRoleParams>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
@@ -214,13 +241,14 @@ async fn get_persons_by_role(
 )]
 #[get("/{person_id}/roles/")]
 async fn roles_by_person(
+    _user: User,
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     if conn.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None))
+        return Ok(RestStatus::Success(None));
     }
-    
+
     let result = conn.roles_by_person(*person_id).await?;
 
     Ok(RestStatus::Success(Some(result)))
@@ -245,7 +273,7 @@ async fn add_role_to_person(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     if transaction.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None))
+        return Ok(RestStatus::Success(None));
     }
 
     transaction
@@ -276,7 +304,7 @@ async fn revoke_role_from_person(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     if transaction.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None))
+        return Ok(RestStatus::Success(None));
     }
 
     transaction
@@ -298,11 +326,12 @@ async fn revoke_role_from_person(
 )]
 #[get("/{person_id}/abmeldungen/")]
 async fn get_abmeldungen_by_person(
+    _user: User,
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     if conn.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None))
+        return Ok(RestStatus::Success(None));
     }
 
     let result = conn.abmeldungen_by_person(*person_id).await?;
@@ -329,7 +358,7 @@ async fn create_abmeldung(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     if transaction.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None))
+        return Ok(RestStatus::Success(None));
     }
 
     let result = transaction
@@ -361,9 +390,9 @@ async fn revoke_abmeldung(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     if transaction.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None))
+        return Ok(RestStatus::Success(None));
     }
-    
+
     transaction
         .revoke_abmeldung_from_person(*person_id, params.start, params.end)
         .await?;
