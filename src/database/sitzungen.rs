@@ -31,11 +31,11 @@ impl SitzungRepo for PgConnection {
         Ok(result)
     }
 
-    async fn create_top<'a>(
+    async fn create_top(
         &mut self,
         sitzung_id: Uuid,
         name: &str,
-        inhalt: Option<&'a serde_json::Value>,
+        inhalt: &str,
         kind: TopKind,
     ) -> Result<Top> {
         let weight = sqlx::query!(
@@ -207,7 +207,7 @@ impl SitzungRepo for PgConnection {
         id: Uuid,
         sitzung_id: Option<Uuid>,
         name: Option<&'a str>,
-        inhalt: Option<&'a serde_json::Value>,
+        inhalt: Option<&'a str>,
         kind: Option<TopKind>,
         weight: Option<i64>,
     ) -> Result<Option<Top>> {
@@ -306,24 +306,28 @@ mod test {
 
         let first_title = "hallo";
         let first_top_kind = TopKind::Normal;
+        let first_inhalt = "wheres da content";
 
         let first_top = conn
-            .create_top(sitzung_id, first_title, None, first_top_kind)
+            .create_top(sitzung_id, first_title, first_inhalt, first_top_kind)
             .await?;
 
         let second_title = "haaaalllo";
         let second_top_kind = TopKind::Normal;
+        let second_inhalt = "zweiter inhalt";
 
         let second_top = conn
-            .create_top(sitzung_id, second_title, None, second_top_kind)
+            .create_top(sitzung_id, second_title, second_inhalt, second_top_kind)
             .await?;
 
         assert_eq!(first_top.name, first_title);
         assert_eq!(first_top.kind, first_top_kind);
+        assert_eq!(first_top.inhalt, first_inhalt);
         assert_eq!(first_top.weight, 1);
 
         assert_eq!(second_top.name, second_title);
         assert_eq!(second_top.kind, second_top_kind);
+        assert_eq!(second_top.inhalt, second_inhalt);
         assert_eq!(second_top.weight, 2);
 
         Ok(())
@@ -337,11 +341,13 @@ mod test {
 
         let title = "hallo";
         let kind = TopKind::Normal;
+        let inhalt = "mein inhalt";
 
-        let top = conn.create_top(sitzung_id, title, None, kind).await?;
+        let top = conn.create_top(sitzung_id, title, inhalt, kind).await?;
 
         assert_eq!(top.name, title);
         assert_eq!(top.kind, kind);
+        assert_eq!(top.inhalt, inhalt);
         assert_eq!(top.weight, 5);
 
         Ok(())

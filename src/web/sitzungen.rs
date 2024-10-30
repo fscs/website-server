@@ -64,7 +64,7 @@ pub struct CreateTopParams {
     #[validate(length(min = 1))]
     name: String,
     kind: TopKind,
-    inhalt: Option<serde_json::Value>,
+    inhalt: String,
 }
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
@@ -80,7 +80,7 @@ pub struct UpdateTopParams {
     #[validate(length(min = 1))]
     name: Option<String>,
     kind: Option<TopKind>,
-    inhalt: Option<serde_json::Value>,
+    inhalt: Option<String>,
     weight: Option<i64>,
 }
 
@@ -334,7 +334,7 @@ async fn post_tops(
         .create_top(
             *sitzung_id,
             params.name.as_str(),
-            params.inhalt.as_ref(),
+            params.inhalt.as_str(),
             params.kind,
         )
         .await?;
@@ -373,7 +373,7 @@ async fn patch_tops(
             top_id,
             None, // we dont allow moving tops
             params.name.as_deref(),
-            params.inhalt.as_ref(),
+            params.inhalt.as_deref(),
             params.kind,
             params.weight,
         )

@@ -21,7 +21,7 @@
       {
         "ordinal": 3,
         "name": "inhalt",
-        "type_info": "Jsonb"
+        "type_info": "Text"
       },
       {
         "ordinal": 4,
@@ -59,7 +59,7 @@
             }
           }
         },
-        "Jsonb",
+        "Text",
         "Int8"
       ]
     },
@@ -67,7 +67,7 @@
       false,
       false,
       false,
-      true,
+      false,
       false
     ]
   },

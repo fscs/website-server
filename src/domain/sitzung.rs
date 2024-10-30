@@ -41,7 +41,7 @@ pub struct Top {
     pub id: Uuid,
     pub weight: i64,
     pub name: String,
-    pub inhalt: Option<serde_json::Value>,
+    pub inhalt: String,
     pub kind: TopKind,
 }
 
@@ -67,11 +67,11 @@ pub trait SitzungRepo {
         kind: SitzungKind,
     ) -> Result<Sitzung>;
 
-    async fn create_top<'a>(
+    async fn create_top(
         &mut self,
         sitzung_id: Uuid,
         name: &str,
-        inhalt: Option<&'a serde_json::Value>,
+        inhalt: &str,
         kind: TopKind,
     ) -> Result<Top>;
 
@@ -104,7 +104,7 @@ pub trait SitzungRepo {
         id: Uuid,
         sitzung_id: Option<Uuid>,
         name: Option<&'a str>,
-        inhalt: Option<&'a serde_json::Value>,
+        inhalt: Option<&'a str>,
         kind: Option<TopKind>,
         weight: Option<i64>,
     ) -> Result<Option<Top>>;
