@@ -8,17 +8,26 @@ use crate::domain::{
 };
 
 impl PersonRepo for PgConnection {
-    async fn create_person(&mut self, name: &str) -> Result<Person> {
+    async fn create_person(
+        &mut self,
+        first_name: &str,
+        last_name: &str,
+        user_name: &str,
+        matrix_id: Option<&str>,
+    ) -> Result<Person> {
         let result = sqlx::query_as!(
             Person,
             r#"
-                INSERT INTO person (name)
-                VALUES ($1)
+                INSERT INTO person (first_name, last_name, user_name, matrix_id)
+                VALUES ($1, $2, $3, $4)
                 ON CONFLICT
                 DO NOTHING
                 RETURNING *
             "#,
-            name
+            first_name,
+            last_name,
+            user_name,
+            matrix_id
         )
         .fetch_one(self)
         .await?;
@@ -135,7 +144,7 @@ impl PersonRepo for PgConnection {
         let result = sqlx::query_as!(
             Person,
             r#"
-                SELECT person.id, person.name
+                SELECT person.*
                 FROM person
                 JOIN rolemapping
                 ON rolemapping.person_id = person.id
@@ -181,11 +190,7 @@ impl PersonRepo for PgConnection {
         Ok(result)
     }
 
-    async fn assign_role_to_person(
-        &mut self,
-        person_id: Uuid,
-        role: &str,
-    ) -> Result<()> {
+    async fn assign_role_to_person(&mut self, person_id: Uuid, role: &str) -> Result<()> {
         sqlx::query_as!(
             PersonRoleMapping,
             r#"
@@ -204,11 +209,7 @@ impl PersonRepo for PgConnection {
         Ok(())
     }
 
-    async fn revoke_role_from_person(
-        &mut self,
-        person_id: Uuid,
-        role: &str,
-    ) -> Result<()> {
+    async fn revoke_role_from_person(&mut self, person_id: Uuid, role: &str) -> Result<()> {
         sqlx::query_as!(
             PersonRoleMapping,
             r#"
@@ -264,19 +265,28 @@ impl PersonRepo for PgConnection {
     async fn update_person<'a>(
         &mut self,
         id: Uuid,
-        name: Option<&'a str>,
+        first_name: Option<&str>,
+        last_name: Option<&str>,
+        user_name: Option<&str>,
+        matrix_id: Option<&str>,
     ) -> Result<Option<Person>> {
         let result = sqlx::query_as!(
             Person,
             r#"
                 UPDATE person 
                 SET 
-                    name = COALESCE($2, name)
+                    first_name = COALESCE($2, first_name),
+                    last_name = COALESCE($3, last_name),
+                    user_name = COALESCE($4, user_name),
+                    matrix_id = COALESCE($5, matrix_id)
                 WHERE id = $1 
                 RETURNING *
             "#,
             id,
-            name
+            first_name,
+            last_name,
+            user_name,
+            matrix_id,
         )
         .fetch_optional(self)
         .await?;
@@ -329,11 +339,19 @@ mod test {
     async fn create_person(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let name = "deine mutter";
+        let first_name = "deine";
+        let last_name = "mutter";
+        let user_name = "ist";
+        let matrix_id = Some("deine mutter".to_string());
 
-        let person = conn.create_person(name).await?;
+        let person = conn
+            .create_person(first_name, last_name, user_name, matrix_id.as_deref())
+            .await?;
 
-        assert_eq!(person.name, name);
+        assert_eq!(person.first_name, first_name);
+        assert_eq!(person.last_name, last_name);
+        assert_eq!(person.user_name, user_name);
+        assert_eq!(person.matrix_id, matrix_id);
 
         Ok(())
     }
@@ -476,11 +494,11 @@ mod test {
         let mut conn = pool.acquire().await?;
 
         let id = Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap();
-        let name = "deine mutter";
+        let user_name = "xXBedwarsProXx";
 
         let person = conn.person_by_id(id).await?.unwrap();
 
-        assert_eq!(person.name, name);
+        assert_eq!(person.user_name, user_name);
 
         Ok(())
     }
@@ -688,11 +706,14 @@ mod test {
         let mut conn = pool.acquire().await?;
 
         let id = Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap();
-        let new_name = "auch meine mutter";
+        let new_user_name = "auch meine mutter";
 
-        let person = conn.update_person(id, Some(new_name)).await?.unwrap();
+        let person = conn
+            .update_person(id, None, None, Some(new_user_name), None)
+            .await?
+            .unwrap();
 
-        assert_eq!(person.name, new_name);
+        assert_eq!(person.user_name, new_user_name);
 
         Ok(())
     }
