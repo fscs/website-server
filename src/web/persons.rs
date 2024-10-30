@@ -5,12 +5,13 @@ use actix_web::{delete, put, web};
 use actix_web::{get, patch, Responder, Scope};
 use actix_web_validator::{Json as ActixJson, Query};
 use chrono::NaiveDate;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 use crate::database::{DatabaseConnection, DatabaseTransaction};
+use crate::domain::persons::Person;
 use crate::web::auth::User;
 use crate::{
     domain::{persons::PersonRepo, Result},
@@ -82,6 +83,37 @@ pub struct AbmeldungParams {
     end: NaiveDate,
 }
 
+#[derive(Debug, Serialize, ToSchema, IntoParams, Validate)]
+pub struct PublicPerson {
+    pub id: Uuid,
+    pub first_name: String,
+    pub last_name: String,
+    pub user_name: Option<String>,
+    pub matrix_id: Option<String>,
+}
+
+impl PublicPerson {
+    pub fn public_from_person(person: Person) -> PublicPerson {
+        PublicPerson {
+            id: person.id,
+            first_name: person.first_name,
+            last_name: person.last_name,
+            user_name: None,
+            matrix_id: None,
+        }
+    }
+
+    pub fn private_from_person(person: Person) -> PublicPerson {
+        PublicPerson {
+            id: person.id,
+            first_name: person.first_name,
+            last_name: person.last_name,
+            user_name: Some(person.user_name),
+            matrix_id: person.matrix_id,
+        }
+    }
+}
+
 fn validate_abmeldung_params(
     params: &AbmeldungParams,
 ) -> core::result::Result<(), ValidationError> {
@@ -96,13 +128,25 @@ fn validate_abmeldung_params(
 #[utoipa::path(
     path = "/api/persons/",
     responses(
-        (status = 200, description = "Success", body = Vec<Person>),
+        (status = 200, description = "Success", body = Vec<PublicPerson>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[get("/")]
-async fn get_persons(_user: User, mut conn: DatabaseConnection) -> Result<impl Responder> {
-    let result = conn.persons().await?;
+async fn get_persons(user: Option<User>, mut conn: DatabaseConnection) -> Result<impl Responder> {
+    let persons = conn.persons().await?;
+
+    let result: Vec<_> = if user.is_some() {
+        persons
+            .into_iter()
+            .map(PublicPerson::private_from_person)
+            .collect()
+    } else {
+        persons
+            .into_iter()
+            .map(PublicPerson::public_from_person)
+            .collect()
+    };
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -110,18 +154,24 @@ async fn get_persons(_user: User, mut conn: DatabaseConnection) -> Result<impl R
 #[utoipa::path(
     path = "/api/persons/{person_id}/",
     responses(
-        (status = 200, description = "Success", body = Person),
+        (status = 200, description = "Success", body = PublicPerson),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[get("/{person_id}/")]
 async fn get_person_by_id(
-    _user: User,
+    user: Option<User>,
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
-    let result = conn.person_by_id(*person_id).await?;
+    let person = conn.person_by_id(*person_id).await?;
+
+    let result = person.map(|p| if user.is_some() {
+        PublicPerson::private_from_person(p)
+    } else {
+        PublicPerson::public_from_person(p)
+    });
 
     Ok(RestStatus::Success(result))
 }
@@ -159,7 +209,7 @@ async fn put_person(
 #[utoipa::path(
     path = "/api/persons/{person_id}/",
     responses(
-        (status = 200, description = "Success"),
+        (status = 200, description = "Success", body = Person),
         (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
@@ -215,18 +265,30 @@ async fn patch_person(
     path = "/api/persons/by-role/",
     params(PersonsByRoleParams),
     responses(
-        (status = 200, description = "Success", body = Vec<Person>),
+        (status = 200, description = "Success", body = Vec<PublicPerson>),
         (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[get("/by-role/")]
 async fn get_persons_by_role(
-    _user: User,
+    user: Option<User>,
     params: Query<PersonsByRoleParams>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
-    let result = conn.persons_with_role(params.role.as_str()).await?;
+    let persons = conn.persons_with_role(params.role.as_str()).await?;
+    
+    let result: Vec<_> = if user.is_some() {
+        persons
+            .into_iter()
+            .map(PublicPerson::private_from_person)
+            .collect()
+    } else {
+        persons
+            .into_iter()
+            .map(PublicPerson::public_from_person)
+            .collect()
+    };
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -241,7 +303,6 @@ async fn get_persons_by_role(
 )]
 #[get("/{person_id}/roles/")]
 async fn roles_by_person(
-    _user: User,
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
@@ -258,7 +319,7 @@ async fn roles_by_person(
     path = "/api/persons/{person_id}/roles/",
     request_body = RoleParams,
     responses(
-        (status = 200, description = "Success", body = PersonRoleMapping),
+        (status = 200, description = "Success"),
         (status = 400, description = "Bad Request"),
         (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
@@ -289,7 +350,7 @@ async fn add_role_to_person(
     path = "/api/persons/{person_id}/roles/",
     request_body = RoleParams,
     responses(
-        (status = 200, description = "Success", body = PersonRoleMapping),
+        (status = 200, description = "Success"),
         (status = 400, description = "Bad Request"),
         (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not Found"),
