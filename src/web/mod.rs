@@ -9,7 +9,7 @@ use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::http::header::{CacheControl, CacheDirective};
 use actix_web::middleware::Logger;
-use actix_web::web::{scope, Data};
+use actix_web::web::Data;
 use actix_web::{
     get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
 };
@@ -18,13 +18,8 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use utoipauto::utoipauto;
 
-pub(crate) mod antrag;
+pub(crate) mod api;
 pub(crate) mod auth;
-pub(crate) mod calendar;
-pub(crate) mod door_state;
-pub(crate) mod persons;
-pub(crate) mod roles;
-pub(crate) mod sitzungen;
 
 use crate::database::{DatabaseConnection, DatabasePool, DatabaseTransaction};
 use crate::domain::Error;
@@ -139,15 +134,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .service(auth::service("/auth"))
             // /api/docs needs to be before /api
             .service(SwaggerUi::new("/api/docs/{_:.*}").url("/api/openapi.json", ApiDoc::openapi()))
-            .service(
-                scope("/api")
-                    .service(calendar::service("/calendar"))
-                    .service(persons::service("/persons"))
-                    .service(roles::service("/roles"))
-                    .service(antrag::service("/anträge"))
-                    .service(door_state::service("/doorstate"))
-                    .service(sitzungen::service("/sitzungen")),
-            )
+            .service(api::service("/api"))
             .service(serve_files)
     });
 
