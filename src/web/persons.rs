@@ -22,7 +22,9 @@ pub(crate) fn service(path: &'static str) -> Scope {
     let scope = web::scope(path)
         .service(get_persons)
         .service(put_person)
-        .service(get_persons_by_role);
+        .service(get_persons_by_role)
+        .service(get_person_by_user_name)
+        .service(get_person_by_matrix_id);
 
     register_person_id_service(scope)
 }
@@ -167,10 +169,12 @@ async fn get_person_by_id(
 ) -> Result<impl Responder> {
     let person = conn.person_by_id(*person_id).await?;
 
-    let result = person.map(|p| if user.is_some() {
-        PublicPerson::private_from_person(p)
-    } else {
-        PublicPerson::public_from_person(p)
+    let result = person.map(|p| {
+        if user.is_some() {
+            PublicPerson::private_from_person(p)
+        } else {
+            PublicPerson::public_from_person(p)
+        }
     });
 
     Ok(RestStatus::Success(result))
@@ -277,7 +281,7 @@ async fn get_persons_by_role(
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     let persons = conn.persons_with_role(params.role.as_str()).await?;
-    
+
     let result: Vec<_> = if user.is_some() {
         persons
             .into_iter()
@@ -291,6 +295,44 @@ async fn get_persons_by_role(
     };
 
     Ok(RestStatus::Success(Some(result)))
+}
+
+#[utoipa::path(
+    path = "/api/persons/by-matrix-id/{matrix_id}",
+    responses(
+        (status = 200, description = "Success", body = Person),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+#[get("/by-matrix-id/{matrix_id}")]
+async fn get_person_by_matrix_id(
+    _user: User,
+    matrix_id: Path<String>,
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = conn.person_by_matrix_id(matrix_id.as_str()).await?;
+
+    Ok(RestStatus::Success(result))
+}
+
+#[utoipa::path(
+    path = "/api/persons/by-username/{user_name}",
+    responses(
+        (status = 200, description = "Success", body = Person),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+#[get("/by-username/{user_name}")]
+async fn get_person_by_user_name(
+    _user: User,
+    user_name: Path<String>,
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = conn.person_by_user_name(user_name.as_str()).await?;
+
+    Ok(RestStatus::Success(result))
 }
 
 #[utoipa::path(

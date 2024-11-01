@@ -140,6 +140,36 @@ impl PersonRepo for PgConnection {
         Ok(result)
     }
 
+    async fn person_by_matrix_id(&mut self, matrix_id: &str) -> Result<Option<Person>> {
+        let result = sqlx::query_as!(
+            Person,
+            r#"
+                SELECT * FROM person
+                WHERE matrix_id = $1
+            "#,
+            matrix_id
+        )
+        .fetch_optional(self)
+        .await?;
+
+        Ok(result)
+    }
+
+    async fn person_by_user_name(&mut self, user_name: &str) -> Result<Option<Person>> {
+        let result = sqlx::query_as!(
+            Person,
+            r#"
+                SELECT * FROM person
+                WHERE user_name = $1
+            "#,
+            user_name
+        )
+        .fetch_optional(self)
+        .await?;
+
+        Ok(result)
+    }
+
     async fn persons_with_role(&mut self, role: &str) -> Result<Vec<Person>> {
         let result = sqlx::query_as!(
             Person,
@@ -499,6 +529,34 @@ mod test {
         let person = conn.person_by_id(id).await?.unwrap();
 
         assert_eq!(person.user_name, user_name);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("gimme_persons"))]
+    async fn person_by_matrix_id(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let matrix_id = "@uwunicorn:inphima.de";
+        let id = Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap();
+
+        let person = conn.person_by_matrix_id(matrix_id).await?.unwrap();
+
+        assert_eq!(person.id, id);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("gimme_persons"))]
+    async fn person_by_user_name(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let user_name = "xXBedwarsProXx";
+        let id = Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap();
+
+        let person = conn.person_by_user_name(user_name).await?.unwrap();
+
+        assert_eq!(person.id, id);
 
         Ok(())
     }

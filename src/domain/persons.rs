@@ -59,6 +59,10 @@ pub trait PersonRepo {
 
     async fn person_by_id(&mut self, id: Uuid) -> Result<Option<Person>>;
 
+    async fn person_by_matrix_id(&mut self, matrix_id: &str) -> Result<Option<Person>>;
+
+    async fn person_by_user_name(&mut self, user_name: &str) -> Result<Option<Person>>;
+
     async fn persons_with_role(&mut self, role: &str) -> Result<Vec<Person>>;
 
     async fn abmeldungen_by_person(&mut self, person_id: Uuid) -> Result<Vec<Abmeldung>>;
