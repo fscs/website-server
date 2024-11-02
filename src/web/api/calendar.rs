@@ -6,18 +6,9 @@ use icalendar::{Component, Event, EventLike};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::LazyLock;
-use utoipa::{IntoParams, ToSchema};
 
 use crate::cache::TimedCache;
-
-#[derive(serde::Serialize, Clone, IntoParams, ToSchema)]
-pub struct CalendarEvent {
-    summary: Option<String>,
-    location: Option<String>,
-    description: Option<String>,
-    start: Option<DateTime<Utc>>,
-    end: Option<DateTime<Utc>>,
-}
+use crate::domain::calendar::CalendarEvent;
 
 pub(crate) fn service(path: &'static str) -> Scope {
     web::scope(path)
