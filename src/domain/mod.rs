@@ -7,6 +7,7 @@ pub mod antrag_top_map;
 pub mod calendar;
 pub mod door_state;
 pub mod persons;
+pub mod protokoll;
 pub mod sitzung;
 
 use persons::{Abmeldung, PersonRepo};
@@ -23,12 +24,13 @@ pub enum Error {
 }
 
 pub trait SitzungAntragService: SitzungRepo + AntragTopMapRepo {}
-
 impl<T> SitzungAntragService for T where T: SitzungRepo + AntragTopMapRepo {}
 
 pub trait SitzungPersonService: SitzungRepo + PersonRepo {}
-
 impl<T> SitzungPersonService for T where T: SitzungRepo + PersonRepo {}
+
+pub trait SitzungAntragPersonService: SitzungRepo + AntragTopMapRepo + PersonRepo {}
+impl<T> SitzungAntragPersonService for T where T: SitzungRepo + AntragTopMapRepo + PersonRepo {}
 
 pub async fn top_with_anträge(
     repo: &mut impl SitzungAntragService,
