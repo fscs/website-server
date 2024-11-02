@@ -191,6 +191,7 @@
             cargo
             rustc
             rustfmt
+            clippy
             sqlx-cli
             postgresql
           ];
