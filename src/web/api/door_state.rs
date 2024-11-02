@@ -13,7 +13,7 @@ use validator::{Validate, ValidationError};
 
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
-    domain::{door_state::DoorStateRepo, Result},
+    domain::{door_state::{DoorState, DoorStateRepo}, Result},
     web::{auth::User, RestStatus},
 };
 

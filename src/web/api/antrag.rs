@@ -11,7 +11,7 @@ use validator::Validate;
 
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
-    domain::{antrag::AntragRepo, antrag_top_map::AntragTopMapRepo, Result},
+    domain::{antrag::{Antrag, AntragRepo}, antrag_top_map::AntragTopMapRepo, Result},
     web::{auth::User, RestStatus},
 };
 

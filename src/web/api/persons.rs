@@ -11,7 +11,7 @@ use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 use crate::database::{DatabaseConnection, DatabaseTransaction};
-use crate::domain::persons::Person;
+use crate::domain::persons::{Abmeldung, Person};
 use crate::web::auth::User;
 use crate::{
     domain::{persons::PersonRepo, Result},

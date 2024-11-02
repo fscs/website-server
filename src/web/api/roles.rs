@@ -6,7 +6,7 @@ use validator::Validate;
 
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
-    domain::{persons::PersonRepo, Result},
+    domain::{persons::{PersonRepo, Role}, Result},
     web::{auth::User, RestStatus},
 };
 
