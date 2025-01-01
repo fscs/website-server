@@ -60,7 +60,7 @@
 
         # Build the actual crate itself, reusing the dependency
         # artifacts from above.
-        my-crate = craneLib.buildPackage (commonArgs
+        website-server = craneLib.buildPackage (commonArgs
           // {
           inherit cargoArtifacts;
 
@@ -80,8 +80,8 @@
       in
       {
         checks = {
-          inherit my-crate;
-          test = craneLib.mkCargoDerivation (commonArgs
+          inherit website-server;
+          website-server-tests = craneLib.mkCargoDerivation (commonArgs
             // {
             inherit cargoArtifacts;
 
@@ -111,10 +111,10 @@
 
         formatter = pkgs.alejandra;
 
-        defaultPackage = my-crate;
+        defaultPackage = website-server;
 
         packages = rec {
-          default = my-crate;
+          default = website-server;
         
           database = pkgs.writeScriptBin "run.sh" ''
             #!/usr/bin/env bash
