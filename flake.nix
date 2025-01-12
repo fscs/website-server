@@ -7,14 +7,16 @@
     crane.url = "github:ipetkov/crane";
   };
 
-  outputs = {
-    self,
-    flake-utils,
-    crane,
-    nixpkgs,
-  }:
+  outputs =
+    {
+      self,
+      flake-utils,
+      crane,
+      nixpkgs,
+    }:
     flake-utils.lib.eachDefaultSystem (
-      system: let
+      system:
+      let
         pkgs = import nixpkgs {
           inherit system;
         };
@@ -24,7 +26,9 @@
 
         queryFilter = path: _type: null != builtins.match ".*/query-.*\.json$" path;
         sqlFilter = path: _type: null != builtins.match ".*\.sql$" path;
-        sqlOrQueryOrCargo = path: type: (queryFilter path type) || (sqlFilter path type) || (craneLib.filterCargoSources path type);
+        sqlOrQueryOrCargo =
+          path: type:
+          (queryFilter path type) || (sqlFilter path type) || (craneLib.filterCargoSources path type);
 
         src = lib.cleanSourceWith {
           src = craneLib.path ./.;
@@ -49,16 +53,21 @@
 
         # Build the actual crate itself, reusing the dependency
         # artifacts from above.
-        website-server = craneLib.buildPackage (commonArgs
+        website-server = craneLib.buildPackage (
+          commonArgs
           // {
             inherit cargoArtifacts;
 
             doCheck = false;
-          });
-      in {
+          }
+        );
+      in
+      {
         checks = {
           inherit website-server;
-          website-server-tests = craneLib.mkCargoDerivation (commonArgs
+
+          website-server-tests = craneLib.mkCargoDerivation (
+            commonArgs
             // {
               inherit cargoArtifacts;
 
@@ -83,7 +92,8 @@
 
                 ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
               '';
-            });
+            }
+          );
         };
 
         formatter = pkgs.alejandra;
