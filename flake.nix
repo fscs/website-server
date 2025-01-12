@@ -7,16 +7,14 @@
     crane.url = "github:ipetkov/crane";
   };
 
-  outputs =
-    { self
-    , flake-utils
-    , crane
-    , nixpkgs
-    ,
-    }:
+  outputs = {
+    self,
+    flake-utils,
+    crane,
+    nixpkgs,
+  }:
     flake-utils.lib.eachDefaultSystem (
-      system:
-      let
+      system: let
         pkgs = import nixpkgs {
           inherit system;
         };
@@ -39,10 +37,10 @@
           strictDeps = true;
 
           buildInputs = lib.optionals pkgs.stdenv.isDarwin [
-              # Additional darwin specific inputs can be set here
-              pkgs.libiconv
-              pkgs.darwin.apple_sdk.frameworks.Security
-            ];
+            # Additional darwin specific inputs can be set here
+            pkgs.libiconv
+            pkgs.darwin.apple_sdk.frameworks.Security
+          ];
         };
 
         # Build *just* the cargo dependencies, so we can reuse
@@ -53,40 +51,39 @@
         # artifacts from above.
         website-server = craneLib.buildPackage (commonArgs
           // {
-          inherit cargoArtifacts;
+            inherit cargoArtifacts;
 
-          doCheck = false;
-        });
-      in
-      {
+            doCheck = false;
+          });
+      in {
         checks = {
           inherit website-server;
           website-server-tests = craneLib.mkCargoDerivation (commonArgs
             // {
-            inherit cargoArtifacts;
+              inherit cargoArtifacts;
 
-            pnameSuffix = "-test";
+              pnameSuffix = "-test";
 
-            buildPhaseCargoCommand = ''
-              TEMP_DIR=$(mktemp -d)
-              DATA_DIR=$TEMP_DIR/data
-              SOCKET_DIR="$TEMP_DIR/sockets"
-              SOCKET_URL="$(echo $SOCKET_DIR | sed 's/\//%2f/g')"
-              export DATABASE_URL="postgresql://$SOCKET_URL:5432/postgres"
+              buildPhaseCargoCommand = ''
+                TEMP_DIR=$(mktemp -d)
+                DATA_DIR=$TEMP_DIR/data
+                SOCKET_DIR="$TEMP_DIR/sockets"
+                SOCKET_URL="$(echo $SOCKET_DIR | sed 's/\//%2f/g')"
+                export DATABASE_URL="postgresql://$SOCKET_URL:5432/postgres"
 
-              mkdir -p "$DATA_DIR" "$SOCKET_DIR"
+                mkdir -p "$DATA_DIR" "$SOCKET_DIR"
 
-              ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
+                ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
 
-              ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
-                
-              ${pkgs.sqlx-cli}/bin/sqlx migrate run
+                ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
 
-              cargoWithProfile test --locked
+                ${pkgs.sqlx-cli}/bin/sqlx migrate run
 
-              ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
-            '';
-          });
+                cargoWithProfile test --locked
+
+                ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
+              '';
+            });
         };
 
         formatter = pkgs.alejandra;
@@ -95,7 +92,7 @@
 
         packages = rec {
           default = website-server;
-        
+
           database = pkgs.writeScriptBin "run.sh" ''
             #!/usr/bin/env bash
             DATA_DIR="$PWD/db/data"
