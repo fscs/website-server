@@ -27,7 +27,10 @@ async fn insert_antragsstellende(
     Ok(())
 }
 
-pub(super) async fn query_antragsstellende(conn: &mut PgConnection, antrag_id: Uuid) -> Result<Vec<Uuid>> {
+pub(super) async fn query_antragsstellende(
+    conn: &mut PgConnection,
+    antrag_id: Uuid,
+) -> Result<Vec<Uuid>> {
     let result = sqlx::query_scalar!(
         r#"
             SELECT person_id FROM antragsstellende

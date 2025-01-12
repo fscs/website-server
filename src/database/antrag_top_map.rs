@@ -150,7 +150,7 @@ mod test {
 
         Ok(())
     }
-    
+
     #[sqlx::test(fixtures(
         "gimme_persons",
         "gimme_sitzungen",
