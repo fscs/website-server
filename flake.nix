@@ -38,16 +38,7 @@
           inherit src;
           strictDeps = true;
 
-          nativeBuildInputs = [
-            pkgs.pkg-config
-          ];
-
-          buildInputs =
-            [
-              # Add additional build inputs here
-              pkgs.openssl
-            ]
-            ++ lib.optionals pkgs.stdenv.isDarwin [
+          buildInputs = lib.optionals pkgs.stdenv.isDarwin [
               # Additional darwin specific inputs can be set here
               pkgs.libiconv
               pkgs.darwin.apple_sdk.frameworks.Security
@@ -63,17 +54,6 @@
         website-server = craneLib.buildPackage (commonArgs
           // {
           inherit cargoArtifacts;
-
-          nativeBuildInputs = with pkgs; [ pkg-config ];
-          buildInputs =
-            [
-              pkgs.openssl
-              # Add additional build inputs here
-            ]
-            ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-              # Additional darwin specific inputs can be set here
-              pkgs.libiconv
-            ];
 
           doCheck = false;
         });
