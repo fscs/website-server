@@ -1,0 +1,22 @@
+name: Push to Attic
+
+on: [push]
+
+jobs:
+  push:
+    name: upload ${{ matrix.platform.target }}
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            target: x86_64-linux
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - run: nix develop .#attic -c attic login fscs https://attic.hhu-fscs.de ${{ secrets.ATTIC_TOKEN }} 
+      - run: nix build
+      - run: nix develop .#attic -c attic push fscs-public result 

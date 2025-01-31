@@ -173,15 +173,23 @@
           exePath = "/bin/run.sh";
         };
 
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            cargo
-            rustc
-            rustfmt
-            clippy
-            sqlx-cli
-            postgresql
-          ];
+        devShells = {
+          default = pkgs.mkShell {
+            buildInputs = with pkgs; [
+              cargo
+              rustc
+              rustfmt
+              clippy
+              sqlx-cli
+              postgresql
+            ];
+          };
+
+          attic = pkgs.mkShell {
+            nativeBuildInputs = [
+              pkgs.attic-client
+            ];
+          };
         };
       }
     );
