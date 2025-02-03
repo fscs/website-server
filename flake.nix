@@ -59,6 +59,7 @@
             inherit cargoArtifacts;
 
             doCheck = false;
+            meta.mainProgram = "fscs-website-backend";
           }
         );
       in
@@ -97,8 +98,6 @@
         };
 
         formatter = pkgs.alejandra;
-
-        defaultPackage = website-server;
 
         packages = rec {
           default = website-server;
@@ -147,7 +146,7 @@
             fi
 
             echo Starting the server
-            ${default}/bin/fscs-website-backend \
+            ${lib.getExe default} \
               --database-url $DATABASE_URL \
               --content-dir test \
               --auth-url https://auth.inphima.de/application/o/authorize/ \
