@@ -191,5 +191,10 @@
           };
         };
       }
-    );
+    )
+    // {
+      nixosModules.fscs-website-server = nixpkgs.lib.modules.importApply ./module.nix {
+        inherit (self) outputs;
+      };
+    };
 }
