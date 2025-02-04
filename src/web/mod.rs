@@ -116,6 +116,7 @@ struct ApiDoc;
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     let server = HttpServer::new(move || {
         App::new()
+            .wrap(AuthMiddle)
             .wrap(
                 Cors::default()
                     .allowed_origin_fn(|o, _| {
@@ -127,7 +128,6 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     .allow_any_header()
                     .supports_credentials(),
             )
-            .wrap(AuthMiddle)
             .wrap(Logger::default())
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))

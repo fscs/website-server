@@ -12,7 +12,7 @@ use actix_web::{
 };
 use anyhow::anyhow;
 use chrono::Utc;
-use log::debug;
+use log::{debug, info};
 use oauth2::{
     basic::BasicClient, http::HeaderValue, reqwest::async_http_client, AuthUrl, AuthorizationCode,
     ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl,
@@ -138,8 +138,10 @@ where
                     .into_iter()
                     .flatten()
                     .filter_map(|cookie| {
-                        HeaderValue::from_str(&format!("{}; SameSite=None; Path=/", cookie)).ok()
+                        HeaderValue::from_str(&format!("{}; SameSite=None; Path=/; Secure", cookie))
+                            .ok()
                     }) {
+                        info!("{:?}", &cookie);
                         res.headers_mut().append(header::SET_COOKIE, cookie);
                     }
                     Ok(res)
@@ -154,7 +156,7 @@ async fn refresh_authentication(
     jar: &mut AuthCookieJar,
     req: &mut ServiceRequest,
 ) -> anyhow::Result<()> {
-    debug!("Refreshing user {:?}", jar.user_info());
+    info!("Refreshing user {:?}", jar.user_info());
     let refresh = jar
         .refresh_token()
         .ok_or(anyhow!("Could not access refresh token"))?;
