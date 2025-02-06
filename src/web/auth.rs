@@ -2,7 +2,7 @@ use std::{borrow::Cow, collections::HashMap, future::Future, pin::Pin, str::From
 
 use actix_utils::future::{ready, Ready};
 use actix_web::{
-    cookie::{Cookie, CookieJar, Key, SameSite},
+    cookie::{time::Duration, Cookie, CookieJar, Key, SameSite},
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     error::{self, ErrorInternalServerError, ErrorUnauthorized},
     get,
@@ -28,6 +28,8 @@ pub(crate) struct User {
     exp: i64,
     userinfo: HashMap<String, serde_json::Value>,
 }
+
+const COOKIE_MAX_AGE: Duration = Duration::days(30);
 
 impl User {
     pub async fn from_token(
@@ -138,8 +140,11 @@ where
                     .into_iter()
                     .flatten()
                     .filter_map(|cookie| {
-                        HeaderValue::from_str(&format!("{}; SameSite=None; Path=/; Secure", cookie))
-                            .ok()
+                        HeaderValue::from_str(&format!(
+                            "{}; SameSite=None; Path=/; Secure; Max-Age={};",
+                            cookie, COOKIE_MAX_AGE
+                        ))
+                        .ok()
                     }) {
                         info!("{:?}", &cookie);
                         res.headers_mut().append(header::SET_COOKIE, cookie);
@@ -224,6 +229,7 @@ impl AuthCookieJar {
         let mut cookie = Cookie::new("access_token", value.to_string());
         cookie.set_path("/");
         cookie.set_same_site(SameSite::None);
+        cookie.set_max_age(COOKIE_MAX_AGE);
         self.jar.add(cookie);
     }
 
@@ -237,6 +243,7 @@ impl AuthCookieJar {
         let mut cookie = Cookie::new("refresh_token", value.to_string());
         cookie.set_path("/");
         cookie.set_same_site(SameSite::None);
+        cookie.set_max_age(COOKIE_MAX_AGE);
         self.jar.add(cookie);
     }
 
@@ -251,6 +258,7 @@ impl AuthCookieJar {
     fn set_user_info(&mut self, user: &User) {
         let mut cookie = Cookie::new("user", serde_json::to_string(&user).unwrap());
         cookie.set_path("/");
+        cookie.set_max_age(COOKIE_MAX_AGE);
         cookie.set_same_site(SameSite::None);
         self.jar.signed_mut(&self.key).add(cookie);
     }
