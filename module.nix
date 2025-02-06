@@ -39,7 +39,7 @@
 
       content = lib.mkOption {
         description = "content folder to server. needs to contain public, hidden and protected subfolders";
-        type = t.pathInStore;
+        type = t.nonEmptyStr;
       };
       authUrl = lib.mkOption {
         description = "url for oauth authorization";
