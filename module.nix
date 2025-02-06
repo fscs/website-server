@@ -66,7 +66,7 @@
     in
     lib.mkIf cfg.enable {
       users.users.fscs-website-server = {
-        isNormalUser = true;
+        isSystemUser = true;
       };
 
       services.postgresql = {
