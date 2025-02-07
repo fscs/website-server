@@ -65,8 +65,10 @@
       cfg = config.services.fscs-website-server;
     in
     lib.mkIf cfg.enable {
+      users.groups.fscs-website-server = { };
       users.users.fscs-website-server = {
         isSystemUser = true;
+        group = "fscs-website-server";
       };
 
       services.postgresql = {
