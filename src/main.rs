@@ -13,24 +13,31 @@ use crate::database::DatabasePool;
 
 #[derive(Parser)]
 struct Args {
-    // Port of the Application
+    /// Port of the Application
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
-    //The Host Interface
+    /// The Host Interface
     #[arg(long, default_value_t = {"127.0.0.1".to_string()})]
     host: String,
+    /// Directory to serve. Needs to contain public, hidden and private subdirs
     #[arg(long, required = true)]
     content_dir: PathBuf,
+    /// Log Level
     #[arg(long, default_value_t = {"Info".to_string()})]
     log_level: String,
+    /// Postgres Database Url to connect to
     #[arg(short, long)]
     database_url: Option<String>,
+    /// Oauth Url to authorize against
     #[arg(short, long)]
     auth_url: String,
+    /// Oauth Url to get tokens from
     #[arg(short, long)]
     token_url: String,
+    /// Oauth Url to get user info from
     #[arg(short, long)]
     user_info: String,
+    /// How many web workers to spawn. Default is the number of CPU cores
     #[arg(short = 'j', long)]
     workers: Option<usize>,
 }
