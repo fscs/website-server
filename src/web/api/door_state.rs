@@ -17,8 +17,9 @@ use crate::{
     web::{auth::User, RestStatus},
 };
 
-pub(crate) fn service(path: &'static str) -> Scope {
-    web::scope(path)
+/// Create the doorstate service under /doorstate
+pub(crate) fn service() -> Scope {
+    web::scope("/doorstate")
         .service(get_doorstate)
         .service(get_doorstate_between)
         .service(create_doorstate)

@@ -10,8 +10,9 @@ use std::sync::LazyLock;
 use crate::cache::TimedCache;
 use crate::domain::calendar::CalendarEvent;
 
-pub(crate) fn service(path: &'static str) -> Scope {
-    web::scope(path)
+// Create the calendar service under /calendar
+pub(crate) fn service() -> Scope {
+    web::scope("/calendar")
         .service(get_events)
         .service(get_branchen_events)
 }

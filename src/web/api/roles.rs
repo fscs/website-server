@@ -10,8 +10,9 @@ use crate::{
     web::{auth::User, RestStatus},
 };
 
-pub(crate) fn service(path: &'static str) -> Scope {
-    web::scope(path)
+// Create the roles service under /roles
+pub(crate) fn service() -> Scope {
+    web::scope("/roles")
         .service(get_roles)
         .service(create_role)
         .service(delete_role)

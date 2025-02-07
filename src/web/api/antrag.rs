@@ -15,8 +15,9 @@ use crate::{
     web::{auth::User, RestStatus},
 };
 
-pub(crate) fn service(path: &'static str) -> Scope {
-    let scope = web::scope(path)
+/// Create the antrags service under /anträge
+pub(crate) fn service() -> Scope {
+    let scope = web::scope("/anträge")
         .service(get_anträge)
         .service(create_antrag)
         .service(get_orphan_anträge);

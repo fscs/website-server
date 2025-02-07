@@ -18,8 +18,9 @@ use crate::{
     web::RestStatus,
 };
 
-pub(crate) fn service(path: &'static str) -> Scope {
-    let scope = web::scope(path)
+/// Create the persons service under /persons
+pub(crate) fn service() -> Scope {
+    let scope = web::scope("/persons")
         .service(get_persons)
         .service(put_person)
         .service(get_persons_by_role)

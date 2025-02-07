@@ -383,8 +383,9 @@ pub(crate) fn oauth_client() -> OauthClient {
     }
 }
 
-pub(crate) fn service(path: &'static str) -> actix_web::Scope {
-    web::scope(path)
+/// Create the auth service under /auth
+pub(crate) fn service() -> actix_web::Scope {
+    web::scope("/auth")
         .service(login)
         .service(callback)
         .service(logout)

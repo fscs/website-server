@@ -131,10 +131,10 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .wrap(Logger::default())
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
-            .service(auth::service("/auth"))
+            .service(auth::service())
             // /api/docs needs to be before /api
             .service(SwaggerUi::new("/api/docs/{_:.*}").url("/api/openapi.json", ApiDoc::openapi()))
-            .service(api::service("/api"))
+            .service(api::service())
             .service(serve_files)
     });
 

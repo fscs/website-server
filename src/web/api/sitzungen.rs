@@ -22,8 +22,9 @@ use crate::domain::{
 };
 use crate::web::{auth::User, RestStatus};
 
-pub(crate) fn service(path: &'static str) -> Scope {
-    let scope = web::scope(path)
+/// Create the sitzungs service under /sitzungen
+pub(crate) fn service() -> Scope {
+    let scope = web::scope("/sitzungen")
         .service(get_sitzungen)
         .service(post_sitzungen)
         .service(get_sitzungen_between)
