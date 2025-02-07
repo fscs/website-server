@@ -58,6 +58,12 @@
         type = t.listOf t.nonEmptyStr;
         default = [ ];
       };
+      allowedCorsOrigins = lib.mkOption {
+        description = "list of origins to allow for CORS";
+        type = t.listOf t.nonEmptyStr;
+        example = ''[ "https://hhu-fscs.de" ]'';
+        default = [ ];
+      };
     };
 
   config =
@@ -89,6 +95,7 @@
             auth-url = cfg.authUrl;
             token-url = cfg.tokenUrl;
             user-info = cfg.userInfoUrl;
+            cors-allowed-origin = cfg.allowedCorsOrigins;
           };
 
           args = lib.escapeShellArgs ((lib.cli.toGNUCommandLine { } argSet) ++ cfg.extraFlags);

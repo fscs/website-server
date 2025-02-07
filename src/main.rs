@@ -40,6 +40,9 @@ struct Args {
     /// How many web workers to spawn. Default is the number of CPU cores
     #[arg(short = 'j', long)]
     workers: Option<usize>,
+    /// Cors origin to allow request from. Can be specified multiple times
+    #[arg(long)]
+    cors_allowed_origin: Vec<String>,
 }
 
 struct ContentDir {

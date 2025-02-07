@@ -115,19 +115,18 @@ struct ApiDoc;
 
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     let server = HttpServer::new(move || {
+        let mut cors = Cors::default()
+            .allow_any_method()
+            .allow_any_header()
+            .supports_credentials();
+        
+        for allowed in &ARGS.cors_allowed_origin {
+           cors = cors.allowed_origin(allowed.as_str()) 
+        }
+
         App::new()
             .wrap(AuthMiddle)
-            .wrap(
-                Cors::default()
-                    .allowed_origin_fn(|o, _| {
-                        let bytes = o.as_bytes();
-
-                        bytes.ends_with(b".hhu-fscs.de")
-                    })
-                    .allow_any_method()
-                    .allow_any_header()
-                    .supports_credentials(),
-            )
+            .wrap(cors)
             .wrap(Logger::default())
             .app_data(Data::new(database.clone()))
             .app_data(Data::new(oauth_client()))
