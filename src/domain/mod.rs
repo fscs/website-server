@@ -20,6 +20,10 @@ pub enum Error {
     Database(#[from] sqlx::Error),
     #[error("io error")]
     Io(#[from] std::io::Error),
+    #[error("request error")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("{0}")]
+    Message(String),
 }
 
 pub trait SitzungAntragService: SitzungRepo + AntragTopMapRepo {}

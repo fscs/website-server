@@ -64,6 +64,11 @@
         example = ''[ "https://hhu-fscs.de" ]'';
         default = [ ];
       };
+      calendars = lib.mkOption {
+        description = "ical calendars to make available under /api/calendar/<name>";
+        type = t.attrsOf t.nonEmptyStr;
+        default = { };
+      };
     };
 
   config =
@@ -96,6 +101,7 @@
             token-url = cfg.tokenUrl;
             user-info = cfg.userInfoUrl;
             cors-allowed-origin = cfg.allowedCorsOrigins;
+            calendar = lib.mapAttrsToList (name: url: "${name}=${url}") cfg.calendars;
           };
 
           args = lib.escapeShellArgs ((lib.cli.toGNUCommandLine { } argSet) ++ cfg.extraFlags);

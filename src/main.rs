@@ -2,7 +2,7 @@
 
 use clap::Parser;
 use log::LevelFilter;
-use std::{convert::identity, path::PathBuf, str::FromStr, sync::LazyLock};
+use std::{convert::identity, error::Error, path::PathBuf, str::FromStr, sync::LazyLock};
 
 mod cache;
 mod database;
@@ -43,6 +43,23 @@ struct Args {
     /// Cors origin to allow request from. Can be specified multiple times
     #[arg(long)]
     cors_allowed_origin: Vec<String>,
+    /// Define an ical calender to fetch, formatted like name=calendar-url. The calendar will be
+    /// available under /api/calendar/<name>. Can be specified multiple times.
+    #[arg(short = 'C', long = "calendar", value_parser = parse_key_val::<String, String>)]
+    calendars: Vec<(String, String)>,
+}
+
+fn parse_key_val<T, U>(s: &str) -> Result<(T, U), Box<dyn Error + Send + Sync + 'static>>
+where
+    T: std::str::FromStr,
+    T::Err: Error + Send + Sync + 'static,
+    U: std::str::FromStr,
+    U::Err: Error + Send + Sync + 'static,
+{
+    let pos = s
+        .find('=')
+        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+    Ok((s[..pos].parse()?, s[pos + 1..].parse()?))
 }
 
 struct ContentDir {

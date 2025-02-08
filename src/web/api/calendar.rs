@@ -1,81 +1,98 @@
-use actix_web::web::Json;
-use actix_web::{get, web, HttpResponse, Responder, Scope};
-use anyhow::anyhow;
+use actix_web::web::{Data, Path};
+use actix_web::{get, web, Responder, Scope};
 use chrono::{DateTime, NaiveTime, Utc};
 use icalendar::{Component, Event, EventLike};
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::LazyLock;
 
 use crate::cache::TimedCache;
 use crate::domain::calendar::CalendarEvent;
+use crate::domain::{self, Result};
+use crate::web::RestStatus;
+use crate::ARGS;
+
+type CalendarCacheMap = HashMap<String, TimedCache<Result<Vec<CalendarEvent>>>>;
 
 // Create the calendar service under /calendar
 pub(crate) fn service() -> Scope {
+    let mut calendar_map: CalendarCacheMap = HashMap::new();
+
+    for (name, url) in &ARGS.calendars {
+        calendar_map.insert(
+            name.clone(),
+            TimedCache::with_generator(
+                || request_calendar(url.as_str()),
+                std::time::Duration::from_secs(60 * 60 * 4),
+            ),
+        );
+    }
+
     web::scope("/calendar")
-        .service(get_events)
-        .service(get_branchen_events)
+        .app_data(Data::new(calendar_map))
+        .service(get_calendar_by_name)
+        .service(get_calendars)
 }
 
 #[utoipa::path(
     path = "/api/calendar/",
     responses(
-        (status = 200, description = "Success", body = CalendarEvent),
+        (status = 200, description = "Success", body = Vec<String>),
         (status = 400, description = "Bad Request"),
     )
 )]
 #[get("/")]
-async fn get_events() -> impl Responder {
-    static CACHE: LazyLock<TimedCache<anyhow::Result<Vec<CalendarEvent>>>> = LazyLock::new(|| {
-        TimedCache::with_generator(
-            || {
-                request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CAx5MEp7cGrQ6cEe?export")
-            },
-            std::time::Duration::from_secs(60 * 60 * 4),
-        )
-    });
-    let Ok(ref x) = *CACHE.get().await else {
-        return HttpResponse::InternalServerError().body("Could not access Calendar");
-    };
-    HttpResponse::Ok().json(Json(x.clone()))
+async fn get_calendars() -> impl Responder {
+    RestStatus::Success(Some(
+        ARGS.calendars
+            .iter()
+            .map(|(name, _)| name)
+            .collect::<Vec<_>>(),
+    ))
 }
 
 #[utoipa::path(
-    path = "/api/calendar/branchen/",
+    path = "/api/calendar/{calendar-name}/",
     responses(
         (status = 200, description = "Success", body = CalendarEvent),
         (status = 400, description = "Bad Request"),
+        (status = 404, description = "Not Found"),
     )
 )]
-#[get("/branchen/")]
-async fn get_branchen_events() -> impl Responder {
-    static CACHE: LazyLock<TimedCache<anyhow::Result<Vec<CalendarEvent>>>> = LazyLock::new(|| {
-        TimedCache::with_generator(
-            || {
-                request_calendar("https://nextcloud.inphima.de/remote.php/dav/public-calendars/CKpykNdtKHkA6Z9B?export")
-            },
-            std::time::Duration::from_secs(60 * 60),
-        )
-    });
-
-    let Ok(ref x) = *CACHE.try_get().await else {
-        return HttpResponse::InternalServerError().body("Could not access Calendar");
+#[get("/{name}/")]
+async fn get_calendar_by_name(
+    name: Path<String>,
+    calendars: Data<CalendarCacheMap>,
+) -> Result<impl Responder> {
+    log::info!("here i am {}", name);
+    let Some(calendar_cache) = calendars.get(name.as_str()) else {
+        return Ok(RestStatus::Success(None));
     };
-    HttpResponse::Ok().json(Json(x.clone()))
+
+    log::info!("found it");
+
+    let Ok(ref calendar) = *calendar_cache.get().await else {
+        return Err(domain::Error::Message(String::from(
+            "failed to fetch calendar",
+        )));
+    };
+
+    Ok(RestStatus::Success(Some(calendar.clone())))
 }
 
 fn request_calendar<'a>(
     url: &str,
-) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<CalendarEvent>>> + 'a>> {
+) -> Pin<Box<dyn Future<Output = Result<Vec<CalendarEvent>>> + 'a>> {
     let url = url.to_owned();
     Box::pin(async { request_cal(url).await })
 }
 
-async fn request_cal(url: String) -> anyhow::Result<Vec<CalendarEvent>> {
+async fn request_cal(url: String) -> Result<Vec<CalendarEvent>> {
     let calendar = reqwest::get(&url).await?.text().await?;
 
     let calendar = icalendar::parser::unfold(&calendar);
-    let calendar = icalendar::parser::read_calendar(&calendar).map_err(|e| anyhow!("{:?}", e))?;
+    let calendar =
+        icalendar::parser::read_calendar(&calendar).map_err(|s| domain::Error::Message(s))?;
 
     let mut events = icalendar::Calendar::from(calendar)
         .components
