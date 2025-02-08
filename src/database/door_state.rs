@@ -86,7 +86,7 @@ mod test {
         assert_eq!(state.time, datetime);
         assert_eq!(state.is_open, is_open);
 
-        Ok(())
+        panic!();
     }
 
     #[sqlx::test(fixtures("gimme_door_states"))]
