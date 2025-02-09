@@ -14,8 +14,7 @@ use crate::ARGS;
 
 type CalendarCacheMap = HashMap<String, TimedCache<Result<Vec<CalendarEvent>>>>;
 
-// Create the calendar service under /calendar
-pub(crate) fn service() -> Scope {
+pub(crate) fn app_data() -> CalendarCacheMap {
     let mut calendar_map: CalendarCacheMap = HashMap::new();
 
     for (name, url) in &ARGS.calendars {
@@ -28,8 +27,12 @@ pub(crate) fn service() -> Scope {
         );
     }
 
+    calendar_map
+}
+
+// Create the calendar service under /calendar
+pub(crate) fn service() -> Scope {
     web::scope("/calendar")
-        .app_data(Data::new(calendar_map))
         .service(get_calendar_by_name)
         .service(get_calendars)
 }
@@ -64,12 +67,9 @@ async fn get_calendar_by_name(
     name: Path<String>,
     calendars: Data<CalendarCacheMap>,
 ) -> Result<impl Responder> {
-    log::info!("here i am {}", name);
     let Some(calendar_cache) = calendars.get(name.as_str()) else {
         return Ok(RestStatus::Success(None));
     };
-
-    log::info!("found it");
 
     let Ok(ref calendar) = *calendar_cache.get().await else {
         return Err(domain::Error::Message(String::from(

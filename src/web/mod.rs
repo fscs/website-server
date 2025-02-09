@@ -114,6 +114,9 @@ impl FromRequest for DatabaseConnection {
 struct ApiDoc;
 
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
+    let database_data = Data::new(database);
+    let calendar_data = Data::new(api::calendar::app_data());
+    
     let server = HttpServer::new(move || {
         let mut cors = Cors::default()
             .allow_any_method()
@@ -128,7 +131,8 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .wrap(AuthMiddle)
             .wrap(cors)
             .wrap(Logger::default())
-            .app_data(Data::new(database.clone()))
+            .app_data(database_data.clone())
+            .app_data(calendar_data.clone())
             .app_data(Data::new(oauth_client()))
             .service(auth::service())
             // /api/docs needs to be before /api
