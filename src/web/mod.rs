@@ -146,6 +146,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                     || path.starts_with("/js")
                     || path.starts_with("/favicon.ico")
                     || path.starts_with("/css")
+                    || path.starts_with("/images")
                     || path.starts_with("/scss"))
                 {
                     let new_path = format!("/de{}", path);
