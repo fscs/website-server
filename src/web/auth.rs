@@ -405,7 +405,7 @@ fn redirect_url<'a>(path: &str, request: HttpRequest) -> Cow<'a, RedirectUrl> {
     )
 }
 
-#[get("/login/")]
+#[get("/login")]
 async fn login(
     oauth_client: web::Data<OauthClient>,
     path: web::Query<PathParam>,
@@ -433,7 +433,7 @@ async fn login(
         .finish()
 }
 
-#[get("/logout/")]
+#[get("/logout")]
 async fn logout() -> impl Responder {
     //rmove cookies and redirect to /
     let mut cookie_at = Cookie::build("access_token", "").path("/").finish();
@@ -451,7 +451,7 @@ async fn logout() -> impl Responder {
         .finish()
 }
 
-#[get("/callback/")]
+#[get("/callback")]
 async fn callback(
     oauth_client: web::Data<OauthClient>,
     query: web::Query<AuthRequest>,
