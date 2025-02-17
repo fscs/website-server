@@ -20,6 +20,7 @@ use actix_web::{
     ResponseError,
 };
 use futures_util::future::LocalBoxFuture;
+use reqwest::blocking::Request;
 use serde::Serialize;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -138,10 +139,10 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .wrap_fn(|req, srv| {
                 let path = req.path().to_owned();
 
-                if !path.starts_with("/de")
-                    || !path.starts_with("/api")
-                    || !path.starts_with("/auth")
-                    || !path.starts_with("/en")
+                if !(path.starts_with("/de")
+                    || path.starts_with("/api")
+                    || path.starts_with("/auth")
+                    || path.starts_with("/en"))
                 {
                     let new_path = format!("/de{}", path);
 
