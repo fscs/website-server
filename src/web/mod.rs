@@ -1,18 +1,25 @@
-use std::future::Future;
+use std::future::{ready, Future, Ready};
 use std::path::{Component, Path, PathBuf};
 use std::pin::Pin;
+use std::rc::Rc;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::task::{Context, Poll};
 
 use actix_cors::Cors;
 use actix_files::NamedFile;
-use actix_http::StatusCode;
+use actix_http::{header, StatusCode, Uri};
+use actix_utils::future::ok;
 use actix_web::body::BoxBody;
-use actix_web::dev::Payload;
+use actix_web::dev::{Payload, Service, ServiceRequest, ServiceResponse, Transform, Url};
 use actix_web::http::header::{CacheControl, CacheDirective};
 use actix_web::middleware::{Logger, TrailingSlash};
 use actix_web::web::Data;
 use actix_web::{
-    get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
+    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
+    ResponseError,
 };
+use futures_util::future::LocalBoxFuture;
 use serde::Serialize;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -128,6 +135,32 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
         }
 
         App::new()
+            .wrap_fn(|req, srv| {
+                let path = req.path().to_owned();
+
+                if !path.starts_with("/de")
+                    || !path.starts_with("/api")
+                    || !path.starts_with("/auth")
+                    || !path.starts_with("/en")
+                {
+                    let new_path = format!("/de{}", path);
+
+                    // Respond with a 307 Temporary Redirect
+                    let response =
+                        HttpResponseBuilder::new(actix_web::http::StatusCode::TEMPORARY_REDIRECT)
+                            .append_header((header::LOCATION, new_path))
+                            .finish();
+
+                    return Box::pin(async move { Ok(req.into_response(response)) })
+                        as LocalBoxFuture<_>;
+                }
+
+                let fut = srv.call(req);
+                Box::pin(async move {
+                    let res = fut.await?;
+                    Ok(res)
+                })
+            })
             .wrap(actix_web::middleware::NormalizePath::new(
                 TrailingSlash::Trim,
             ))
