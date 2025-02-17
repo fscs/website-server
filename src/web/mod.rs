@@ -129,7 +129,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
 
         App::new()
             .wrap(actix_web::middleware::NormalizePath::new(
-                TrailingSlash::Always,
+                TrailingSlash::Trim,
             ))
             .wrap(AuthMiddle)
             .wrap(cors)
