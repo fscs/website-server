@@ -131,6 +131,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .wrap(actix_web::middleware::NormalizePath::new(
                 TrailingSlash::Trim,
             ))
+            .wrap(actix_web::middleware::Compress::default())
             .wrap(AuthMiddle)
             .wrap(cors)
             .wrap(Logger::default())
@@ -140,6 +141,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .service(auth::service())
             // /api/docs needs to be before /api
             .service(SwaggerUi::new("/api/docs/{_:.*}").url("/api/openapi.json", ApiDoc::openapi()))
+            .service(SwaggerUi::new("/api/docs{_:.*}").url("/api/openapi.json", ApiDoc::openapi()))
             .service(api::service())
             .service(serve_files)
     });
