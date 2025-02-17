@@ -8,7 +8,7 @@ use actix_http::StatusCode;
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::http::header::{CacheControl, CacheDirective};
-use actix_web::middleware::Logger;
+use actix_web::middleware::{Logger, TrailingSlash};
 use actix_web::web::Data;
 use actix_web::{
     get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
@@ -128,6 +128,10 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
         }
 
         App::new()
+            .wrap(actix_web::middleware::NormalizePath::new(
+                TrailingSlash::Always,
+            ))
+            .wrap(actix_web::middleware::Compress::default())
             .wrap(AuthMiddle)
             .wrap(cors)
             .wrap(Logger::default())
