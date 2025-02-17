@@ -142,7 +142,9 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
                 if !(path.starts_with("/de")
                     || path.starts_with("/api")
                     || path.starts_with("/auth")
-                    || path.starts_with("/en"))
+                    || path.starts_with("/en")
+                    || path.starts_with("/js")
+                    || path.starts_with("/favicon.ico"))
                 {
                     let new_path = format!("/de{}", path);
 
