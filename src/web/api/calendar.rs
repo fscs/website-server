@@ -38,13 +38,13 @@ pub(crate) fn service() -> Scope {
 }
 
 #[utoipa::path(
-    path = "/api/calendar/",
+    path = "/api/calendar",
     responses(
         (status = 200, description = "Success", body = Vec<String>),
         (status = 400, description = "Bad Request"),
     )
 )]
-#[get("/")]
+#[get("")]
 async fn get_calendars() -> impl Responder {
     RestStatus::Success(Some(
         ARGS.calendars
@@ -55,14 +55,14 @@ async fn get_calendars() -> impl Responder {
 }
 
 #[utoipa::path(
-    path = "/api/calendar/{calendar-name}/",
+    path = "/api/calendar/{calendar-name}",
     responses(
         (status = 200, description = "Success", body = CalendarEvent),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
     )
 )]
-#[get("/{name}/")]
+#[get("/{name}")]
 async fn get_calendar_by_name(
     name: Path<String>,
     calendars: Data<CalendarCacheMap>,

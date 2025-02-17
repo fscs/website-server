@@ -117,13 +117,13 @@ pub struct AssocAntragParams {
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/",
+    path = "/api/sitzungen",
     responses(
         (status = 200, description = "Success", body = Vec<Sitzung>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/")]
+#[get("")]
 async fn get_sitzungen(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.sitzungen().await?;
 
@@ -131,7 +131,7 @@ async fn get_sitzungen(mut conn: DatabaseConnection) -> Result<impl Responder> {
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/",
+    path = "/api/sitzungen",
     request_body = CreateSitzungParams,
     responses(
         (status = 201, description = "Created", body = Sitzung),
@@ -140,7 +140,7 @@ async fn get_sitzungen(mut conn: DatabaseConnection) -> Result<impl Responder> {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/")]
+#[post("")]
 async fn post_sitzungen(
     _user: User,
     params: ActixJson<CreateSitzungParams>,
@@ -156,7 +156,7 @@ async fn post_sitzungen(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/first-after/",
+    path = "/api/sitzungen/first-after",
     params(FirstSitzungAfterParams),
     responses(
         (status = 200, description = "Success", body = SitzungWithTops),
@@ -165,7 +165,7 @@ async fn post_sitzungen(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/first-after/")]
+#[get("/first-after")]
 async fn get_first_sitzung_after(
     params: Query<FirstSitzungAfterParams>,
     mut conn: DatabaseConnection,
@@ -176,7 +176,7 @@ async fn get_first_sitzung_after(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/between/",
+    path = "/api/sitzungen/between",
     params(SitzungBetweenParams),
     responses(
         (status = 200, description = "Success", body = Vec<Sitzung>),
@@ -184,7 +184,7 @@ async fn get_first_sitzung_after(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/between/")]
+#[get("/between")]
 async fn get_sitzungen_between(
     params: Query<SitzungBetweenParams>,
     mut conn: DatabaseConnection,
@@ -195,14 +195,14 @@ async fn get_sitzungen_between(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/",
+    path = "/api/sitzungen/{sitzung_id}",
     responses(
         (status = 200, description = "Success", body = SitzungWithTops),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{sitzung_id}/")]
+#[get("/{sitzung_id}")]
 async fn get_sitzung_by_id(
     sitzung_id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -213,7 +213,7 @@ async fn get_sitzung_by_id(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/",
+    path = "/api/sitzungen/{sitzung_id}",
     request_body = UpdateSitzungParams,
     responses(
         (status = 200, description = "Success", body = Sitzung),
@@ -223,7 +223,7 @@ async fn get_sitzung_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}/")]
+#[patch("/{sitzung_id}")]
 async fn patch_sitzung_by_id(
     _user: User,
     sitzung_id: Path<Uuid>,
@@ -245,7 +245,7 @@ async fn patch_sitzung_by_id(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/",
+    path = "/api/sitzungen/{sitzung_id}",
     responses(
         (status = 200, description = "Success", body = Sitzung),
         (status = 401, description = "Unauthorized"),
@@ -253,7 +253,7 @@ async fn patch_sitzung_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}/")]
+#[delete("/{sitzung_id}")]
 async fn delete_sitzung_by_id(
     _user: User,
     sitzung_id: Path<Uuid>,
@@ -267,14 +267,14 @@ async fn delete_sitzung_by_id(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/abmeldungen/",
+    path = "/api/sitzungen/{sitzung_id}/abmeldungen",
     responses(
         (status = 200, description = "Success", body = Vec<Abmeldung>),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{sitzung_id}/abmeldungen/")]
+#[get("/{sitzung_id}/abmeldungen")]
 async fn get_abmeldungen_by_sitzung(
     sitzung_id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -289,7 +289,7 @@ async fn get_abmeldungen_by_sitzung(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/",
+    path = "/api/sitzungen/{sitzung_id}/tops",
     responses(
         (status = 200, description = "Success", body = Vec<TopWithAnträge>),
         (status = 400, description = "Bad Request"),
@@ -297,7 +297,7 @@ async fn get_abmeldungen_by_sitzung(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{sitzung_id}/tops/")]
+#[get("/{sitzung_id}/tops")]
 async fn get_tops(
     _user: User,
     sitzung_id: Path<Uuid>,
@@ -313,7 +313,7 @@ async fn get_tops(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/",
+    path = "/api/sitzungen/{sitzung_id}/tops",
     request_body = CreateTopParams,
     responses(
         (status = 201, description = "Created", body = Top),
@@ -323,7 +323,7 @@ async fn get_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/{sitzung_id}/tops/")]
+#[post("/{sitzung_id}/tops")]
 async fn post_tops(
     _user: User,
     sitzung_id: Path<Uuid>,
@@ -349,7 +349,7 @@ async fn post_tops(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/",
+    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}",
     request_body = UpdateTopParams,
     responses(
         (status = 200, description = "Sucess", body = Top),
@@ -359,7 +359,7 @@ async fn post_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}/tops/{top_id}/")]
+#[patch("/{sitzung_id}/tops/{top_id}")]
 async fn patch_tops(
     _user: User,
     path_params: Path<(Uuid, Uuid)>,
@@ -389,7 +389,7 @@ async fn patch_tops(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/",
+    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}",
     responses(
         (status = 200, description = "Sucess", body = Top),
         (status = 401, description = "Unauthorized"),
@@ -397,7 +397,7 @@ async fn patch_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}/tops/{top_id}/")]
+#[delete("/{sitzung_id}/tops/{top_id}")]
 async fn delete_tops(
     _user: User,
     path_params: Path<(Uuid, Uuid)>,
@@ -417,7 +417,7 @@ async fn delete_tops(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc/",
+    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc",
     request_body = AssocAntragParams,
     responses(
         (status = 200, description = "Sucess", body = AntragTopMapping),
@@ -427,7 +427,7 @@ async fn delete_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}/tops/{top_id}/assoc/")]
+#[patch("/{sitzung_id}/tops/{top_id}/assoc")]
 async fn assoc_antrag(
     _user: User,
     path_params: Path<(Uuid, Uuid)>,
@@ -454,7 +454,7 @@ async fn assoc_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc/",
+    path = "/api/sitzungen/{sitzung_id}/tops/{top_id}/assoc",
     request_body = AssocAntragParams,
     responses(
         (status = 200, description = "Sucess", body = AntragTopMapping),
@@ -464,7 +464,7 @@ async fn assoc_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}/tops/{top_id}/assoc/")]
+#[delete("/{sitzung_id}/tops/{top_id}/assoc")]
 async fn delete_assoc_antrag(
     _user: User,
     path_params: Path<(Uuid, Uuid)>,

@@ -6,7 +6,10 @@ use validator::Validate;
 
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
-    domain::{persons::{PersonRepo, Role}, Result},
+    domain::{
+        persons::{PersonRepo, Role},
+        Result,
+    },
     web::{auth::User, RestStatus},
 };
 
@@ -25,13 +28,13 @@ pub struct RoleParams {
 }
 
 #[utoipa::path(
-    path = "/api/roles/",
+    path = "/api/roles",
     responses(
         (status = 200, description = "Success", body = Vec<Role>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/")]
+#[get("")]
 async fn get_roles(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.roles().await?;
 
@@ -39,7 +42,7 @@ async fn get_roles(mut conn: DatabaseConnection) -> Result<impl Responder> {
 }
 
 #[utoipa::path(
-    path = "/api/roles/",
+    path = "/api/roles",
     request_body = RoleParams,
     responses(
         (status = 201, description = "Created", body = Role),
@@ -48,7 +51,7 @@ async fn get_roles(mut conn: DatabaseConnection) -> Result<impl Responder> {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("/")]
+#[put("")]
 async fn create_role(
     _user: User,
     params: ActixJson<RoleParams>,
@@ -62,7 +65,7 @@ async fn create_role(
 }
 
 #[utoipa::path(
-    path = "/api/roles/",
+    path = "/api/roles",
     request_body = RoleParams,
     responses(
         (status = 200, description = "Success"),
@@ -72,7 +75,7 @@ async fn create_role(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/")]
+#[delete("")]
 async fn delete_role(
     _user: User,
     params: ActixJson<RoleParams>,

@@ -129,13 +129,13 @@ fn validate_abmeldung_params(
 }
 
 #[utoipa::path(
-    path = "/api/persons/",
+    path = "/api/persons",
     responses(
         (status = 200, description = "Success", body = Vec<PublicPerson>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/")]
+#[get("")]
 async fn get_persons(user: Option<User>, mut conn: DatabaseConnection) -> Result<impl Responder> {
     let persons = conn.persons().await?;
 
@@ -155,14 +155,14 @@ async fn get_persons(user: Option<User>, mut conn: DatabaseConnection) -> Result
 }
 
 #[utoipa::path(
-    path = "/api/persons/{person_id}/",
+    path = "/api/persons/{person_id}",
     responses(
         (status = 200, description = "Success", body = PublicPerson),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{person_id}/")]
+#[get("/{person_id}")]
 async fn get_person_by_id(
     user: Option<User>,
     person_id: Path<Uuid>,
@@ -182,7 +182,7 @@ async fn get_person_by_id(
 }
 
 #[utoipa::path(
-    path = "/api/persons/",
+    path = "/api/persons",
     request_body = CreatePersonParams,
     responses(
         (status = 201, description = "Created", body = Person),
@@ -191,7 +191,7 @@ async fn get_person_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("/")]
+#[put("")]
 async fn put_person(
     _user: User,
     params: ActixJson<CreatePersonParams>,
@@ -212,7 +212,7 @@ async fn put_person(
 }
 
 #[utoipa::path(
-    path = "/api/persons/{person_id}/",
+    path = "/api/persons/{person_id}",
     responses(
         (status = 200, description = "Success", body = Person),
         (status = 401, description = "Unauthorized"),
@@ -220,7 +220,7 @@ async fn put_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{person_id}/")]
+#[delete("/{person_id}")]
 async fn delete_person_by_id(
     _user: User,
     person_id: Path<Uuid>,
@@ -234,7 +234,7 @@ async fn delete_person_by_id(
 }
 
 #[utoipa::path(
-    path = "/api/persons/{person_id}/",
+    path = "/api/persons/{person_id}",
     request_body = UpdatePersonParams,
     responses(
         (status = 200, description = "Success", body = Person),
@@ -244,7 +244,7 @@ async fn delete_person_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{person_id}/")]
+#[patch("/{person_id}")]
 async fn patch_person(
     _user: User,
     person_id: Path<Uuid>,
@@ -267,7 +267,7 @@ async fn patch_person(
 }
 
 #[utoipa::path(
-    path = "/api/persons/by-role/",
+    path = "/api/persons/by-role",
     params(PersonsByRoleParams),
     responses(
         (status = 200, description = "Success", body = Vec<PublicPerson>),
@@ -275,7 +275,7 @@ async fn patch_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/by-role/")]
+#[get("/by-role")]
 async fn get_persons_by_role(
     user: Option<User>,
     params: Query<PersonsByRoleParams>,
@@ -337,14 +337,14 @@ async fn get_person_by_user_name(
 }
 
 #[utoipa::path(
-    path = "/api/persons/{person_id}/roles/",
+    path = "/api/persons/{person_id}/roles",
     responses(
         (status = 200, description = "Success", body = Vec<String>),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{person_id}/roles/")]
+#[get("/{person_id}/roles")]
 async fn roles_by_person(
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -359,7 +359,7 @@ async fn roles_by_person(
 }
 
 #[utoipa::path(
-    path = "/api/persons/{person_id}/roles/",
+    path = "/api/persons/{person_id}/roles",
     request_body = RoleParams,
     responses(
         (status = 200, description = "Success"),
@@ -369,7 +369,7 @@ async fn roles_by_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("/{person_id}/roles/")]
+#[put("/{person_id}/roles")]
 async fn add_role_to_person(
     _user: User,
     person_id: Path<Uuid>,
@@ -390,7 +390,7 @@ async fn add_role_to_person(
 }
 
 #[utoipa::path(
-    path = "/api/persons/{person_id}/roles/",
+    path = "/api/persons/{person_id}/roles",
     request_body = RoleParams,
     responses(
         (status = 200, description = "Success"),
@@ -400,7 +400,7 @@ async fn add_role_to_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{person_id}/roles/")]
+#[delete("/{person_id}/roles")]
 async fn revoke_role_from_person(
     _user: User,
     person_id: Path<Uuid>,
@@ -421,14 +421,14 @@ async fn revoke_role_from_person(
 }
 
 #[utoipa::path(
-    path = "/api/persons/{person_id}/abmeldungen/",
+    path = "/api/persons/{person_id}/abmeldungen",
     responses(
         (status = 200, description = "Success", body = Abmeldung),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{person_id}/abmeldungen/")]
+#[get("/{person_id}/abmeldungen")]
 async fn get_abmeldungen_by_person(
     _user: User,
     person_id: Path<Uuid>,
@@ -444,7 +444,7 @@ async fn get_abmeldungen_by_person(
 }
 
 #[utoipa::path(
-    path = "/api/persons/{person_id}/abmeldungen/",
+    path = "/api/persons/{person_id}/abmeldungen",
     request_body = AbmeldungParams,
     responses(
         (status = 201, description = "Created", body = Abmeldung),
@@ -454,7 +454,7 @@ async fn get_abmeldungen_by_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("/{person_id}/abmeldungen/")]
+#[put("/{person_id}/abmeldungen")]
 async fn create_abmeldung(
     _user: User,
     person_id: Path<Uuid>,
@@ -475,7 +475,7 @@ async fn create_abmeldung(
 }
 
 #[utoipa::path(
-    path = "/api/persons/{person_id}/abmeldungen/",
+    path = "/api/persons/{person_id}/abmeldungen",
     params(("person_id" = Uuid, Path, description = "person_id")),
     request_body = AbmeldungParams,
     responses(
@@ -486,7 +486,7 @@ async fn create_abmeldung(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{person_id}/abmeldungen/")]
+#[delete("/{person_id}/abmeldungen")]
 async fn revoke_abmeldung(
     _user: User,
     person_id: Path<Uuid>,

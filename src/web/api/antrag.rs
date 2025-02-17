@@ -11,7 +11,11 @@ use validator::Validate;
 
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
-    domain::{antrag::{Antrag, AntragRepo}, antrag_top_map::AntragTopMapRepo, Result},
+    domain::{
+        antrag::{Antrag, AntragRepo},
+        antrag_top_map::AntragTopMapRepo,
+        Result,
+    },
     web::{auth::User, RestStatus},
 };
 
@@ -56,13 +60,13 @@ pub struct UpdateAntragParams {
 }
 
 #[utoipa::path(
-    path = "/api/anträge/",
+    path = "/api/anträge",
     responses(
         (status = 200, description = "Success", body = Vec<Antrag>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/")]
+#[get("")]
 async fn get_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.anträge().await?;
 
@@ -70,13 +74,13 @@ async fn get_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
 }
 
 #[utoipa::path(
-    path = "/api/anträge/orphans/",
+    path = "/api/anträge/orphans",
     responses(
         (status = 200, description = "Success", body = Vec<Antrag>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/orphans/")]
+#[get("/orphans")]
 async fn get_orphan_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.orphan_anträge().await?;
 
@@ -84,14 +88,14 @@ async fn get_orphan_anträge(mut conn: DatabaseConnection) -> Result<impl Respon
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}/",
+    path = "/api/anträge/{antrag_id}",
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{antrag_id}/")]
+#[get("/{antrag_id}")]
 async fn get_antrag_by_id(
     antrag_id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -102,7 +106,7 @@ async fn get_antrag_by_id(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/",
+    path = "/api/anträge",
     request_body = CreateAntragParams,
     responses(
         (status = 201, description = "Created", body = Antrag),
@@ -111,7 +115,7 @@ async fn get_antrag_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/")]
+#[post("")]
 async fn create_antrag(
     _user: User,
     params: ActixJson<CreateAntragParams>,
@@ -132,7 +136,7 @@ async fn create_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}/",
+    path = "/api/anträge/{antrag_id}",
     request_body = UpdateAntragParams,
     responses(
         (status = 200, description = "Success", body = Antrag),
@@ -142,7 +146,7 @@ async fn create_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{antrag_id}/")]
+#[patch("/{antrag_id}")]
 async fn patch_antrag(
     _user: User,
     params: ActixJson<UpdateAntragParams>,
@@ -165,7 +169,7 @@ async fn patch_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}/",
+    path = "/api/anträge/{antrag_id}",
     responses(
         (status = 200, description = "Success"),
         (status = 401, description = "Unauthorized"),
@@ -173,7 +177,7 @@ async fn patch_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{antrag_id}/")]
+#[delete("/{antrag_id}")]
 async fn delete_antrag(
     _user: User,
     antrag_id: Path<Uuid>,

@@ -13,7 +13,10 @@ use validator::{Validate, ValidationError};
 
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
-    domain::{door_state::{DoorState, DoorStateRepo}, Result},
+    domain::{
+        door_state::{DoorState, DoorStateRepo},
+        Result,
+    },
     web::{auth::User, RestStatus},
 };
 
@@ -49,13 +52,13 @@ pub struct CreateDoorStateParams {
 }
 
 #[utoipa::path(
-    path = "/api/doorstate/",
+    path = "/api/doorstate",
     responses(
         (status = 200, description = "Success", body = DoorState),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/")]
+#[get("")]
 async fn get_doorstate(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let now = chrono::Utc::now();
     let result = conn.door_state_at(now).await?;
@@ -64,7 +67,7 @@ async fn get_doorstate(mut conn: DatabaseConnection) -> Result<impl Responder> {
 }
 
 #[utoipa::path(
-    path = "/api/doorstate/between/",
+    path = "/api/doorstate/between",
     params(GetDoorStateParams),
     responses(
         (status = 200, description = "Success", body = Vec<DoorState>),
@@ -72,7 +75,7 @@ async fn get_doorstate(mut conn: DatabaseConnection) -> Result<impl Responder> {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/between/")]
+#[get("/between")]
 async fn get_doorstate_between(
     params: Query<GetDoorStateParams>,
     mut conn: DatabaseConnection,
@@ -83,7 +86,7 @@ async fn get_doorstate_between(
 }
 
 #[utoipa::path(
-    path = "/api/doorstate/",
+    path = "/api/doorstate",
     params(CreateDoorStateParams),
     request_body = CreateDoorStateParams,
     responses(
@@ -93,7 +96,7 @@ async fn get_doorstate_between(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/")]
+#[post("")]
 async fn create_doorstate(
     _user: User,
     params: ActixJson<CreateDoorStateParams>,
