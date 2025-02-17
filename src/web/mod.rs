@@ -116,22 +116,21 @@ struct ApiDoc;
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     let database_data = Data::new(database);
     let calendar_data = Data::new(api::calendar::app_data());
-    
+
     let server = HttpServer::new(move || {
         let mut cors = Cors::default()
             .allow_any_method()
             .allow_any_header()
             .supports_credentials();
-        
+
         for allowed in &ARGS.cors_allowed_origin {
-           cors = cors.allowed_origin(allowed.as_str()) 
+            cors = cors.allowed_origin(allowed.as_str())
         }
 
         App::new()
             .wrap(actix_web::middleware::NormalizePath::new(
                 TrailingSlash::Always,
             ))
-            .wrap(actix_web::middleware::Compress::default())
             .wrap(AuthMiddle)
             .wrap(cors)
             .wrap(Logger::default())
