@@ -135,7 +135,7 @@ where
                         jar.jar
                             .get("user")
                             .map(Cookie::value)
-                            .map(|u| format!("user_info={u}")),
+                            .map(|u| format!("user={u}")),
                     ]
                     .into_iter()
                     .flatten()
