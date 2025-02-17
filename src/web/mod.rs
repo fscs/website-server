@@ -139,7 +139,17 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .wrap_fn(|req, srv| {
                 let path = req.path().to_owned();
 
-                if !(path.starts_with("/de") || path.starts_with("/en") || path.ends_with(".html"))
+                if !(path.starts_with("/de")
+                    || path.starts_with("/api")
+                    || path.starts_with("/auth")
+                    || path.starts_with("/en")
+                    || path.starts_with("/js")
+                    || path.starts_with("/favicon.ico")
+                    || path.starts_with("/css")
+                    || path.starts_with("/images")
+                    || path.contains(".js")
+                    || path.contains(".css")
+                    || path.starts_with("/scss"))
                 {
                     let new_path = format!("/de{}", path);
 
