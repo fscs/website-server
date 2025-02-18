@@ -174,10 +174,10 @@ async fn default_redirect(
     };
 
     let path = req.path();
-    let fs_path = base_dir.join(path);
+    let fs_path = base_dir.join(&path[1..]);
 
     if !fs_path.exists() {
-        let fs_redirect_path = base_dir.join(format!("/de/{}", path));
+        let fs_redirect_path = base_dir.join(format!("de{}", path));
 
         if fs_redirect_path.exists() {
             let new_path = format!("/de{}", path);
@@ -187,6 +187,8 @@ async fn default_redirect(
                 .finish();
 
             return Ok(req.into_response(response).map_into_boxed_body());
+        } else {
+            println!("no");
         }
     }
 
