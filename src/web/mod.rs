@@ -114,8 +114,6 @@ impl FromRequest for DatabaseConnection {
 ))]
 struct ApiDoc;
 
-const REDIRECT_DENY_LIST: &[&str] = &["api", "auth", "de", "en"];
-
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     let database_data = Data::new(database);
     let calendar_data = Data::new(api::calendar::app_data());
@@ -162,25 +160,34 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
 }
 
 async fn default_redirect(
-    req: ServiceRequest,
+    mut req: ServiceRequest,
     next: Next<BoxBody>,
 ) -> Result<ServiceResponse<BoxBody>, actix_web::Error> {
+    let user = req.extract::<Option<User>>().await?;
+
+    let base_dir = match user {
+        Some(user) => match user.is_rat() {
+            true => CONTENT_DIR.protected.as_path(),
+            false => CONTENT_DIR.hidden.as_path(),
+        },
+        None => CONTENT_DIR.public.as_path(),
+    };
+
     let path = req.path();
+    let fs_path = base_dir.join(path);
 
-    let mut components = path.split('/').filter(|c| !c.is_empty());
-    let first_component = components.next().unwrap_or("");
-    let last_component = components.last();
+    if !fs_path.exists() {
+        let fs_redirect_path = base_dir.join(format!("/de/{}", path));
 
-    let is_html_file = last_component.map_or(false, |inner| inner.ends_with(".html"));
+        if fs_redirect_path.exists() {
+            let new_path = format!("/de{}", path);
 
-    if is_html_file && !REDIRECT_DENY_LIST.contains(&first_component) {
-        let new_path = format!("/de{}", path);
+            let response = HttpResponseBuilder::new(actix_web::http::StatusCode::MOVED_PERMANENTLY)
+                .append_header((header::LOCATION, new_path))
+                .finish();
 
-        let response = HttpResponseBuilder::new(actix_web::http::StatusCode::MOVED_PERMANENTLY)
-            .append_header((header::LOCATION, new_path))
-            .finish();
-
-        return Ok(req.into_response(response).map_into_boxed_body());
+            return Ok(req.into_response(response).map_into_boxed_body());
+        }
     }
 
     Ok(next.call(req).await?.map_into_boxed_body())
