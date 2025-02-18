@@ -116,6 +116,7 @@
             User = config.users.users.fscs-website-server.name;
             Restart = "always";
             RestartSec = 5;
+            LimitNOFILE = "8192";
             CapabilityBoundingSet = [ "" ];
             DeviceAllow = [ "" ];
             DevicePolicy = "closed";
