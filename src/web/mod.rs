@@ -1,26 +1,19 @@
-use std::future::{ready, Future, Ready};
+use std::future::Future;
 use std::path::{Component, Path, PathBuf};
 use std::pin::Pin;
-use std::rc::Rc;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::task::{Context, Poll};
 
 use actix_cors::Cors;
 use actix_files::NamedFile;
-use actix_http::{header, StatusCode, Uri};
-use actix_utils::future::ok;
+use actix_http::{header, StatusCode};
 use actix_web::body::BoxBody;
-use actix_web::dev::{Payload, Service, ServiceRequest, ServiceResponse, Transform, Url};
+use actix_web::dev::{Payload, ServiceRequest, ServiceResponse};
 use actix_web::http::header::{CacheControl, CacheDirective};
-use actix_web::middleware::{Logger, TrailingSlash};
+use actix_web::middleware::{Logger, Next, TrailingSlash};
 use actix_web::web::Data;
 use actix_web::{
     get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
     ResponseError,
 };
-use futures_util::future::LocalBoxFuture;
-use reqwest::blocking::Request;
 use serde::Serialize;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -121,6 +114,8 @@ impl FromRequest for DatabaseConnection {
 ))]
 struct ApiDoc;
 
+const REDIRECT_DENY_LIST: &[&str] = &["api", "auth", "de", "en"];
+
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     let database_data = Data::new(database);
     let calendar_data = Data::new(api::calendar::app_data());
@@ -136,40 +131,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
         }
 
         App::new()
-            .wrap_fn(|req, srv| {
-                let path = req.path().to_owned();
-
-                if !(path.starts_with("/de")
-                    || path.starts_with("/api")
-                    || path.starts_with("/auth")
-                    || path.starts_with("/en")
-                    || path.starts_with("/js")
-                    || path.starts_with("/favicon.ico")
-                    || path.starts_with("/css")
-                    || path.starts_with("/images")
-                    || path.starts_with("/pagefind")
-                    || path.contains(".js")
-                    || path.contains(".css")
-                    || path.starts_with("/scss"))
-                {
-                    let new_path = format!("/de{}", path);
-
-                    // Respond with a 307 Temporary Redirect
-                    let response =
-                        HttpResponseBuilder::new(actix_web::http::StatusCode::TEMPORARY_REDIRECT)
-                            .append_header((header::LOCATION, new_path))
-                            .finish();
-
-                    return Box::pin(async move { Ok(req.into_response(response)) })
-                        as LocalBoxFuture<_>;
-                }
-
-                let fut = srv.call(req);
-                Box::pin(async move {
-                    let res = fut.await?;
-                    Ok(res)
-                })
-            })
+            .wrap(actix_web::middleware::from_fn(default_redirect))
             .wrap(actix_web::middleware::NormalizePath::new(
                 TrailingSlash::Trim,
             ))
@@ -197,6 +159,31 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     server.bind((ARGS.host.as_str(), ARGS.port))?.run().await?;
 
     Ok(())
+}
+
+async fn default_redirect(
+    req: ServiceRequest,
+    next: Next<BoxBody>,
+) -> Result<ServiceResponse<BoxBody>, actix_web::Error> {
+    let path = req.path();
+
+    let mut components = path.split('/').filter(|c| !c.is_empty());
+    let first_component = components.next().unwrap_or("");
+    let last_component = components.last();
+
+    let is_html_file = last_component.map_or(false, |inner| inner.ends_with(".html"));
+
+    if is_html_file && !REDIRECT_DENY_LIST.contains(&first_component) {
+        let new_path = format!("/de{}", path);
+
+        let response = HttpResponseBuilder::new(actix_web::http::StatusCode::MOVED_PERMANENTLY)
+            .append_header((header::LOCATION, new_path))
+            .finish();
+
+        return Ok(req.into_response(response).map_into_boxed_body());
+    }
+
+    Ok(next.call(req).await?.map_into_boxed_body())
 }
 
 #[get("/{filename:.*}")]
