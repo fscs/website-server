@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use async_std::sync::RwLock;
 use async_std::sync::{RwLockReadGuard, RwLockWriteGuard};
 use std::future::Future;
