@@ -16,6 +16,7 @@ use utoipauto::utoipauto;
 
 pub(crate) mod api;
 pub(crate) mod auth;
+pub(crate) mod calendar;
 pub(crate) mod files;
 
 use crate::database::{DatabaseConnection, DatabasePool, DatabaseTransaction};
@@ -112,7 +113,7 @@ struct ApiDoc;
 
 pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     let database_data = Data::new(database);
-    let calendar_data = Data::new(api::calendar::app_data());
+    let calendar_data = Data::new(calendar::CalendarData::new());
 
     let server = HttpServer::new(move || {
         let mut cors = Cors::default()
