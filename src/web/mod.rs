@@ -2,12 +2,13 @@ use std::future::Future;
 use std::pin::Pin;
 
 use actix_cors::Cors;
+use actix_http::header;
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
-use actix_web::middleware::{Logger, TrailingSlash};
-use actix_web::web::Data;
+use actix_web::middleware::{Compress, Logger, NormalizePath};
+use actix_web::web::{self, Data};
 use actix_web::{
-    App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
+    get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
 };
 use serde::Serialize;
 use utoipa::OpenApi;
@@ -126,22 +127,26 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
         }
 
         App::new()
-            .wrap(actix_web::middleware::NormalizePath::new(
-                TrailingSlash::Trim,
-            ))
-            .wrap(actix_web::middleware::Compress::default())
-            .wrap(AuthMiddle)
-            .wrap(cors)
-            .wrap(Logger::default())
+            // app data
             .app_data(database_data.clone())
             .app_data(calendar_data.clone())
             .app_data(Data::new(oauth_client()))
-            .service(auth::service())
-            // /api/docs needs to be before /api
+            // middlewares
+            .wrap(Compress::default())
+            .wrap(AuthMiddle)
+            .wrap(cors)
+            .wrap(Logger::default())
+            // /api/docs needs to be before /api. also cannot be wrapped with normalized path and
+            // needs this weird redirect, because its well special
+            .service(redirect_docs)
             .service(SwaggerUi::new("/api/docs/{_:.*}").url("/api/openapi.json", ApiDoc::openapi()))
-            .service(SwaggerUi::new("/api/docs{_:.*}").url("/api/openapi.json", ApiDoc::openapi()))
-            .service(api::service())
-            .service(files::service())
+            .service(
+                web::scope("")
+                    .wrap(NormalizePath::trim())
+                    .service(auth::service())
+                    .service(api::service())
+                    .service(files::service()),
+            )
     });
 
     let server = if let Some(workers) = ARGS.workers {
@@ -153,4 +158,11 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     server.bind((ARGS.host.as_str(), ARGS.port))?.run().await?;
 
     Ok(())
+}
+
+#[get("/api/docs")]
+pub async fn redirect_docs() -> impl Responder {
+    HttpResponse::PermanentRedirect()
+        .insert_header((header::LOCATION, "/api/docs/"))
+        .finish()
 }
