@@ -10,7 +10,7 @@ use actix_web::{
     dev::HttpServiceFactory,
     get,
     http::header::{CacheControl, CacheDirective},
-    HttpRequest, HttpResponse, HttpResponseBuilder, Responder,
+    HttpRequest, HttpResponse, Responder,
 };
 
 use crate::CONTENT_DIR;
@@ -116,7 +116,7 @@ async fn try_redirect(base_dir: &Path, path: &Path, req: HttpRequest) -> HttpRes
 
     let redirect_path = format!("/de/{}", path.to_string_lossy());
 
-    HttpResponseBuilder::new(StatusCode::MOVED_PERMANENTLY)
-        .append_header((header::LOCATION, redirect_path))
+    HttpResponse::PermanentRedirect()
+        .insert_header((header::LOCATION, redirect_path))
         .finish()
 }
