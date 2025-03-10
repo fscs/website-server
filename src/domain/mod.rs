@@ -10,7 +10,7 @@ pub mod persons;
 pub mod sitzung;
 
 use persons::{Abmeldung, PersonRepo};
-use sitzung::{SitzungRepo, SitzungWithTops, TopWithAnträge};
+use sitzung::{SitzungRepo, SitzungWithTops, SitzungenWithTops, TopWithAnträge};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -80,27 +80,33 @@ pub async fn sitzung_with_tops(
     }))
 }
 
-pub async fn sitzung_after_with_tops(
+pub async fn sitzungen_after_with_tops(
     repo: &mut impl SitzungAntragService,
     timestamp: DateTime<Utc>,
-) -> Result<Option<SitzungWithTops>> {
-    let Some(sitzung) = repo.first_sitzung_after(timestamp).await? else {
+    limit: Option<i64>,
+) -> Result<Option<SitzungenWithTops>> {
+    let sitzungen = repo.sitzungen_after(timestamp, limit).await? else {
         return Ok(None);
     };
 
-    let tops = repo.tops_by_sitzung(sitzung.id).await?;
+    let mut sitzungen_with_tops = vec![];
 
-    let mut tops_with_anträge = vec![];
+    for sitzung in &sitzungen {
+        let tops = repo.tops_by_sitzung(sitzung.id).await?;
+        let mut tops_with_anträge = vec![];
+        for top in tops {
+            let top_and_anträge = top_with_anträge(repo, top.id).await?.unwrap();
 
-    for top in tops {
-        let top_and_anträge = top_with_anträge(repo, top.id).await?.unwrap();
-
-        tops_with_anträge.push(top_and_anträge);
+            tops_with_anträge.push(top_and_anträge);
+        }
+        sitzungen_with_tops.push(SitzungWithTops {
+            sitzung: sitzung.clone(),
+            tops: tops_with_anträge,
+        });
     }
 
-    Ok(Some(SitzungWithTops {
-        sitzung,
-        tops: tops_with_anträge,
+    Ok(Some(SitzungenWithTops {
+        sitzungen: sitzungen_with_tops,
     }))
 }
 

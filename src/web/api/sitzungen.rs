@@ -28,7 +28,7 @@ pub(crate) fn service() -> Scope {
         .service(get_sitzungen)
         .service(post_sitzungen)
         .service(get_sitzungen_between)
-        .service(get_first_sitzung_after);
+        .service(get_sitzungen_after);
 
     // must come last
     register_sitzung_id_service(scope)
@@ -89,8 +89,9 @@ pub struct UpdateTopParams {
 }
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
-pub struct FirstSitzungAfterParams {
+pub struct SitzungenAfterParams {
     timestamp: DateTime<Utc>,
+    limit: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
@@ -156,8 +157,8 @@ async fn post_sitzungen(
 }
 
 #[utoipa::path(
-    path = "/api/sitzungen/first-after",
-    params(FirstSitzungAfterParams),
+    path = "/api/sitzungen/after",
+    params(SitzungenAfterParams),
     responses(
         (status = 200, description = "Success", body = SitzungWithTops),
         (status = 400, description = "Bad Request"),
@@ -165,12 +166,13 @@ async fn post_sitzungen(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/first-after")]
-async fn get_first_sitzung_after(
-    params: Query<FirstSitzungAfterParams>,
+#[get("/after")]
+async fn get_sitzungen_after(
+    params: Query<SitzungenAfterParams>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
-    let result = domain::sitzung_after_with_tops(&mut *conn, params.timestamp).await?;
+    let result =
+        domain::sitzungen_after_with_tops(&mut *conn, params.timestamp, params.limit).await?;
 
     Ok(RestStatus::Success(result))
 }

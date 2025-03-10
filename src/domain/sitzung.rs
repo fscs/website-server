@@ -28,7 +28,7 @@ pub enum TopKind {
     Verschiedenes,
 }
 
-#[derive(Debug, Serialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, IntoParams, ToSchema, Clone)]
 pub struct Sitzung {
     pub id: Uuid,
     pub datetime: DateTime<Utc>,
@@ -50,6 +50,12 @@ pub struct SitzungWithTops {
     #[serde(flatten)]
     pub sitzung: Sitzung,
     pub tops: Vec<TopWithAnträge>,
+}
+
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct SitzungenWithTops {
+    #[serde(flatten)]
+    pub sitzungen: Vec<SitzungWithTops>,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
@@ -79,7 +85,11 @@ pub trait SitzungRepo {
 
     async fn sitzung_by_id(&mut self, id: Uuid) -> Result<Option<Sitzung>>;
 
-    async fn first_sitzung_after(&mut self, datetime: DateTime<Utc>) -> Result<Option<Sitzung>>;
+    async fn sitzungen_after(
+        &mut self,
+        datetime: DateTime<Utc>,
+        limit: Option<i64>,
+    ) -> Result<Vec<Sitzung>>;
 
     async fn sitzungen_between(
         &mut self,

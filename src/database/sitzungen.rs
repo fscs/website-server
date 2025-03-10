@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
+use utoipa::openapi::response::ResponseExt;
 use uuid::Uuid;
 
 use crate::domain::{
@@ -100,20 +101,41 @@ impl SitzungRepo for PgConnection {
         Ok(result)
     }
 
-    async fn first_sitzung_after(&mut self, datetime: DateTime<Utc>) -> Result<Option<Sitzung>> {
-        let result = sqlx::query_as!(
-            Sitzung,
-            r#"
+    async fn sitzungen_after(
+        &mut self,
+        datetime: DateTime<Utc>,
+        limit: Option<i64>,
+    ) -> Result<Vec<Sitzung>> {
+        let result;
+        if (limit.is_some()) {
+            result = sqlx::query_as!(
+                Sitzung,
+                r#"
                 SELECT id, datetime, location, kind AS "kind!: SitzungKind"
                 FROM sitzungen
                 WHERE datetime >= $1
                 ORDER BY datetime ASC
-                LIMIT 1
+                LIMIT $2
             "#,
-            datetime
-        )
-        .fetch_optional(self)
-        .await?;
+                datetime,
+                limit,
+            )
+            .fetch_all(self)
+            .await?;
+        } else {
+            result = sqlx::query_as!(
+                Sitzung,
+                r#"
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind"
+                FROM sitzungen
+                WHERE datetime >= $1
+                ORDER BY datetime ASC
+            "#,
+                datetime
+            )
+            .fetch_all(self)
+            .await?;
+        }
 
         Ok(result)
     }
@@ -372,16 +394,16 @@ mod test {
     }
 
     #[sqlx::test(fixtures("gimme_sitzungen"))]
-    async fn first_sitzung_after(pool: PgPool) -> Result<()> {
+    async fn sitzungen_after(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let timestamp = DateTime::parse_from_rfc3339("2024-09-15T00:00:00+02:00").unwrap();
 
         let id = Uuid::parse_str("177b861d-0447-45ce-bc56-9eb68991cbda").unwrap();
 
-        let sitzung = conn.first_sitzung_after(timestamp.into()).await?.unwrap();
+        let sitzungen = conn.sitzungen_after(timestamp.into(), Some(1)).await?;
 
-        assert_eq!(sitzung.id, id);
+        assert_eq!(sitzungen[0].id, id);
 
         Ok(())
     }
