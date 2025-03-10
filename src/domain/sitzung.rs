@@ -54,7 +54,6 @@ pub struct SitzungWithTops {
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct SitzungenWithTops {
-    #[serde(flatten)]
     pub sitzungen: Vec<SitzungWithTops>,
 }
 
