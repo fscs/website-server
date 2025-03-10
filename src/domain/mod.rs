@@ -84,7 +84,7 @@ pub async fn sitzungen_after_with_tops(
     repo: &mut impl SitzungAntragService,
     timestamp: DateTime<Utc>,
     limit: Option<i64>,
-) -> Result<Option<SitzungenWithTops>> {
+) -> Result<Option<Vec<SitzungWithTops>>> {
     let sitzungen = repo.sitzungen_after(timestamp, limit).await? else {
         return Ok(None);
     };
@@ -105,9 +105,7 @@ pub async fn sitzungen_after_with_tops(
         });
     }
 
-    Ok(Some(SitzungenWithTops {
-        sitzungen: sitzungen_with_tops,
-    }))
+    Ok(Some(sitzungen_with_tops))
 }
 
 pub async fn abmeldungen_by_sitzung(
