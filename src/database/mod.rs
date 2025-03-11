@@ -40,13 +40,13 @@ pub struct DatabaseTransaction<'a> {
     transaction: Transaction<'a, Postgres>,
 }
 
-impl<'a> DerefMut for DatabaseTransaction<'a> {
+impl DerefMut for DatabaseTransaction<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.transaction
     }
 }
 
-impl<'a> Deref for DatabaseTransaction<'a> {
+impl Deref for DatabaseTransaction<'_> {
     type Target = PgConnection;
 
     fn deref(&self) -> &Self::Target {

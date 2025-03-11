@@ -65,7 +65,7 @@ async fn request_cal(url: String) -> Result<Vec<CalendarEvent>> {
     let calendar = reqwest::get(&url).await?.text().await?;
 
     let calendar = icalendar::parser::unfold(&calendar);
-    let calendar = icalendar::parser::read_calendar(&calendar).map_err(|s| Error::Message(s))?;
+    let calendar = icalendar::parser::read_calendar(&calendar).map_err(Error::Message)?;
 
     let mut events = icalendar::Calendar::from(calendar)
         .components

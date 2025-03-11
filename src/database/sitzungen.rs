@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
-use utoipa::openapi::response::ResponseExt;
 use uuid::Uuid;
 
 use crate::domain::{
@@ -106,9 +105,8 @@ impl SitzungRepo for PgConnection {
         datetime: DateTime<Utc>,
         limit: Option<i64>,
     ) -> Result<Vec<Sitzung>> {
-        let result;
-        if (limit.is_some()) {
-            result = sqlx::query_as!(
+        let result = if limit.is_some() {
+            sqlx::query_as!(
                 Sitzung,
                 r#"
                 SELECT id, datetime, location, kind AS "kind!: SitzungKind"
@@ -121,9 +119,9 @@ impl SitzungRepo for PgConnection {
                 limit,
             )
             .fetch_all(self)
-            .await?;
+            .await?
         } else {
-            result = sqlx::query_as!(
+            sqlx::query_as!(
                 Sitzung,
                 r#"
                 SELECT id, datetime, location, kind AS "kind!: SitzungKind"
@@ -134,8 +132,8 @@ impl SitzungRepo for PgConnection {
                 datetime
             )
             .fetch_all(self)
-            .await?;
-        }
+            .await?
+        };
 
         Ok(result)
     }

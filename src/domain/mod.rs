@@ -10,7 +10,7 @@ pub mod persons;
 pub mod sitzung;
 
 use persons::{Abmeldung, PersonRepo};
-use sitzung::{SitzungRepo, SitzungWithTops, SitzungenWithTops, TopWithAnträge};
+use sitzung::{SitzungRepo, SitzungWithTops, TopWithAnträge};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -85,10 +85,7 @@ pub async fn sitzungen_after_with_tops(
     timestamp: DateTime<Utc>,
     limit: Option<i64>,
 ) -> Result<Option<Vec<SitzungWithTops>>> {
-    let sitzungen = repo.sitzungen_after(timestamp, limit).await? else {
-        return Ok(None);
-    };
-
+    let sitzungen = repo.sitzungen_after(timestamp, limit).await?;
     let mut sitzungen_with_tops = vec![];
 
     for sitzung in &sitzungen {
