@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, datetime, location, kind AS \"kind!: SitzungKind\"\n                FROM sitzungen\n                WHERE id = $1\n            ",
+  "query": "\n                INSERT INTO sitzungen (datetime, location, kind, antragsfrist)\n                VALUES ($1, $2, $3, $4) \n                RETURNING id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist\n            ",
   "describe": {
     "columns": [
       {
@@ -36,19 +36,42 @@
             }
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "antragsfrist",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Timestamptz",
+        "Text",
+        {
+          "Custom": {
+            "name": "sitzungkind",
+            "kind": {
+              "Enum": [
+                "normal",
+                "vv",
+                "wahlvv",
+                "ersatz",
+                "konsti",
+                "dringlichkeit"
+              ]
+            }
+          }
+        },
+        "Timestamptz"
       ]
     },
     "nullable": [
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "310af66d7c4167091cedbe035f55c33a9ba8c4c13a70485099bfe9da44b8496f"
+  "hash": "99b145ecebc39eada996368f2c48af729dcb19094d566468bbabb5afc0f96e9a"
 }

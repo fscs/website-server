@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT \n                    anträge.id,\n                    anträge.titel,\n                    anträge.antragstext,\n                    anträge.begründung\n                FROM anträge\n                WHERE id = $1\n            ",
+  "query": "\n                SELECT \n                    anträge.id,\n                    anträge.titel,\n                    anträge.antragstext,\n                    anträge.begründung,\n                    anträge.created_at\n                FROM anträge\n                WHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,11 @@
         "ordinal": 3,
         "name": "begründung",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
@@ -33,8 +38,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "83bb08bed52db8f2c0efa42d4816a7831978f9f49852bee24dcdaa762fa53fe4"
+  "hash": "12b11fbc87b90d9d226d672db2798c3ce398d337d284453586b5862b943af203"
 }

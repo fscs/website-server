@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                DELETE FROM anträge \n                WHERE id = $1\n                RETURNING *\n            ",
+  "query": "\n                SELECT\n                    anträge.id,\n                    anträge.antragstext,\n                    anträge.begründung,\n                    anträge.titel,\n                    anträge.created_at\n                FROM anträge\n                JOIN antragstop\n                ON anträge.id = antragstop.antrag_id\n                WHERE antragstop.top_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -10,17 +10,17 @@
       },
       {
         "ordinal": 1,
-        "name": "titel",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 2,
         "name": "antragstext",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 2,
         "name": "begründung",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "titel",
         "type_info": "Text"
       },
       {
@@ -42,5 +42,5 @@
       false
     ]
   },
-  "hash": "e0286c9cd7cb4dfdf590b90588a55398ba5cd505eeb225f8fead47d7bf50c22e"
+  "hash": "92bb7b3f172c7c824eb60fd95e1047f90b2bbddbdfa9c87150f0b76be8f77950"
 }

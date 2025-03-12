@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                UPDATE anträge\n                SET\n                    titel = COALESCE($1, titel),\n                    begründung = COALESCE($2, begründung),\n                    antragstext = COALESCE($3, antragstext)\n                WHERE id = $4\n                RETURNING *\n            ",
+  "query": "\n                INSERT INTO anträge (titel, antragstext, begründung, created_at) \n                VALUES ($1, $2, $3, $4) \n                RETURNING *\n            ",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,11 @@
         "ordinal": 3,
         "name": "begründung",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
@@ -29,15 +34,16 @@
         "Text",
         "Text",
         "Text",
-        "Uuid"
+        "Timestamptz"
       ]
     },
     "nullable": [
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "1d1741d8a055461e901c1f97776960ccf3a750f6d205eb19a735d6c73051b633"
+  "hash": "538dfb2f6232dfe04078592909d86627a9f61576b916327dd1723748a8db4009"
 }

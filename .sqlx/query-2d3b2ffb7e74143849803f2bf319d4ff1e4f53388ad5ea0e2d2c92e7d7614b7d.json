@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, datetime, location, kind AS \"kind!: SitzungKind\" \n                FROM sitzungen\n                WHERE datetime >= $1 AND datetime <= $2\n                ORDER BY datetime ASC\n            ",
+  "query": "\n                SELECT id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist\n                FROM sitzungen\n            ",
   "describe": {
     "columns": [
       {
@@ -36,20 +36,23 @@
             }
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "antragsfrist",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": [
-        "Timestamptz",
-        "Timestamptz"
-      ]
+      "Left": []
     },
     "nullable": [
+      false,
       false,
       false,
       false,
       false
     ]
   },
-  "hash": "a4f3ddd83935917d4d319de2813f235467a556e2963acd938e2e8facfb20b304"
+  "hash": "2d3b2ffb7e74143849803f2bf319d4ff1e4f53388ad5ea0e2d2c92e7d7614b7d"
 }

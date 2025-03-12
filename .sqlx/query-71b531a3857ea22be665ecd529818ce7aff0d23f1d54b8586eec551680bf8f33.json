@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                DELETE FROM anträge \n                WHERE id = $1\n                RETURNING *\n            ",
+  "query": "\n                UPDATE anträge\n                SET\n                    titel = COALESCE($1, titel),\n                    begründung = COALESCE($2, begründung),\n                    antragstext = COALESCE($3, antragstext),\n                    created_at = COALESCE($4, created_at)\n                WHERE id = $5\n                RETURNING *\n            ",
   "describe": {
     "columns": [
       {
@@ -31,6 +31,10 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
         "Uuid"
       ]
     },
@@ -42,5 +46,5 @@
       false
     ]
   },
-  "hash": "e0286c9cd7cb4dfdf590b90588a55398ba5cd505eeb225f8fead47d7bf50c22e"
+  "hash": "71b531a3857ea22be665ecd529818ce7aff0d23f1d54b8586eec551680bf8f33"
 }

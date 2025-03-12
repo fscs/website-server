@@ -18,7 +18,8 @@ impl AntragTopMapRepo for PgConnection {
                     anträge.id,
                     anträge.antragstext,
                     anträge.begründung,
-                    anträge.titel
+                    anträge.titel,
+                    anträge.created_at
                 FROM anträge
                 JOIN antragstop
                 ON anträge.id = antragstop.antrag_id
@@ -51,7 +52,8 @@ impl AntragTopMapRepo for PgConnection {
                     anträge.id,
                     anträge.antragstext,
                     anträge.begründung,
-                    anträge.titel
+                    anträge.titel,
+                    anträge.created_at
                 FROM anträge
                 LEFT JOIN antragstop
                 ON anträge.id = antragstop.antrag_id

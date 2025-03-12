@@ -1,3 +1,4 @@
+use chrono::Utc;
 use sqlx::{PgConnection, QueryBuilder};
 use uuid::Uuid;
 
@@ -55,13 +56,14 @@ impl AntragRepo for PgConnection {
         let antrag = sqlx::query_as!(
             AntragData,
             r#"
-                INSERT INTO anträge (titel, antragstext, begründung) 
-                VALUES ($1, $2, $3) 
+                INSERT INTO anträge (titel, antragstext, begründung, created_at) 
+                VALUES ($1, $2, $3, $4) 
                 RETURNING *
             "#,
             title,
             antragstext,
-            reason
+            reason,
+            Utc::now()
         )
         .fetch_one(&mut *self)
         .await?;
@@ -84,7 +86,8 @@ impl AntragRepo for PgConnection {
                     id,
                     titel,
                     antragstext,
-                    begründung
+                    begründung,
+                    created_at
                 FROM anträge
             "#
         )
@@ -113,7 +116,8 @@ impl AntragRepo for PgConnection {
                     anträge.id,
                     anträge.titel,
                     anträge.antragstext,
-                    anträge.begründung
+                    anträge.begründung,
+                    anträge.created_at
                 FROM anträge
                 WHERE id = $1
             "#,
@@ -147,13 +151,15 @@ impl AntragRepo for PgConnection {
                 SET
                     titel = COALESCE($1, titel),
                     begründung = COALESCE($2, begründung),
-                    antragstext = COALESCE($3, antragstext)
-                WHERE id = $4
+                    antragstext = COALESCE($3, antragstext),
+                    created_at = COALESCE($4, created_at)
+                WHERE id = $5
                 RETURNING *
             "#,
             title,
             reason,
             antragstext,
+            Utc::now(),
             id
         )
         .fetch_optional(&mut *self)

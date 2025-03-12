@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -10,6 +11,7 @@ pub struct AntragData {
     pub titel: String,
     pub antragstext: String,
     pub begründung: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema, PartialEq)]

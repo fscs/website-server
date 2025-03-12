@@ -83,15 +83,15 @@
 
                 mkdir -p "$DATA_DIR" "$SOCKET_DIR"
 
-                ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
+                ${pkgs.postgresql_16}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
 
-                ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
+                ${pkgs.postgresql_16}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
 
                 ${pkgs.sqlx-cli}/bin/sqlx migrate run
 
                 cargoWithProfile test --locked
 
-                ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
+                ${pkgs.postgresql_16}/bin/pg_ctl -D "$DATA_DIR" stop
               '';
             }
           );
@@ -112,17 +112,17 @@
             mkdir -p "$DATA_DIR" "$SOCKET_DIR"
 
             echo Initializing the Database
-            ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
+            ${pkgs.postgresql_16}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
 
-            ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR" start
+            ${pkgs.postgresql_16}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR" start
 
-            trap "${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR stop; exit" SIGINT
+            trap "${pkgs.postgresql_16}/bin/pg_ctl -D $DATA_DIR stop; exit" SIGINT
 
             ${pkgs.sqlx-cli}/bin/sqlx migrate run --source ./migrations  --database-url $DATABASE_URL
 
             read -p "Press enter to stop the database"
 
-            ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
+            ${pkgs.postgresql_16}/bin/pg_ctl -D "$DATA_DIR" stop
           '';
 
           full = pkgs.writeScriptBin "run.sh" ''

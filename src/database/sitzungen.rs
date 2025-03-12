@@ -13,17 +13,19 @@ impl SitzungRepo for PgConnection {
         datetime: DateTime<Utc>,
         location: &str,
         kind: SitzungKind,
+        antragsfrist: DateTime<Utc>,
     ) -> Result<Sitzung> {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                INSERT INTO sitzungen (datetime, location, kind) 
-                VALUES ($1, $2, $3) 
-                RETURNING id, datetime, location, kind AS "kind!: SitzungKind"
+                INSERT INTO sitzungen (datetime, location, kind, antragsfrist)
+                VALUES ($1, $2, $3, $4) 
+                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
             "#,
             datetime,
             location,
             kind as SitzungKind,
+            antragsfrist,
         )
         .fetch_one(self)
         .await?;
@@ -74,7 +76,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind"
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
                 FROM sitzungen
             "#
         )
@@ -88,7 +90,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind"
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
                 FROM sitzungen
                 WHERE id = $1
             "#,
@@ -109,7 +111,7 @@ impl SitzungRepo for PgConnection {
             sqlx::query_as!(
                 Sitzung,
                 r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind"
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
                 FROM sitzungen
                 WHERE datetime >= $1
                 ORDER BY datetime ASC
@@ -124,7 +126,7 @@ impl SitzungRepo for PgConnection {
             sqlx::query_as!(
                 Sitzung,
                 r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind"
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
                 FROM sitzungen
                 WHERE datetime >= $1
                 ORDER BY datetime ASC
@@ -146,7 +148,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind" 
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
                 FROM sitzungen
                 WHERE datetime >= $1 AND datetime <= $2
                 ORDER BY datetime ASC
@@ -199,6 +201,7 @@ impl SitzungRepo for PgConnection {
         datetime: Option<DateTime<Utc>>,
         location: Option<&'a str>,
         kind: Option<SitzungKind>,
+        antragsfrist: Option<DateTime<Utc>>,
     ) -> Result<Option<Sitzung>> {
         let result = sqlx::query_as!(
             Sitzung,
@@ -207,13 +210,15 @@ impl SitzungRepo for PgConnection {
                 SET 
                     datetime = COALESCE($1, datetime),
                     location = COALESCE($2, location),
-                    kind = COALESCE($3, kind)
-                WHERE id = $4 
-                RETURNING id, datetime, location, kind AS "kind!: SitzungKind" 
+                    kind = COALESCE($3, kind),
+                    antragsfrist = COALESCE($4, antragsfrist)
+                WHERE id = $5 
+                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
             "#,
             datetime,
             location,
             kind as Option<SitzungKind>,
+            antragsfrist,
             id
         )
         .fetch_optional(self)
@@ -263,7 +268,7 @@ impl SitzungRepo for PgConnection {
             r#"
                 DELETE FROM sitzungen
                 WHERE id = $1
-                RETURNING id, datetime, location, kind AS "kind!: SitzungKind"
+                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
             "#,
             id
         )
@@ -306,9 +311,10 @@ mod test {
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T10:30:00+02:00").unwrap();
         let location = "ein uni raum";
         let sitzung_kind = SitzungKind::VV;
+        let antragsfrist = DateTime::parse_from_rfc3339("2024-09-07T10:30:00+02:00").unwrap();
 
         let sitzung = conn
-            .create_sitzung(datetime.into(), location, sitzung_kind)
+            .create_sitzung(datetime.into(), location, sitzung_kind, antragsfrist.into())
             .await?;
 
         assert_eq!(sitzung.datetime, datetime);
@@ -490,7 +496,7 @@ mod test {
         let new_sitzung_kind = SitzungKind::Konsti;
 
         let sitzung = conn
-            .update_sitzung(sitzung_id, None, None, Some(new_sitzung_kind))
+            .update_sitzung(sitzung_id, None, None, Some(new_sitzung_kind), None)
             .await?
             .unwrap();
 

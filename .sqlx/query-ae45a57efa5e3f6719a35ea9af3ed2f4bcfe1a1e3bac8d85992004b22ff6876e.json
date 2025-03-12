@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                INSERT INTO anträge (titel, antragstext, begründung) \n                VALUES ($1, $2, $3) \n                RETURNING *\n            ",
+  "query": "\n                SELECT\n                    id,\n                    titel,\n                    antragstext,\n                    begründung,\n                    created_at\n                FROM anträge\n            ",
   "describe": {
     "columns": [
       {
@@ -22,21 +22,23 @@
         "ordinal": 3,
         "name": "begründung",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": [
-        "Text",
-        "Text",
-        "Text"
-      ]
+      "Left": []
     },
     "nullable": [
+      false,
       false,
       false,
       false,
       false
     ]
   },
-  "hash": "a328e8b59107e274cd99ffc99d15e54d94741a426f93b15f8aa5453cd7e80fb8"
+  "hash": "ae45a57efa5e3f6719a35ea9af3ed2f4bcfe1a1e3bac8d85992004b22ff6876e"
 }

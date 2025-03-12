@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                UPDATE sitzungen \n                SET \n                    datetime = COALESCE($1, datetime),\n                    location = COALESCE($2, location),\n                    kind = COALESCE($3, kind)\n                WHERE id = $4 \n                RETURNING id, datetime, location, kind AS \"kind!: SitzungKind\" \n            ",
+  "query": "\n                UPDATE sitzungen \n                SET \n                    datetime = COALESCE($1, datetime),\n                    location = COALESCE($2, location),\n                    kind = COALESCE($3, kind),\n                    antragsfrist = COALESCE($4, antragsfrist)\n                WHERE id = $5 \n                RETURNING id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist\n            ",
   "describe": {
     "columns": [
       {
@@ -36,6 +36,11 @@
             }
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "antragsfrist",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
@@ -57,6 +62,7 @@
             }
           }
         },
+        "Timestamptz",
         "Uuid"
       ]
     },
@@ -64,8 +70,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "0ad72772a779efcf1fa43ff0983c043f0ac31c41afca0092751253c8ba5f260e"
+  "hash": "6f0a2592be981adeb79871c32d818174318b11794a85f2d6b9ae0cb597195768"
 }

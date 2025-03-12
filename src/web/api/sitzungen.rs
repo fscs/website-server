@@ -61,6 +61,7 @@ pub struct CreateSitzungParams {
     #[validate(length(min = 1))]
     location: String,
     kind: SitzungKind,
+    antragsfrist: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
@@ -77,6 +78,7 @@ pub struct UpdateSitzungParams {
     #[validate(length(min = 1))]
     location: Option<String>,
     kind: Option<SitzungKind>,
+    antragsfrist: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
@@ -148,7 +150,12 @@ async fn post_sitzungen(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     let result = transaction
-        .create_sitzung(params.datetime, params.location.as_str(), params.kind)
+        .create_sitzung(
+            params.datetime,
+            params.location.as_str(),
+            params.kind,
+            params.antragsfrist,
+        )
         .await?;
 
     transaction.commit().await?;
@@ -238,6 +245,7 @@ async fn patch_sitzung_by_id(
             params.datetime,
             params.location.as_deref(),
             params.kind,
+            params.antragsfrist,
         )
         .await?;
 
