@@ -1245,7 +1245,6 @@ dependencies = [
  "anyhow",
  "async-std",
  "chrono",
- "chrono-tz",
  "clap",
  "futures-util",
  "icalendar",

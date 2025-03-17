@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use actix_http::header;
 use actix_multipart::form::{tempfile::TempFile, MultipartForm};
 use actix_web::{
@@ -8,7 +6,7 @@ use actix_web::{
     HttpResponse, Responder, Scope,
 };
 use actix_web_validator::Json as ActixJson;
-use log::{debug, info};
+use log::debug;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -20,7 +18,7 @@ use crate::{
         self,
         antrag::{Antrag, AntragRepo},
         antrag_top_map::AntragTopMapRepo,
-        attachment::{Attachment, AttachmentRepo},
+        attachment::AttachmentRepo,
         Result,
     },
     web::{auth::User, RestStatus},

@@ -15,7 +15,6 @@ actix-web = { version = "4", features = [ "secure-cookies", "rustls", ] }
 actix-multipart = "0"
 anyhow = "1"
 async-std = "1"
-chrono-tz = "0"
 chrono = { version = "0", features = [ "serde", ] }
 clap = { version = "4", features = [ "derive", "color", ] }
 icalendar = { version = "0.16", features = [ "chrono-tz", ] }

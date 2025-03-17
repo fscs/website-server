@@ -290,7 +290,7 @@ async fn get_abmeldungen_by_sitzung(
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     if conn.sitzung_by_id(*sitzung_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = domain::abmeldungen_by_sitzung(&mut *conn, *sitzung_id).await?;
@@ -314,7 +314,7 @@ async fn get_tops(
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     if conn.sitzung_by_id(*sitzung_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = domain::top_with_anträge_by_sitzung(&mut *conn, *sitzung_id).await?;
@@ -341,7 +341,7 @@ async fn post_tops(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     if transaction.sitzung_by_id(*sitzung_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = transaction
@@ -379,7 +379,7 @@ async fn patch_tops(
     let (sitzung_id, top_id) = path_params.into_inner();
 
     if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = transaction
@@ -416,7 +416,7 @@ async fn delete_tops(
     let (sitzung_id, top_id) = path_params.into_inner();
 
     if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = transaction.delete_top(top_id).await?;
@@ -447,11 +447,11 @@ async fn assoc_antrag(
     let (sitzung_id, top_id) = path_params.into_inner();
 
     if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     if transaction.top_by_id(top_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = transaction
@@ -484,11 +484,11 @@ async fn delete_assoc_antrag(
     let (sitzung_id, top_id) = path_params.into_inner();
 
     if transaction.sitzung_by_id(sitzung_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     if transaction.top_by_id(top_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = transaction

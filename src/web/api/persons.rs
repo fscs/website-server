@@ -350,7 +350,7 @@ async fn roles_by_person(
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     if conn.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = conn.roles_by_person(*person_id).await?;
@@ -377,7 +377,7 @@ async fn add_role_to_person(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     if transaction.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     transaction
@@ -408,7 +408,7 @@ async fn revoke_role_from_person(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     if transaction.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     transaction
@@ -435,7 +435,7 @@ async fn get_abmeldungen_by_person(
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     if conn.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = conn.abmeldungen_by_person(*person_id).await?;
@@ -462,7 +462,7 @@ async fn create_abmeldung(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     if transaction.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     let result = transaction
@@ -494,7 +494,7 @@ async fn revoke_abmeldung(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     if transaction.person_by_id(*person_id).await?.is_none() {
-        return Ok(RestStatus::Success(None));
+        return Ok(RestStatus::NotFound);
     }
 
     transaction
