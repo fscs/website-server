@@ -69,6 +69,11 @@
         type = t.attrsOf t.nonEmptyStr;
         default = { };
       };
+      dataDir = lib.mkOption {
+        description = "directory to store uploaded files";
+        default = "/var/lib/fscs-website-server";
+        type = t.nonEmptyStr;
+      };
     };
 
   config =
@@ -102,6 +107,7 @@
             user-info = cfg.userInfoUrl;
             cors-allowed-origin = cfg.allowedCorsOrigins;
             calendar = lib.mapAttrsToList (name: url: "${name}=${url}") cfg.calendars;
+            data-dir = cfg.dataDir;
           };
 
           args = lib.escapeShellArgs ((lib.cli.toGNUCommandLine { } argSet) ++ cfg.extraFlags);
@@ -116,6 +122,7 @@
             User = config.users.users.fscs-website-server.name;
             Restart = "always";
             RestartSec = 5;
+            StateDirectory = cfg.dataDir;
             LimitNOFILE = "8192";
             CapabilityBoundingSet = [ "" ];
             DeviceAllow = [ "" ];

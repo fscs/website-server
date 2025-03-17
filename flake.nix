@@ -127,28 +127,33 @@
 
           full = pkgs.writeScriptBin "run.sh" ''
             #!/usr/bin/env bash
-            DATA_DIR="$PWD/db/data"
+            POSTGRES_DATA_DIR="$PWD/db/data"
+            DATA_DIR="$PWD"
             SOCKET_DIR="$PWD/db/sockets"
             SOCKET_URL="$(echo $SOCKET_DIR | sed 's/\//%2f/g')"
             export DATABASE_URL="postgresql://$SOCKET_URL:5432/postgres"
 
-            mkdir -p "$DATA_DIR" "$SOCKET_DIR"
+            mkdir -p "$POSTGRES_DATA_DIR" "$SOCKET_DIR" "$DATA_DIR"
 
-            ${pkgs.postgresql}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
 
-            ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR status
+            ${pkgs.postgresql_16}/bin/initdb -D "$POSTGRES_DATA_DIR" --locale=C.utf8
+
+            ${pkgs.postgresql_16}/bin/pg_ctl -D $POSTGRES_DATA_DIR status
             ALREADY_RUNNING=$?
 
             if [ ! "$ALREADY_RUNNING" -eq 0 ]; then
               echo Initializing the Database
-              ${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
-              trap "${pkgs.postgresql}/bin/pg_ctl -D $DATA_DIR stop; exit" SIGINT
+              ${pkgs.postgresql_16}/bin/pg_ctl -D $POSTGRES_DATA_DIR -o "-k $SOCKET_DIR -h \"\"" start
+              trap "${pkgs.postgresql_16}/bin/pg_ctl -D $POSTGRES_DATA_DIR stop; exit" SIGINT
             fi
 
             echo Starting the server
+            echo "DATABASE_URL: $DATABASE_URL"
             ${lib.getExe default} \
               --database-url $DATABASE_URL \
               --content-dir test \
+              --data-dir $DATA_DIR \
+              --max-file-size 10485760 \
               --auth-url https://auth.inphima.de/application/o/authorize/ \
               --token-url https://auth.inphima.de/application/o/token/ \
               --user-info https://auth.inphima.de/application/o/userinfo/ \
@@ -157,7 +162,7 @@
 
             if [ ! "$ALREADY_RUNNING" -eq 0  ]; then
               echo Stopping the Database
-              ${pkgs.postgresql}/bin/pg_ctl -D "$DATA_DIR" stop
+              ${pkgs.postgresql_16}/bin/pg_ctl -D "$POSTGRES_DATA_DIR" stop
             fi
           '';
         };
@@ -181,6 +186,7 @@
               clippy
               sqlx-cli
               postgresql
+              cargo-watch
             ];
           };
 

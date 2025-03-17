@@ -1,7 +1,7 @@
-INSERT INTO anträge (id, titel, antragstext, begründung)
+INSERT INTO anträge (id, titel, antragstext, begründung, created_at)
     VALUES
-        ('46148231-87b0-4486-8043-c55038178518', 'Blumen für Valentin', 'get them', 'Valentin deserves them'),
-        ('5c51d5c0-3943-4695-844d-4c47da854fac', 'blub', 'blub', 'bulabsb');
+        ('46148231-87b0-4486-8043-c55038178518', 'Blumen für Valentin', 'get them', 'Valentin deserves them', '2021-08-01T00:00:00Z'),
+        ('5c51d5c0-3943-4695-844d-4c47da854fac', 'blub', 'blub', 'bulabsb', '2021-08-02T00:00:00Z');
 
 INSERT INTO antragsstellende (antrags_id, person_id)
     VALUES

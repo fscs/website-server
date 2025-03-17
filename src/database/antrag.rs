@@ -45,6 +45,23 @@ pub(super) async fn query_antragsstellende(
     Ok(result)
 }
 
+pub(super) async fn query_attachments(
+    conn: &mut PgConnection,
+    antrags_id: Uuid,
+) -> Result<Vec<Uuid>> {
+    let result = sqlx::query_scalar!(
+        r#"
+            SELECT attachment_id FROM attachment_mapping
+            WHERE antrags_id = $1
+        "#,
+        antrags_id
+    )
+    .fetch_all(conn)
+    .await?;
+
+    Ok(result)
+}
+
 impl AntragRepo for PgConnection {
     async fn create_antrag(
         &mut self,
@@ -73,6 +90,7 @@ impl AntragRepo for PgConnection {
         let result = Antrag {
             data: antrag,
             creators: creators.to_vec(),
+            attachments: vec![],
         };
 
         Ok(result)
@@ -98,10 +116,12 @@ impl AntragRepo for PgConnection {
 
         for data in anträge {
             let creators = query_antragsstellende(&mut *self, data.id).await?;
+            let attachments = query_attachments(&mut *self, data.id).await?;
 
             result.push(Antrag {
                 data: data.clone(),
                 creators,
+                attachments,
             })
         }
 
@@ -130,8 +150,13 @@ impl AntragRepo for PgConnection {
         };
 
         let creators = query_antragsstellende(&mut *self, data.id).await?;
+        let attachments = query_attachments(&mut *self, data.id).await?;
 
-        let result = Antrag { data, creators };
+        let result = Antrag {
+            data,
+            creators,
+            attachments,
+        };
 
         Ok(Some(result))
     }
@@ -186,9 +211,12 @@ impl AntragRepo for PgConnection {
             query_antragsstellende(&mut *self, id).await?
         };
 
+        let attachments = query_attachments(&mut *self, id).await?;
+
         let result = Antrag {
             data: antrag,
             creators: new_creators,
+            attachments,
         };
 
         Ok(Some(result))
@@ -208,6 +236,44 @@ impl AntragRepo for PgConnection {
         .await?;
 
         Ok(result)
+    }
+
+    async fn add_attachment_to_antrag(
+        &mut self,
+        antrags_id: Uuid,
+        attachment_id: Uuid,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+                INSERT INTO attachment_mapping (antrags_id, attachment_id) 
+                VALUES ($1, $2)
+            "#,
+            antrags_id,
+            attachment_id
+        )
+        .fetch_optional(&mut *self)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn delete_attachment_from_antrag(
+        &mut self,
+        antrags_id: Uuid,
+        attachment_id: Uuid,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            DELETE FROM attachment_mapping 
+            WHERE antrags_id = $1 AND attachment_id = $2
+            "#,
+            antrags_id,
+            attachment_id
+        )
+        .fetch_optional(&mut *self)
+        .await?;
+
+        Ok(())
     }
 }
 
@@ -305,6 +371,7 @@ mod test {
         let reason1 = "Valentin deserves them";
         let antragstext1 = "get them";
         let id1 = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
+        let created_at1 = "2021-08-01T00:00:00Z";
 
         let antrag1 = Antrag {
             data: AntragData {
@@ -312,8 +379,10 @@ mod test {
                 id: id1,
                 antragstext: antragstext1.to_string(),
                 begründung: reason1.to_string(),
+                created_at: created_at1.parse().unwrap(),
             },
             creators: creators1,
+            attachments: vec![],
         };
 
         let creators2 = vec![Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap()];
@@ -321,6 +390,7 @@ mod test {
         let reason2 = "bulabsb";
         let antragstext2 = "blub";
         let id2 = Uuid::parse_str("5c51d5c0-3943-4695-844d-4c47da854fac").unwrap();
+        let created_at2 = "2021-08-02T00:00:00Z";
 
         let antrag2 = Antrag {
             data: AntragData {
@@ -328,8 +398,10 @@ mod test {
                 id: id2,
                 antragstext: antragstext2.to_string(),
                 begründung: reason2.to_string(),
+                created_at: created_at2.parse().unwrap(),
             },
             creators: creators2,
+            attachments: vec![],
         };
 
         assert_eq!(anträge.len(), 2);
@@ -411,6 +483,47 @@ mod test {
         let please_dont_be_an_antrag = conn.antrag_by_id(antrag_id).await?;
 
         assert!(please_dont_be_an_antrag.is_none());
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("gimme_antraege", "gimme_attachments"))]
+    async fn add_attachment_to_antrag(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let antrag_id = Uuid::parse_str("5c51d5c0-3943-4695-844d-4c47da854fac").unwrap();
+        let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap();
+
+        conn.add_attachment_to_antrag(antrag_id, attachment_id)
+            .await?;
+
+        let antrag = conn.antrag_by_id(antrag_id).await?.unwrap();
+
+        assert_eq!(antrag.attachments.len(), 1);
+        assert_eq!(antrag.attachments[0], attachment_id);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("gimme_antraege", "gimme_attachments", "gimme_attachment_mappings"))]
+    async fn delete_attachment_from_antrag(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let antrag_id = Uuid::parse_str("5c51d5c0-3943-4695-844d-4c47da854fac").unwrap();
+        let antrag2_id = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
+
+        let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap();
+
+        conn.delete_attachment_from_antrag(antrag_id, attachment_id)
+            .await?;
+        conn.delete_attachment_from_antrag(antrag2_id, attachment_id)
+            .await?;
+
+        let antrag = conn.antrag_by_id(antrag_id).await?.unwrap();
+        let antrag2 = conn.antrag_by_id(antrag_id).await?.unwrap();
+
+        assert!(antrag.attachments.is_empty());
+        assert!(antrag2.attachments.is_empty());
 
         Ok(())
     }

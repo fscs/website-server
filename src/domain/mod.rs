@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 pub mod antrag;
 pub mod antrag_top_map;
+pub mod attachment;
 pub mod calendar;
 pub mod door_state;
 pub mod persons;

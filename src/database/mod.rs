@@ -7,6 +7,7 @@ use sqlx::{postgres::PgPoolOptions, PgConnection, PgPool, Postgres, Transaction}
 
 pub mod antrag;
 pub mod antrag_top_map;
+pub mod attachment;
 pub mod door_state;
 pub mod persons;
 pub mod sitzungen;

@@ -28,6 +28,8 @@ use auth::{oauth_client, AuthMiddle};
 pub(super) enum RestStatus<T: Serialize> {
     Success(Option<T>),
     Created(Option<T>),
+    BadRequest(String),
+    NotFound,
 }
 
 impl ResponseError for Error {}
@@ -45,6 +47,8 @@ impl<T: Serialize> Responder for RestStatus<T> {
                 Some(inner) => HttpResponse::Created().json(inner),
                 None => HttpResponse::NotFound().body("Not Found"),
             },
+            RestStatus::BadRequest(msg) => HttpResponse::BadRequest().body(msg),
+            RestStatus::NotFound => HttpResponse::NotFound().body("Not Found"),
         }
     }
 }

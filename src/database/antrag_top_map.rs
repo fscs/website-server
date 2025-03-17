@@ -34,10 +34,12 @@ impl AntragTopMapRepo for PgConnection {
 
         for data in anträge {
             let creators = query_antragsstellende(&mut *self, data.id).await?;
+            let attachments = query_antragsstellende(&mut *self, data.id).await?;
 
             result.push(Antrag {
                 data: data.clone(),
                 creators,
+                attachments,
             })
         }
 
@@ -67,10 +69,12 @@ impl AntragTopMapRepo for PgConnection {
 
         for data in anträge {
             let creators = query_antragsstellende(&mut *self, data.id).await?;
+            let attachments = query_antragsstellende(&mut *self, data.id).await?;
 
             result.push(Antrag {
                 data: data.clone(),
                 creators,
+                attachments,
             })
         }
 

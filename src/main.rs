@@ -47,6 +47,12 @@ struct Args {
     /// available under /api/calendar/<name>. Can be specified multiple times.
     #[arg(short = 'C', long = "calendar", value_parser = parse_key_val::<String, String>)]
     calendars: Vec<(String, String)>,
+    /// Define the max file size for uploads in bytes
+    #[arg(long, default_value_t = 1024 * 1024 * 10)]
+    max_file_size: u64,
+    /// Define the datadir for the uploads
+    #[arg(long)]
+    data_dir: PathBuf,
 }
 
 fn parse_key_val<T, U>(s: &str) -> Result<(T, U), Box<dyn Error + Send + Sync + 'static>>
@@ -74,6 +80,8 @@ static CONTENT_DIR: LazyLock<ContentDir> = LazyLock::new(|| ContentDir {
     hidden: ARGS.content_dir.join("hidden"),
     protected: ARGS.content_dir.join("protected"),
 });
+
+static UPLOAD_DIR: LazyLock<PathBuf> = LazyLock::new(|| ARGS.data_dir.join("uploads/attachments/"));
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {

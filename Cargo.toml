@@ -12,6 +12,7 @@ actix-http = "3"
 actix-utils = "3"
 actix-web-validator = "6"
 actix-web = { version = "4", features = [ "secure-cookies", "rustls", ] }
+actix-multipart = "0"
 anyhow = "1"
 async-std = "1"
 chrono-tz = "0"

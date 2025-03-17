@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM attachment_mapping \n            WHERE antrags_id = $1 AND attachment_id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "85e461f5d8f785ff358b93175e6820d92f6c8d3637518ba4d28b3c1d55efc7f3"
+}

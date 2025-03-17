@@ -19,6 +19,7 @@ pub struct Antrag {
     #[serde(flatten)]
     pub data: AntragData,
     pub creators: Vec<Uuid>,
+    pub attachments: Vec<Uuid>,
 }
 
 pub trait AntragRepo {
@@ -44,4 +45,16 @@ pub trait AntragRepo {
     ) -> Result<Option<Antrag>>;
 
     async fn delete_antrag(&mut self, id: Uuid) -> Result<Option<AntragData>>;
+
+    async fn add_attachment_to_antrag(
+        &mut self,
+        antrags_id: Uuid,
+        attachment_id: Uuid,
+    ) -> Result<()>;
+
+    async fn delete_attachment_from_antrag(
+        &mut self,
+        antrags_id: Uuid,
+        attachment_id: Uuid,
+    ) -> Result<()>;
 }
