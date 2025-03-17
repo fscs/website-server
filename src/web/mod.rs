@@ -2,13 +2,14 @@ use std::future::Future;
 use std::pin::Pin;
 
 use actix_cors::Cors;
-use actix_http::header;
+use actix_http::{header, StatusCode};
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::middleware::{Compress, Logger, NormalizePath};
 use actix_web::web::{self, Data};
 use actix_web::{
-    get, App, FromRequest, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
+    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
+    ResponseError,
 };
 use serde::Serialize;
 use utoipa::OpenApi;
@@ -29,6 +30,7 @@ pub(super) enum RestStatus<T: Serialize> {
     Success(Option<T>),
     Created(Option<T>),
     BadRequest(String),
+    Status(StatusCode, String),
     NotFound,
 }
 
@@ -49,6 +51,7 @@ impl<T: Serialize> Responder for RestStatus<T> {
             },
             RestStatus::BadRequest(msg) => HttpResponse::BadRequest().body(msg),
             RestStatus::NotFound => HttpResponse::NotFound().body("Not Found"),
+            RestStatus::Status(status, msg) => HttpResponseBuilder::new(status).body(msg),
         }
     }
 }

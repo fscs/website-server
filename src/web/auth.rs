@@ -10,7 +10,6 @@ use actix_web::{
     web::{self, Data},
     FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
 };
-use anyhow::anyhow;
 use chrono::Utc;
 use log::{debug, info};
 use oauth2::{
@@ -20,7 +19,7 @@ use oauth2::{
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::ARGS;
+use crate::{domain, ARGS};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub(crate) struct User {
@@ -160,18 +159,20 @@ where
 async fn refresh_authentication(
     jar: &mut AuthCookieJar,
     req: &mut ServiceRequest,
-) -> anyhow::Result<()> {
+) -> domain::Result<()> {
     info!("Refreshing user {:?}", jar.user_info());
-    let refresh = jar
-        .refresh_token()
-        .ok_or(anyhow!("Could not access refresh token"))?;
+    let refresh = jar.refresh_token().ok_or(domain::Error::Message(
+        "Could not access refresh token".to_string(),
+    ))?;
+
     let oauth_client = req.app_data::<Data<OauthClient>>().unwrap();
 
     let token = oauth_client
         .client
         .exchange_refresh_token(&RefreshToken::new(refresh.to_owned()))
         .request_async(async_http_client)
-        .await?;
+        .await
+        .map_err(|e| domain::Error::Message(format!("{:?}", e)))?;
 
     let refresh_token = token.refresh_token().map_or("/", |a| a.secret());
     let access_token = token.access_token().secret();
@@ -180,16 +181,18 @@ async fn refresh_authentication(
 
     let user = User::from_token(token.access_token().secret(), oauth_client)
         .await
-        .map_err(|e| anyhow!("{:?}", e))?;
+        .map_err(|e| domain::Error::Message(format!("{:?}", e)))?;
     jar.set_user_info(&user);
     let user = jar.jar.get("user").unwrap().value();
 
     let cookie_header = req
         .headers_mut()
         .get_mut(header::COOKIE)
-        .ok_or(anyhow!("Could not read Cookies"))?;
+        .ok_or(domain::Error::Message("Could not read Cookies".to_string()))?;
 
-    let cookie_header = cookie_header.to_str()?;
+    let cookie_header = cookie_header
+        .to_str()
+        .map_err(|e| domain::Error::Message(format!("{:?}", e)))?;
 
     let regex = Regex::from_str("(refresh_token=[.--;]*;)|(access_token=[.--;]*;)|(user=[.--;]*;)")
         .unwrap();
@@ -200,8 +203,11 @@ async fn refresh_authentication(
         "{cookie_header}refresh_token={refresh_token};access_token={access_token};user={user}",
     );
 
-    req.headers_mut()
-        .insert(header::COOKIE, HeaderValue::from_str(&cookie_header)?);
+    req.headers_mut().insert(
+        header::COOKIE,
+        HeaderValue::from_str(&cookie_header)
+            .map_err(|e| domain::Error::Message(format!("{:?}", e)))?,
+    );
     req.extensions_mut().clear();
     Ok(())
 }

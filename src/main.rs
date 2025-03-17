@@ -84,9 +84,12 @@ static CONTENT_DIR: LazyLock<ContentDir> = LazyLock::new(|| ContentDir {
 static UPLOAD_DIR: LazyLock<PathBuf> = LazyLock::new(|| ARGS.data_dir.join("uploads/attachments/"));
 
 #[actix_web::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> domain::Result<()> {
     pretty_env_logger::formatted_timed_builder()
-        .filter_level(LevelFilter::from_str(&ARGS.log_level)?)
+        .filter_level(
+            LevelFilter::from_str(&ARGS.log_level)
+                .map_err(|e| domain::Error::Message(format!("{:?}", e)))?,
+        )
         .init();
 
     let database_url = ARGS.database_url.clone().map_or(
@@ -97,10 +100,15 @@ async fn main() -> anyhow::Result<()> {
         identity,
     );
 
-    let database = DatabasePool::new(&database_url).await?;
+    let database = DatabasePool::new(&database_url)
+        .await
+        .map_err(|e| domain::Error::Message(format!("failed to aquire database: {:?}", e)))?;
 
     let mut transaction = database.start_transaction().await?;
-    sqlx::migrate!().run(&mut *transaction).await?;
+    sqlx::migrate!()
+        .run(&mut *transaction)
+        .await
+        .map_err(|e| domain::Error::Message(format!("error while running migrations: {:?}", e)))?;
     transaction.commit().await?;
 
     let _ = web::start_server(database).await;
