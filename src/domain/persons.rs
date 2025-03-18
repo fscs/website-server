@@ -14,8 +14,7 @@ pub struct PersonRoleMapping {
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct Person {
     pub id: Uuid,
-    pub first_name: String,
-    pub last_name: String,
+    pub full_name: String,
     pub user_name: String,
     pub matrix_id: Option<String>,
 }
@@ -36,8 +35,7 @@ pub struct Abmeldung {
 pub trait PersonRepo {
     async fn create_person(
         &mut self,
-        first_name: &str,
-        last_name: &str,
+        full_name: &str,
         user_name: &str,
         matrix_id: Option<&str>,
     ) -> Result<Person>;
@@ -83,8 +81,7 @@ pub trait PersonRepo {
     async fn update_person<'a>(
         &mut self,
         id: Uuid,
-        first_name: Option<&str>,
-        last_name: Option<&str>,
+        full_name: Option<&str>,
         user_name: Option<&str>,
         matrix_id: Option<&str>,
     ) -> Result<Option<Person>>;

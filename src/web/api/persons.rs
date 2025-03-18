@@ -52,9 +52,7 @@ pub struct PersonsByRoleParams {
 #[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct CreatePersonParams {
     #[validate(length(min = 1))]
-    first_name: String,
-    #[validate(length(min = 1))]
-    last_name: String,
+    full_name: String,
     #[validate(length(min = 1))]
     user_name: String,
     #[validate(length(min = 1))]
@@ -64,9 +62,7 @@ pub struct CreatePersonParams {
 #[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct UpdatePersonParams {
     #[validate(length(min = 1))]
-    first_name: Option<String>,
-    #[validate(length(min = 1))]
-    last_name: Option<String>,
+    full_name: Option<String>,
     #[validate(length(min = 1))]
     user_name: Option<String>,
     #[validate(length(min = 1))]
@@ -89,8 +85,7 @@ pub struct AbmeldungParams {
 #[derive(Debug, Serialize, ToSchema, IntoParams, Validate)]
 pub struct PublicPerson {
     pub id: Uuid,
-    pub first_name: String,
-    pub last_name: String,
+    pub full_name: String,
     pub user_name: Option<String>,
     pub matrix_id: Option<String>,
 }
@@ -99,8 +94,7 @@ impl PublicPerson {
     pub fn public_from_person(person: Person) -> PublicPerson {
         PublicPerson {
             id: person.id,
-            first_name: person.first_name,
-            last_name: person.last_name,
+            full_name: person.full_name,
             user_name: None,
             matrix_id: None,
         }
@@ -109,8 +103,7 @@ impl PublicPerson {
     pub fn private_from_person(person: Person) -> PublicPerson {
         PublicPerson {
             id: person.id,
-            first_name: person.first_name,
-            last_name: person.last_name,
+            full_name: person.full_name,
             user_name: Some(person.user_name),
             matrix_id: person.matrix_id,
         }
@@ -199,8 +192,7 @@ async fn put_person(
 ) -> Result<impl Responder> {
     let result = transaction
         .create_person(
-            params.first_name.as_str(),
-            params.last_name.as_str(),
+            params.full_name.as_str(),
             params.user_name.as_str(),
             params.matrix_id.as_deref(),
         )
@@ -254,8 +246,7 @@ async fn patch_person(
     let result = transaction
         .update_person(
             *person_id,
-            params.first_name.as_deref(),
-            params.last_name.as_deref(),
+            params.full_name.as_deref(),
             params.user_name.as_deref(),
             params.matrix_id.as_deref(),
         )

@@ -10,22 +10,20 @@ use crate::domain::{
 impl PersonRepo for PgConnection {
     async fn create_person(
         &mut self,
-        first_name: &str,
-        last_name: &str,
+        full_name: &str,
         user_name: &str,
         matrix_id: Option<&str>,
     ) -> Result<Person> {
         let result = sqlx::query_as!(
             Person,
             r#"
-                INSERT INTO person (first_name, last_name, user_name, matrix_id)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO person (full_name, user_name, matrix_id)
+                VALUES ($1, $2, $3)
                 ON CONFLICT
                 DO NOTHING
                 RETURNING *
             "#,
-            first_name,
-            last_name,
+            full_name,
             user_name,
             matrix_id
         )
@@ -295,8 +293,7 @@ impl PersonRepo for PgConnection {
     async fn update_person<'a>(
         &mut self,
         id: Uuid,
-        first_name: Option<&str>,
-        last_name: Option<&str>,
+        full_name: Option<&str>,
         user_name: Option<&str>,
         matrix_id: Option<&str>,
     ) -> Result<Option<Person>> {
@@ -305,16 +302,14 @@ impl PersonRepo for PgConnection {
             r#"
                 UPDATE person 
                 SET 
-                    first_name = COALESCE($2, first_name),
-                    last_name = COALESCE($3, last_name),
-                    user_name = COALESCE($4, user_name),
-                    matrix_id = COALESCE($5, matrix_id)
+                    full_name = COALESCE($2, full_name),
+                    user_name = COALESCE($3, user_name),
+                    matrix_id = COALESCE($4, matrix_id)
                 WHERE id = $1 
                 RETURNING *
             "#,
             id,
-            first_name,
-            last_name,
+            full_name,
             user_name,
             matrix_id,
         )
@@ -369,17 +364,15 @@ mod test {
     async fn create_person(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let first_name = "deine";
-        let last_name = "mutter";
+        let full_name = "deine mutter";
         let user_name = "ist";
         let matrix_id = Some("deine mutter".to_string());
 
         let person = conn
-            .create_person(first_name, last_name, user_name, matrix_id.as_deref())
+            .create_person(full_name, user_name, matrix_id.as_deref())
             .await?;
 
-        assert_eq!(person.first_name, first_name);
-        assert_eq!(person.last_name, last_name);
+        assert_eq!(person.full_name, full_name);
         assert_eq!(person.user_name, user_name);
         assert_eq!(person.matrix_id, matrix_id);
 
@@ -767,7 +760,7 @@ mod test {
         let new_user_name = "auch meine mutter";
 
         let person = conn
-            .update_person(id, None, None, Some(new_user_name), None)
+            .update_person(id, None, Some(new_user_name), None)
             .await?
             .unwrap();
 

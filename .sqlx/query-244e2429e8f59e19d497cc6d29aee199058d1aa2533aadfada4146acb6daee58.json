@@ -10,21 +10,16 @@
       },
       {
         "ordinal": 1,
-        "name": "last_name",
+        "name": "full_name",
         "type_info": "Text"
       },
       {
         "ordinal": 2,
-        "name": "first_name",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 3,
         "name": "user_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "matrix_id",
         "type_info": "Text"
       }
@@ -35,7 +30,6 @@
       ]
     },
     "nullable": [
-      false,
       false,
       false,
       false,
