@@ -19,11 +19,20 @@ use oauth2::{
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::{domain, ARGS};
+use crate::{
+    database::DatabaseTransaction,
+    domain::{
+        self,
+        persons::{Person, PersonRepo},
+    },
+    ARGS,
+};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub(crate) struct User {
+    pub(crate) full_name: String,
     pub(crate) username: String,
+    pub(crate) sub: String,
     exp: i64,
     userinfo: HashMap<String, serde_json::Value>,
 }
@@ -53,16 +62,39 @@ impl User {
             })?;
 
         Ok(User {
+            full_name: userinfo
+                .get("name")
+                .ok_or_else(|| ErrorInternalServerError("Internal Error"))?
+                .as_str()
+                .ok_or_else(|| ErrorInternalServerError("Internal Error"))?
+                .to_string(),
             username: userinfo
                 .get("preferred_username")
-                .map(std::string::ToString::to_string)
-                .ok_or_else(|| {
-                    debug!("Could not access preferred_username");
-                    ErrorInternalServerError("Internal Error")
-                })?,
+                .ok_or_else(|| ErrorInternalServerError("Internal Error"))?
+                .as_str()
+                .ok_or_else(|| ErrorInternalServerError("Internal Error"))?
+                .to_string(),
+            sub: userinfo
+                .get("sub")
+                .ok_or_else(|| ErrorInternalServerError("Internal Error"))?
+                .as_str()
+                .ok_or_else(|| ErrorInternalServerError("Internal Error"))?
+                .to_string(),
             exp: Utc::now().timestamp() + 300,
             userinfo,
         })
+    }
+
+    pub async fn query_person(&self, repo: &mut impl PersonRepo) -> domain::Result<Person> {
+        let user_name = format!("{}-{}", ARGS.oauth_source_name.as_str(), self.sub.as_str());
+        repo.person_by_user_name(user_name.as_str())
+            .await?
+            .ok_or_else(|| {
+                domain::Error::Message(
+                    "no corresponding person found in database, try logging out and in again"
+                        .to_string(),
+                )
+            })
     }
 
     pub fn is_rat(&self) -> bool {
@@ -145,7 +177,6 @@ where
                         ))
                         .ok()
                     }) {
-                        info!("{:?}", &cookie);
                         res.headers_mut().append(header::SET_COOKIE, cookie);
                     }
                     Ok(res)
@@ -324,11 +355,11 @@ impl FromRequest for User {
                     return Err(ErrorUnauthorized("Invalid Header"));
                 }
                 let access_token = parts[1];
-                let oauth_client = req.app_data::<Data<OauthClient>>().ok_or(
-                    actix_web::error::ErrorInternalServerError(
-                        "Broken config please Contact an Admin",
-                    ),
-                )?;
+                let oauth_client =
+                    req.app_data::<Data<OauthClient>>()
+                        .ok_or(ErrorInternalServerError(
+                            "Broken config please Contact an Admin",
+                        ))?;
                 return User::from_token(access_token, oauth_client)
                     .await
                     .map_err(|e| {
@@ -343,11 +374,11 @@ impl FromRequest for User {
             if let Some(user) = jar.user_info() {
                 Ok(user)
             } else if let Some(access_token) = jar.access_token() {
-                let oauth_client = req.app_data::<Data<OauthClient>>().ok_or(
-                    actix_web::error::ErrorInternalServerError(
-                        "Broken config please Contact an Admin",
-                    ),
-                )?;
+                let oauth_client =
+                    req.app_data::<Data<OauthClient>>()
+                        .ok_or(ErrorInternalServerError(
+                            "Broken config please Contact an Admin",
+                        ))?;
                 User::from_token(access_token, oauth_client)
                     .await
                     .map_err(|e| {
@@ -463,16 +494,17 @@ async fn callback(
     query: web::Query<AuthRequest>,
     mut auth_jar: AuthCookieJar,
     request: HttpRequest,
-) -> impl Responder {
+    mut transaction: DatabaseTransaction<'_>,
+) -> domain::Result<impl Responder> {
     let code = AuthorizationCode::new(query.code.clone());
     let state = query.state.clone();
 
     let Some(csrf_token) = request.cookie("csrf") else {
-        return HttpResponse::Unauthorized().body("missing csrf token");
+        return Ok(HttpResponse::Unauthorized().body("missing csrf token"));
     };
 
     if state != csrf_token.value() {
-        return HttpResponse::Unauthorized().body("wrong csrf state");
+        return Ok(HttpResponse::Unauthorized().body("wrong csrf state"));
     }
 
     let path = query.path.clone().unwrap_or("/".to_string());
@@ -485,7 +517,9 @@ async fn callback(
         .request_async(async_http_client)
         .await
     else {
-        return HttpResponse::InternalServerError().body("Could not get token from Provider");
+        return Err(domain::Error::Message(
+            "Could not get token from Provider".to_string(),
+        ));
     };
 
     let access_token = token.access_token().secret();
@@ -498,17 +532,30 @@ async fn callback(
     auth_jar.set_refresh_token(refresh_token);
 
     let Ok(user) = User::from_token(access_token, &oauth_client).await else {
-        return HttpResponse::InternalServerError().body("Could not access user info");
+        return Err(domain::Error::Message(
+            "Could not access user info".to_string(),
+        ));
     };
     auth_jar.set_user_info(&user);
 
-    let mut ressponse_builder = HttpResponse::Found();
-    ressponse_builder.append_header((header::LOCATION, path));
+    let mut response_builder = HttpResponse::Found();
+    response_builder.append_header((header::LOCATION, path));
 
-    //info!("{:?}", auth_jar.delta());
     for cookie in auth_jar.delta() {
-        ressponse_builder.cookie(cookie.clone());
+        response_builder.cookie(cookie.clone());
     }
 
-    ressponse_builder.finish()
+    let user_name = format!("{}-{}", ARGS.oauth_source_name.as_str(), user.sub.as_str());
+    if let None = transaction.person_by_user_name(user_name.as_str()).await? {
+        info!("creating user '{}'", user_name.as_str());
+        transaction
+            .create_person(user.full_name.as_str(), user_name.as_str(), None)
+            .await?;
+    } else {
+        info!("user '{}' already exists", user_name.as_str());
+    }
+
+    transaction.commit().await?;
+
+    Ok(response_builder.finish())
 }

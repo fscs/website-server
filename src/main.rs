@@ -28,6 +28,9 @@ struct Args {
     /// Postgres Database Url to connect to
     #[arg(short, long)]
     database_url: Option<String>,
+    /// Oauth Source Name
+    #[arg(short, long)]
+    oauth_source_name: String,
     /// Oauth Url to authorize against
     #[arg(short, long)]
     auth_url: String,

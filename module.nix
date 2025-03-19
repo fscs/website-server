@@ -41,6 +41,10 @@
         description = "content folder to server. needs to contain public, hidden and protected subfolders";
         type = t.nonEmptyStr;
       };
+      oauthSourceName = lib.mkOption {
+        description = "name of the oauth provider";
+        type = t.nonEmptyStr;
+      };
       authUrl = lib.mkOption {
         description = "url for oauth authorization";
         type = t.nonEmptyStr;
@@ -102,6 +106,7 @@
             inherit (cfg) host port;
             database-url = "postgresql:///${config.users.users.fscs-website-server.name}?port=${toString config.services.postgresql.settings.port}";
             content-dir = cfg.content;
+            oauth-source-name = cfg.oauthSourceName;
             auth-url = cfg.authUrl;
             token-url = cfg.tokenUrl;
             user-info = cfg.userInfoUrl;
