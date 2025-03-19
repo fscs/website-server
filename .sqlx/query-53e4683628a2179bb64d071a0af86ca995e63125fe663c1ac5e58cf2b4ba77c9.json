@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                UPDATE sitzungen \n                SET \n                    datetime = COALESCE($1, datetime),\n                    location = COALESCE($2, location),\n                    kind = COALESCE($3, kind),\n                    antragsfrist = COALESCE($4, antragsfrist)\n                WHERE id = $5 \n                RETURNING id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist\n            ",
+  "query": "\n                SELECT id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist, legislative_period_id\n                FROM sitzungen\n                WHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -41,28 +41,15 @@
         "ordinal": 4,
         "name": "antragsfrist",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "legislative_period_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Timestamptz",
-        "Text",
-        {
-          "Custom": {
-            "name": "sitzungkind",
-            "kind": {
-              "Enum": [
-                "normal",
-                "vv",
-                "wahlvv",
-                "ersatz",
-                "konsti",
-                "dringlichkeit"
-              ]
-            }
-          }
-        },
-        "Timestamptz",
         "Uuid"
       ]
     },
@@ -71,8 +58,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "6f0a2592be981adeb79871c32d818174318b11794a85f2d6b9ae0cb597195768"
+  "hash": "53e4683628a2179bb64d071a0af86ca995e63125fe663c1ac5e58cf2b4ba77c9"
 }

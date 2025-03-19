@@ -1,0 +1,85 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE sitzungen \n                SET \n                    datetime = COALESCE($1, datetime),\n                    location = COALESCE($2, location),\n                    kind = COALESCE($3, kind),\n                    antragsfrist = COALESCE($4, antragsfrist),\n                    legislative_period_id = COALESCE($5, legislative_period_id)\n                WHERE id = $6 \n                RETURNING id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist, legislative_period_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "location",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "kind!: SitzungKind",
+        "type_info": {
+          "Custom": {
+            "name": "sitzungkind",
+            "kind": {
+              "Enum": [
+                "normal",
+                "vv",
+                "wahlvv",
+                "ersatz",
+                "konsti",
+                "dringlichkeit"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "antragsfrist",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "legislative_period_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Text",
+        {
+          "Custom": {
+            "name": "sitzungkind",
+            "kind": {
+              "Enum": [
+                "normal",
+                "vv",
+                "wahlvv",
+                "ersatz",
+                "konsti",
+                "dringlichkeit"
+              ]
+            }
+          }
+        },
+        "Timestamptz",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6435959ec058f090af69b3838cc2c319fee0c2ef496b67a3b8cc4f56e4fc08ec"
+}

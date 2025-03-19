@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                DELETE FROM sitzungen\n                WHERE id = $1\n                RETURNING id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist\n            ",
+  "query": "\n                SELECT id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist, legislative_period_id\n                FROM sitzungen\n                WHERE datetime >= $1\n                ORDER BY datetime ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -41,11 +41,16 @@
         "ordinal": 4,
         "name": "antragsfrist",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "legislative_period_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Timestamptz"
       ]
     },
     "nullable": [
@@ -53,8 +58,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "55c17fe380aa390aefdeeacb12a2839ad5b26284b78ebac6c899bfa0622bdd4a"
+  "hash": "293287fec20d7736007efc2bf998a1f8244205cb237de94ea23ec50642b84392"
 }

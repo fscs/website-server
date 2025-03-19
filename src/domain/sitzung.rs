@@ -35,6 +35,7 @@ pub struct Sitzung {
     pub location: String,
     pub kind: SitzungKind,
     pub antragsfrist: DateTime<Utc>,
+    pub legislative_period_id: Uuid,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
@@ -72,6 +73,7 @@ pub trait SitzungRepo {
         location: &str,
         kind: SitzungKind,
         antragsfrist: DateTime<Utc>,
+        legislative_period: Uuid,
     ) -> Result<Sitzung>;
 
     async fn create_top(
@@ -109,6 +111,7 @@ pub trait SitzungRepo {
         location: Option<&'a str>,
         kind: Option<SitzungKind>,
         antragsfrist: Option<DateTime<Utc>>,
+        legislative_period: Option<Uuid>,
     ) -> Result<Option<Sitzung>>;
 
     async fn update_top<'a>(

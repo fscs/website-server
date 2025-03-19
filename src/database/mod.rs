@@ -9,6 +9,7 @@ pub mod antrag;
 pub mod antrag_top_map;
 pub mod attachment;
 pub mod door_state;
+pub mod legislative_period;
 pub mod persons;
 pub mod sitzungen;
 

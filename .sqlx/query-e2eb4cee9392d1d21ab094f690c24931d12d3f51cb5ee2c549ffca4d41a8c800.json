@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist\n                FROM sitzungen\n                WHERE datetime >= $1\n                ORDER BY datetime ASC\n                LIMIT $2\n            ",
+  "query": "\n                SELECT id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist, legislative_period_id\n                FROM sitzungen\n                WHERE legislative_period_id = $1\n                ORDER BY datetime ASC\n                ",
   "describe": {
     "columns": [
       {
@@ -41,12 +41,16 @@
         "ordinal": 4,
         "name": "antragsfrist",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "legislative_period_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Timestamptz",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -54,8 +58,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "89a3e1d959b9167f53447906a2c53204428d305704d405993c2137a581ef3dc6"
+  "hash": "e2eb4cee9392d1d21ab094f690c24931d12d3f51cb5ee2c549ffca4d41a8c800"
 }

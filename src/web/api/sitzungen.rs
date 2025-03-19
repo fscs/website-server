@@ -62,6 +62,7 @@ pub struct CreateSitzungParams {
     location: String,
     kind: SitzungKind,
     antragsfrist: DateTime<Utc>,
+    legislative_period: Uuid,
 }
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
@@ -79,6 +80,7 @@ pub struct UpdateSitzungParams {
     location: Option<String>,
     kind: Option<SitzungKind>,
     antragsfrist: Option<DateTime<Utc>>,
+    legislative_period: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
@@ -155,6 +157,7 @@ async fn post_sitzungen(
             params.location.as_str(),
             params.kind,
             params.antragsfrist,
+            params.legislative_period,
         )
         .await?;
 
@@ -246,6 +249,7 @@ async fn patch_sitzung_by_id(
             params.location.as_deref(),
             params.kind,
             params.antragsfrist,
+            params.legislative_period,
         )
         .await?;
 

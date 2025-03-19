@@ -7,6 +7,8 @@ use crate::domain::{
     Result,
 };
 
+use super::legislative_period;
+
 impl SitzungRepo for PgConnection {
     async fn create_sitzung(
         &mut self,
@@ -14,18 +16,20 @@ impl SitzungRepo for PgConnection {
         location: &str,
         kind: SitzungKind,
         antragsfrist: DateTime<Utc>,
+        legislative_period_id: Uuid,
     ) -> Result<Sitzung> {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                INSERT INTO sitzungen (datetime, location, kind, antragsfrist)
-                VALUES ($1, $2, $3, $4) 
-                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
+                INSERT INTO sitzungen (datetime, location, kind, antragsfrist, legislative_period_id)
+                VALUES ($1, $2, $3, $4, $5) 
+                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
             "#,
             datetime,
             location,
             kind as SitzungKind,
             antragsfrist,
+            legislative_period_id
         )
         .fetch_one(self)
         .await?;
@@ -76,7 +80,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
                 FROM sitzungen
             "#
         )
@@ -90,7 +94,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
                 FROM sitzungen
                 WHERE id = $1
             "#,
@@ -111,7 +115,7 @@ impl SitzungRepo for PgConnection {
             sqlx::query_as!(
                 Sitzung,
                 r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
                 FROM sitzungen
                 WHERE datetime >= $1
                 ORDER BY datetime ASC
@@ -126,7 +130,7 @@ impl SitzungRepo for PgConnection {
             sqlx::query_as!(
                 Sitzung,
                 r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
                 FROM sitzungen
                 WHERE datetime >= $1
                 ORDER BY datetime ASC
@@ -148,7 +152,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Sitzung,
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
+                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
                 FROM sitzungen
                 WHERE datetime >= $1 AND datetime <= $2
                 ORDER BY datetime ASC
@@ -202,6 +206,7 @@ impl SitzungRepo for PgConnection {
         location: Option<&'a str>,
         kind: Option<SitzungKind>,
         antragsfrist: Option<DateTime<Utc>>,
+        legislative_period_id: Option<Uuid>,
     ) -> Result<Option<Sitzung>> {
         let result = sqlx::query_as!(
             Sitzung,
@@ -211,14 +216,16 @@ impl SitzungRepo for PgConnection {
                     datetime = COALESCE($1, datetime),
                     location = COALESCE($2, location),
                     kind = COALESCE($3, kind),
-                    antragsfrist = COALESCE($4, antragsfrist)
-                WHERE id = $5 
-                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
+                    antragsfrist = COALESCE($4, antragsfrist),
+                    legislative_period_id = COALESCE($5, legislative_period_id)
+                WHERE id = $6 
+                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
             "#,
             datetime,
             location,
             kind as Option<SitzungKind>,
             antragsfrist,
+            legislative_period_id,
             id
         )
         .fetch_optional(self)
@@ -268,7 +275,7 @@ impl SitzungRepo for PgConnection {
             r#"
                 DELETE FROM sitzungen
                 WHERE id = $1
-                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist
+                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
             "#,
             id
         )
@@ -304,7 +311,7 @@ mod test {
 
     use crate::domain::sitzung::{SitzungKind, SitzungRepo, TopKind};
 
-    #[sqlx::test]
+    #[sqlx::test(fixtures("gimme_legislative_period"))]
     async fn create_sitzung(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
@@ -313,13 +320,24 @@ mod test {
         let sitzung_kind = SitzungKind::VV;
         let antragsfrist = DateTime::parse_from_rfc3339("2024-09-07T10:30:00+02:00").unwrap();
 
+        let legislative_period_id =
+            Uuid::parse_str("f2b2b2b2-2b2b-2b2b-2b2b-2b2b2b2b2b2b").unwrap();
+
         let sitzung = conn
-            .create_sitzung(datetime.into(), location, sitzung_kind, antragsfrist.into())
+            .create_sitzung(
+                datetime.into(),
+                location,
+                sitzung_kind,
+                antragsfrist.into(),
+                legislative_period_id,
+            )
             .await?;
 
         assert_eq!(sitzung.datetime, datetime);
         assert_eq!(sitzung.location, location);
         assert_eq!(sitzung.kind, sitzung_kind);
+        assert_eq!(sitzung.antragsfrist, antragsfrist);
+        assert_eq!(sitzung.legislative_period_id, legislative_period_id);
 
         Ok(())
     }
@@ -496,7 +514,7 @@ mod test {
         let new_sitzung_kind = SitzungKind::Konsti;
 
         let sitzung = conn
-            .update_sitzung(sitzung_id, None, None, Some(new_sitzung_kind), None)
+            .update_sitzung(sitzung_id, None, None, Some(new_sitzung_kind), None, None)
             .await?
             .unwrap();
 
