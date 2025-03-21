@@ -17,7 +17,7 @@ use crate::{
         door_state::{DoorState, DoorStateRepo},
         Result,
     },
-    web::{auth::User, RestStatus},
+    web::{auth, RestStatus},
 };
 
 /// Create the doorstate service under /doorstate
@@ -96,9 +96,8 @@ async fn get_doorstate_between(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("")]
+#[post("", wrap = "auth::capability::RequireManageDoor")]
 async fn create_doorstate(
-    _user: User,
     params: ActixJson<CreateDoorStateParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {

@@ -1,4 +1,4 @@
-use actix_http::header;
+use actix_http::{header, StatusCode};
 use actix_multipart::form::{tempfile::TempFile, MultipartForm};
 use actix_web::{
     delete, get, patch, post,
@@ -19,9 +19,12 @@ use crate::{
         antrag::{Antrag, AntragRepo},
         antrag_top_map::AntragTopMapRepo,
         attachment::AttachmentRepo,
-        Result,
+        Capability, Result,
     },
-    web::{auth::User, RestStatus},
+    web::{
+        auth::{self, User},
+        RestStatus,
+    },
     ARGS, UPLOAD_DIR,
 };
 
@@ -48,7 +51,6 @@ fn register_antrag_id_service(parent: Scope) -> Scope {
 
 #[derive(Debug, IntoParams, Deserialize, ToSchema, Validate)]
 pub struct CreateAntragParams {
-    antragssteller: Vec<Uuid>,
     #[validate(length(min = 1))]
     begründung: String,
     #[validate(length(min = 1))]
@@ -59,7 +61,6 @@ pub struct CreateAntragParams {
 
 #[derive(Debug, IntoParams, Deserialize, ToSchema, Validate)]
 pub struct UpdateAntragParams {
-    antragssteller: Option<Vec<Uuid>>,
     #[validate(length(min = 1))]
     begründung: Option<String>,
     #[validate(length(min = 1))]
@@ -129,15 +130,17 @@ async fn get_antrag_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("")]
+#[post("", wrap = "auth::capability::RequireCreateAntrag")]
 async fn create_antrag(
-    _user: User,
+    user: User,
     params: ActixJson<CreateAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    let person = user.query_person(&mut *transaction).await?;
+
     let result = transaction
         .create_antrag(
-            &params.antragssteller,
+            &[person.id],
             &params.titel,
             &params.begründung,
             &params.antragstext,
@@ -160,17 +163,32 @@ async fn create_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{antrag_id}")]
+#[patch("/{antrag_id}", wrap = "auth::capability::RequireCreateAntrag")]
 async fn patch_antrag(
-    _user: User,
+    user: User,
     params: ActixJson<UpdateAntragParams>,
     antrag_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
+    let person = user.query_person(&mut *transaction).await?;
+
+    if !user.has_capability(Capability::ManageAnträge) {
+        let Some(antrag) = transaction.antrag_by_id(*antrag_id).await? else {
+            return Ok(RestStatus::NotFound);
+        };
+
+        if !antrag.creators.contains(&person.id) {
+            return Ok(RestStatus::Status(
+                StatusCode::UNAUTHORIZED,
+                "you are not a creator of this antrag".to_string(),
+            ));
+        }
+    }
+
     let result = transaction
         .update_antrag(
             *antrag_id,
-            params.antragssteller.as_deref(),
+            None,
             params.titel.as_deref(),
             params.begründung.as_deref(),
             params.antragstext.as_deref(),
@@ -191,9 +209,8 @@ async fn patch_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{antrag_id}")]
+#[delete("/{antrag_id}", wrap = "auth::capability::RequireManageAnträge")]
 async fn delete_antrag(
-    _user: User,
     antrag_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
@@ -215,7 +232,6 @@ async fn delete_antrag(
 )]
 #[get("/{antrag_id}/attachments/{attachment_id}")]
 async fn get_antrag_attachment(
-    _user: User,
     path_params: Path<(Uuid, Uuid)>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
@@ -247,13 +263,29 @@ async fn get_antrag_attachment(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{antrag_id}/attachments/{attachment_id}")]
+#[delete("/{antrag_id}/attachments/{attachment_id}", wrap = "auth::capability::RequireCreateAntrag")]
 async fn delete_antrag_attachment(
-    _user: User,
+    user: User,
     path_params: Path<(Uuid, Uuid)>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     let (antrag_id, attachment_id) = path_params.into_inner();
+
+    if !user.has_capability(Capability::ManageAnträge) {
+        let person = user.query_person(&mut *transaction).await?;
+
+        let Some(antrag) = transaction.antrag_by_id(antrag_id).await? else {
+            return Ok(RestStatus::NotFound);
+        };
+
+        if !antrag.creators.contains(&person.id) {
+            return Ok(RestStatus::Status(
+                StatusCode::UNAUTHORIZED,
+                "you are not a creator of this antrag".to_string(),
+            ));
+        }
+    }
+
     transaction
         .delete_attachment_from_antrag(antrag_id, attachment_id)
         .await?;
@@ -277,15 +309,26 @@ async fn delete_antrag_attachment(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/{antrag_id}/attachments")]
+#[post("/{antrag_id}/attachments", wrap = "auth::capability::RequireCreateAntrag")]
 async fn add_antrag_attachment(
-    _user: User,
+    user: User,
     antrag_id: Path<Uuid>,
     form: MultipartForm<UploadAntrag>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    if transaction.antrag_by_id(*antrag_id).await?.is_none() {
+    let Some(antrag) = transaction.antrag_by_id(*antrag_id).await? else {
         return Ok(RestStatus::NotFound);
+    };
+
+    if !user.has_capability(Capability::ManageAnträge) {
+        let person = user.query_person(&mut *transaction).await?;
+
+        if !antrag.creators.contains(&person.id) {
+            return Ok(RestStatus::Status(
+                StatusCode::UNAUTHORIZED,
+                "you are not a creator of this antrag".to_string(),
+            ));
+        }
     }
 
     match form.file.size {

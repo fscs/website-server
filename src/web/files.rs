@@ -13,7 +13,7 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder,
 };
 
-use crate::CONTENT_DIR;
+use crate::{domain::Capability, CONTENT_DIR};
 
 use super::auth::User;
 
@@ -25,11 +25,9 @@ pub(crate) fn service() -> impl HttpServiceFactory {
 async fn serve_files(req: HttpRequest, user: Option<User>) -> HttpResponse<BoxBody> {
     // decide what the user gets to see
     let base_dir = match user {
-        Some(user) => match user.is_rat() {
-            true => CONTENT_DIR.protected.as_path(),
-            false => CONTENT_DIR.hidden.as_path(),
-        },
-        None => CONTENT_DIR.public.as_path(),
+        Some(user) if user.has_capability(Capability::ViewProtected) => CONTENT_DIR.protected.as_path(),
+        Some(user) if user.has_capability(Capability::ViewProtected) => CONTENT_DIR.hidden.as_path(),
+        _ => CONTENT_DIR.public.as_path(),
     };
 
     let sub_path: PathBuf = req.match_info().query("filename").parse().unwrap();

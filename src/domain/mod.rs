@@ -28,6 +28,19 @@ pub enum Error {
     Message(String),
 }
 
+#[derive(Debug, Clone, Copy, strum::EnumString, strum::Display, Eq, Hash, PartialEq)]
+#[strum(ascii_case_insensitive)]
+pub enum Capability {
+    Admin,
+    ManageSitzungen,
+    ManageAnträge,
+    ManagePersons,
+    ManageDoor,
+    CreateAntrag,
+    ViewHidden,
+    ViewProtected,
+}
+
 pub trait SitzungAntragService: SitzungRepo + AntragTopMapRepo {}
 
 impl<T> SitzungAntragService for T where T: SitzungRepo + AntragTopMapRepo {}

@@ -12,7 +12,8 @@ use validator::{Validate, ValidationError};
 
 use crate::database::{DatabaseConnection, DatabaseTransaction};
 use crate::domain::persons::{Abmeldung, Person};
-use crate::web::auth::User;
+use crate::domain::Capability;
+use crate::web::auth::{self, User};
 use crate::{
     domain::{persons::PersonRepo, Result},
     web::RestStatus,
@@ -129,20 +130,24 @@ fn validate_abmeldung_params(
     )
 )]
 #[get("")]
-async fn get_persons(user: Option<User>, mut conn: DatabaseConnection) -> Result<impl Responder> {
+async fn get_persons(
+    maybe_user: Option<User>,
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
     let persons = conn.persons().await?;
 
-    let result: Vec<_> = if user.is_some() {
-        persons
-            .into_iter()
-            .map(PublicPerson::private_from_person)
-            .collect()
-    } else {
-        persons
-            .into_iter()
-            .map(PublicPerson::public_from_person)
-            .collect()
-    };
+    let result: Vec<_> =
+        if maybe_user.is_some_and(|user| user.has_capability(Capability::ManagePersons)) {
+            persons
+                .into_iter()
+                .map(PublicPerson::private_from_person)
+                .collect()
+        } else {
+            persons
+                .into_iter()
+                .map(PublicPerson::public_from_person)
+                .collect()
+        };
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -157,14 +162,14 @@ async fn get_persons(user: Option<User>, mut conn: DatabaseConnection) -> Result
 )]
 #[get("/{person_id}")]
 async fn get_person_by_id(
-    user: Option<User>,
+    maybe_user: Option<User>,
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     let person = conn.person_by_id(*person_id).await?;
 
     let result = person.map(|p| {
-        if user.is_some() {
+        if maybe_user.is_some_and(|user| user.has_capability(Capability::ManagePersons)) {
             PublicPerson::private_from_person(p)
         } else {
             PublicPerson::public_from_person(p)
@@ -184,9 +189,8 @@ async fn get_person_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("")]
+#[put("", wrap = "auth::capability::RequireManagePersons")]
 async fn put_person(
-    _user: User,
     params: ActixJson<CreatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
@@ -212,9 +216,8 @@ async fn put_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{person_id}")]
+#[delete("/{person_id}", wrap = "auth::capability::RequireManagePersons")]
 async fn delete_person_by_id(
-    _user: User,
     person_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
@@ -236,9 +239,8 @@ async fn delete_person_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{person_id}")]
+#[patch("/{person_id}", wrap = "auth::capability::RequireManagePersons")]
 async fn patch_person(
-    _user: User,
     person_id: Path<Uuid>,
     params: ActixJson<UpdatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -268,13 +270,13 @@ async fn patch_person(
 )]
 #[get("/by-role")]
 async fn get_persons_by_role(
-    user: Option<User>,
+    maybe_user: Option<User>,
     params: Query<PersonsByRoleParams>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     let persons = conn.persons_with_role(params.role.as_str()).await?;
 
-    let result: Vec<_> = if user.is_some() {
+    let result: Vec<_> = if maybe_user.is_some_and(|user| user.has_capability(Capability::ManagePersons)) {
         persons
             .into_iter()
             .map(PublicPerson::private_from_person)
@@ -297,9 +299,8 @@ async fn get_persons_by_role(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/by-matrix-id/{matrix_id}")]
+#[get("/by-matrix-id/{matrix_id}", wrap = "auth::capability::RequireManagePersons")]
 async fn get_person_by_matrix_id(
-    _user: User,
     matrix_id: Path<String>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
@@ -316,9 +317,8 @@ async fn get_person_by_matrix_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/by-username/{user_name}")]
+#[get("/by-username/{user_name}", wrap = "auth::capability::RequireManagePersons")]
 async fn get_person_by_user_name(
-    _user: User,
     user_name: Path<String>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
@@ -360,9 +360,8 @@ async fn roles_by_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("/{person_id}/roles")]
+#[put("/{person_id}/roles", wrap = "auth::capability::RequireManagePersons")]
 async fn add_role_to_person(
-    _user: User,
     person_id: Path<Uuid>,
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -391,9 +390,8 @@ async fn add_role_to_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{person_id}/roles")]
+#[delete("/{person_id}/roles", wrap = "auth::capability::RequireManagePersons")]
 async fn revoke_role_from_person(
-    _user: User,
     person_id: Path<Uuid>,
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -419,9 +417,8 @@ async fn revoke_role_from_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{person_id}/abmeldungen")]
+#[get("/{person_id}/abmeldungen", wrap = "auth::capability::RequireManagePersons")]
 async fn get_abmeldungen_by_person(
-    _user: User,
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
@@ -445,9 +442,8 @@ async fn get_abmeldungen_by_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("/{person_id}/abmeldungen")]
+#[put("/{person_id}/abmeldungen", wrap = "auth::capability::RequireManagePersons")]
 async fn create_abmeldung(
-    _user: User,
     person_id: Path<Uuid>,
     params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -477,9 +473,8 @@ async fn create_abmeldung(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{person_id}/abmeldungen")]
+#[delete("/{person_id}/abmeldungen", wrap = "auth::capability::RequireManagePersons")]
 async fn revoke_abmeldung(
-    _user: User,
     person_id: Path<Uuid>,
     params: ActixJson<AbmeldungParams>,
     mut transaction: DatabaseTransaction<'_>,

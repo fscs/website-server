@@ -20,7 +20,10 @@ use crate::domain::{
     sitzung::{SitzungKind, SitzungRepo, TopKind},
     Result,
 };
-use crate::web::{auth::User, RestStatus};
+use crate::web::{
+    auth,
+    RestStatus,
+};
 
 /// Create the sitzungs service under /sitzungen
 pub(crate) fn service() -> Scope {
@@ -145,9 +148,8 @@ async fn get_sitzungen(mut conn: DatabaseConnection) -> Result<impl Responder> {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("")]
+#[post("", wrap = "auth::capability::RequireManageSitzungen")]
 async fn post_sitzungen(
-    _user: User,
     params: ActixJson<CreateSitzungParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
@@ -235,9 +237,8 @@ async fn get_sitzung_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}")]
+#[patch("/{sitzung_id}", wrap = "auth::capability::RequireManageSitzungen")]
 async fn patch_sitzung_by_id(
-    _user: User,
     sitzung_id: Path<Uuid>,
     params: ActixJson<UpdateSitzungParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -267,9 +268,8 @@ async fn patch_sitzung_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}")]
+#[delete("/{sitzung_id}", wrap = "auth::capability::RequireManageSitzungen")]
 async fn delete_sitzung_by_id(
-    _user: User,
     sitzung_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
@@ -313,7 +313,6 @@ async fn get_abmeldungen_by_sitzung(
 )]
 #[get("/{sitzung_id}/tops")]
 async fn get_tops(
-    _user: User,
     sitzung_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
@@ -337,9 +336,8 @@ async fn get_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/{sitzung_id}/tops")]
+#[post("/{sitzung_id}/tops", wrap = "auth::capability::RequireManageSitzungen")]
 async fn post_tops(
-    _user: User,
     sitzung_id: Path<Uuid>,
     params: ActixJson<CreateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -373,9 +371,8 @@ async fn post_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}/tops/{top_id}")]
+#[patch("/{sitzung_id}/tops/{top_id}", wrap = "auth::capability::RequireManageSitzungen")]
 async fn patch_tops(
-    _user: User,
     path_params: Path<(Uuid, Uuid)>,
     params: ActixJson<UpdateTopParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -411,9 +408,8 @@ async fn patch_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}/tops/{top_id}")]
+#[delete("/{sitzung_id}/tops/{top_id}", wrap = "auth::capability::RequireManageSitzungen")]
 async fn delete_tops(
-    _user: User,
     path_params: Path<(Uuid, Uuid)>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
@@ -441,9 +437,8 @@ async fn delete_tops(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}/tops/{top_id}/assoc")]
+#[patch("/{sitzung_id}/tops/{top_id}/assoc", wrap = "auth::capability::RequireManageSitzungen")]
 async fn assoc_antrag(
-    _user: User,
     path_params: Path<(Uuid, Uuid)>,
     params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -478,9 +473,8 @@ async fn assoc_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}/tops/{top_id}/assoc")]
+#[delete("/{sitzung_id}/tops/{top_id}/assoc", wrap = "auth::capability::RequireManageSitzungen")]
 async fn delete_assoc_antrag(
-    _user: User,
     path_params: Path<(Uuid, Uuid)>,
     params: ActixJson<AssocAntragParams>,
     mut transaction: DatabaseTransaction<'_>,

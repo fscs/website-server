@@ -10,7 +10,7 @@ use crate::{
         persons::{PersonRepo, Role},
         Result,
     },
-    web::{auth::User, RestStatus},
+    web::{auth, RestStatus},
 };
 
 // Create the roles service under /roles
@@ -51,9 +51,8 @@ async fn get_roles(mut conn: DatabaseConnection) -> Result<impl Responder> {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("")]
+#[put("", wrap = "auth::capability::RequireManagePersons")]
 async fn create_role(
-    _user: User,
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
@@ -75,9 +74,8 @@ async fn create_role(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("")]
+#[delete("", wrap = "auth::capability::RequireManagePersons")]
 async fn delete_role(
-    _user: User,
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {

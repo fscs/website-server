@@ -15,7 +15,7 @@ use crate::{
         sitzung::Sitzung,
         Result,
     },
-    web::{auth::User, RestStatus},
+    web::{auth, RestStatus},
 };
 
 /// Create the legislative period service
@@ -74,7 +74,7 @@ async fn get_legislatives_sitzungen(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("")]
+#[post("", wrap = "auth::capability::RequireManageSitzungen")]
 async fn create_legislative(
     params: Query<CreateLegislativeParams>,
     mut conn: DatabaseConnection,
@@ -94,9 +94,8 @@ async fn create_legislative(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{id}")]
+#[patch("/{id}", wrap = "auth::capability::RequireManageSitzungen")]
 async fn patch_legislative(
-    _user: User,
     path_params: Path<Uuid>,
     params: actix_web_validator::Json<CreateLegislativeParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -119,9 +118,8 @@ async fn patch_legislative(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{id}")]
+#[delete("/{id}", wrap = "auth::capability::RequireManageSitzungen")]
 async fn delete_legislative(
-    _user: User,
     path_params: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {

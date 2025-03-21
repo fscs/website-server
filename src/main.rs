@@ -2,7 +2,13 @@
 
 use clap::Parser;
 use log::LevelFilter;
-use std::{convert::identity, error::Error, path::PathBuf, str::FromStr, sync::LazyLock};
+use std::{
+    convert::identity,
+    error::Error,
+    path::PathBuf,
+    str::FromStr,
+    sync::LazyLock,
+};
 
 mod cache;
 mod database;
@@ -34,6 +40,10 @@ struct Args {
     /// Oauth Url to authorize against
     #[arg(short, long)]
     auth_url: String,
+    /// Specifiy a group and grant it capabilities.. Parameter should be formatted like
+    /// 'GroupName=CapName[,CapName]'
+    #[arg(long = "group", value_parser = parse_key_val::<String, String>)]
+    groups: Vec<(String, String)>,
     /// Oauth Url to get tokens from
     #[arg(short, long)]
     token_url: String,

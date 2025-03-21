@@ -7,8 +7,6 @@ use crate::domain::{
     Result,
 };
 
-use super::legislative_period;
-
 impl SitzungRepo for PgConnection {
     async fn create_sitzung(
         &mut self,

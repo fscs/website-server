@@ -9,6 +9,9 @@
   options.services.fscs-website-server =
     let
       t = lib.types;
+
+      trivialTypes = t.either t.nonEmptyStr (t.either t.bool t.number);
+      settingsType = t.attrsOf (t.either trivialTypes (t.listOf trivialTypes));
     in
     {
       enable = lib.mkEnableOption "enable the fscs website server";
@@ -25,58 +28,44 @@
         default = null;
       };
 
-      host = lib.mkOption {
-        description = "host address to bind to";
-        type = t.nonEmptyStr;
-        default = "0.0.0.0";
+      settings = lib.mkOption {
+        descriptions = "settings, passed as commandline arguments";
+        type = t.submodule {
+          freeformType = settingsType;
+
+          options = {
+            host = lib.mkOption {
+              description = "host address to bind to";
+              type = t.nonEmptyStr;
+              default = "0.0.0.0";
+            };
+
+            port = lib.mkOption {
+              description = "port to bind to";
+              type = t.port;
+              default = 8080;
+            };
+
+            dataDir = lib.mkOption {
+              description = "directory to store uploaded files";
+              type = t.nonEmptyStr;
+              default = "/var/lib/fscs-website-server";
+            };
+          };
+        };
+        default = { };
       };
 
-      port = lib.mkOption {
-        description = "port to bind to";
-        type = t.port;
-        default = 8080;
-      };
-
-      content = lib.mkOption {
-        description = "content folder to server. needs to contain public, hidden and protected subfolders";
-        type = t.nonEmptyStr;
-      };
-      oauthSourceName = lib.mkOption {
-        description = "name of the oauth provider";
-        type = t.nonEmptyStr;
-      };
-      authUrl = lib.mkOption {
-        description = "url for oauth authorization";
-        type = t.nonEmptyStr;
-      };
-      tokenUrl = lib.mkOption {
-        description = "url for getting tokens";
-        type = t.nonEmptyStr;
-      };
-      userInfoUrl = lib.mkOption {
-        description = "url for getting user info";
-        type = t.nonEmptyStr;
-      };
-      extraFlags = lib.mkOption {
-        description = "list of extra options to pass to the server";
-        type = t.listOf t.nonEmptyStr;
-        default = [ ];
-      };
-      allowedCorsOrigins = lib.mkOption {
-        description = "list of origins to allow for CORS";
-        type = t.listOf t.nonEmptyStr;
-        example = ''[ "https://hhu-fscs.de" ]'';
-        default = [ ];
-      };
       calendars = lib.mkOption {
         description = "ical calendars to make available under /api/calendar/<name>";
         type = t.attrsOf t.nonEmptyStr;
         default = { };
       };
-      dataDir = lib.mkOption {
-        description = "directory to store uploaded files";
-        default = "/var/lib/fscs-website-server";
-        type = t.nonEmptyStr;
+
+      groups = lib.mkOption {
+        description = "grant permissions to certain oauth groups";
+        type = t.attrsOf (t.listOf t.nonEmptyStr);
+        default = { };
       };
     };
 
@@ -100,70 +89,61 @@
         };
       };
 
-      systemd.services.fscs-website-server =
-        let
-          argSet = {
-            inherit (cfg) host port;
-            database-url = "postgresql:///${config.users.users.fscs-website-server.name}?port=${toString config.services.postgresql.settings.port}";
-            content-dir = cfg.content;
-            oauth-source-name = cfg.oauthSourceName;
-            auth-url = cfg.authUrl;
-            token-url = cfg.tokenUrl;
-            user-info = cfg.userInfoUrl;
-            cors-allowed-origin = cfg.allowedCorsOrigins;
-            calendar = lib.mapAttrsToList (name: url: "${name}=${url}") cfg.calendars;
-            data-dir = cfg.dataDir;
-          };
+      services.fscs-website-server.settings = {
+        database-url = "postgresql:///${config.users.users.fscs-website-server.name}?port=${toString config.services.postgresql.settings.port}";
 
-          args = lib.escapeShellArgs ((lib.cli.toGNUCommandLine { } argSet) ++ cfg.extraFlags);
-        in
-        {
-          after = [ "network.target" ];
-          wantedBy = [ "multi-user.target" ];
-          serviceConfig = {
-            EnvironmentFile = cfg.environmentFile;
-            ExecStart = "${lib.getExe cfg.package} ${args}";
-            Type = "exec";
-            User = config.users.users.fscs-website-server.name;
-            Restart = "always";
-            RestartSec = 5;
-            StateDirectory = cfg.dataDir;
-            LimitNOFILE = "8192";
-            CapabilityBoundingSet = [ "" ];
-            DeviceAllow = [ "" ];
-            DevicePolicy = "closed";
-            LockPersonality = true;
-            MemoryDenyWriteExecute = true;
-            NoNewPrivileges = true;
-            PrivateDevices = true;
-            PrivateTmp = true;
-            PrivateUsers = true;
-            ProcSubset = "pid";
-            ProtectClock = true;
-            ProtectControlGroups = true;
-            ProtectHome = true;
-            ProtectHostname = true;
-            ProtectKernelLogs = true;
-            ProtectKernelModules = true;
-            ProtectKernelTunables = true;
-            ProtectProc = "noaccess";
-            ProtectSystem = "strict";
-            RemoveIPC = true;
-            RestrictAddressFamilies = [
-              "AF_INET"
-              "AF_INET6"
-              "AF_UNIX"
-            ];
-            RestrictNamespaces = true;
-            RestrictRealtime = true;
-            RestrictSUIDSGID = true;
-            SystemCallArchitectures = "native";
-            SystemCallFilter = [
-              "@system-service"
-              "~@privileged"
-            ];
-            UMask = "0077";
-          };
+        calendar = lib.mapAttrsToList (name: url: "${name}=${url}") cfg.calendars;
+
+        group = lib.mapAttrsToList (name: caps: "${name}=${lib.concatStringsSep "," caps}") cfg.groups;
+      };
+
+      systemd.services.fscs-website-server = {
+        after = [ "network.target" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          EnvironmentFile = cfg.environmentFile;
+          ExecStart = "${lib.getExe cfg.package} ${lib.cli.toGNUCommandLineShell { } cfg.settings}";
+          Type = "exec";
+          User = config.users.users.fscs-website-server.name;
+          Restart = "always";
+          RestartSec = 5;
+          StateDirectory = cfg.dataDir;
+          LimitNOFILE = "8192";
+          CapabilityBoundingSet = [ "" ];
+          DeviceAllow = [ "" ];
+          DevicePolicy = "closed";
+          LockPersonality = true;
+          MemoryDenyWriteExecute = true;
+          NoNewPrivileges = true;
+          PrivateDevices = true;
+          PrivateTmp = true;
+          PrivateUsers = true;
+          ProcSubset = "pid";
+          ProtectClock = true;
+          ProtectControlGroups = true;
+          ProtectHome = true;
+          ProtectHostname = true;
+          ProtectKernelLogs = true;
+          ProtectKernelModules = true;
+          ProtectKernelTunables = true;
+          ProtectProc = "noaccess";
+          ProtectSystem = "strict";
+          RemoveIPC = true;
+          RestrictAddressFamilies = [
+            "AF_INET"
+            "AF_INET6"
+            "AF_UNIX"
+          ];
+          RestrictNamespaces = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+          SystemCallArchitectures = "native";
+          SystemCallFilter = [
+            "@system-service"
+            "~@privileged"
+          ];
+          UMask = "0077";
         };
+      };
     };
 }
