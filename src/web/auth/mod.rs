@@ -495,7 +495,7 @@ async fn login(
 ) -> impl Responder {
     let path = path.into_inner().path.unwrap_or("/".to_string());
 
-    let (ref mut auth_url, csrf_token) = &mut oauth_client
+    let (auth_url, csrf_token) = &mut oauth_client
         .client
         .authorize_url(CsrfToken::new_random)
         .add_scope(oauth2::Scope::new("openid".to_string()))

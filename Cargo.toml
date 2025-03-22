@@ -2,7 +2,7 @@
 name = "fscs-website-backend"
 authors = [ "Florian Schubert", "Felix Nilles" ]
 version = "1.0.0"
-edition = "2021"
+edition = "2024"
 description = "Backend für Knuts neue Webseite"
 
 [dependencies]
