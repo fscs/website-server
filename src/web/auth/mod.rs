@@ -36,7 +36,7 @@ use crate::{
     ARGS,
 };
 
-pub mod capability; 
+pub mod capability;
 
 const COOKIE_MAX_AGE: Duration = Duration::days(30);
 
@@ -240,7 +240,10 @@ where
             };
 
             if let Some(user) = maybe_user {
-                debug!("user {} aquired", user.preferred_username);
+                debug!(
+                    "user {} aquired (sub: {}-{})",
+                    user.preferred_username, ARGS.oauth_source_name, user.sub
+                );
                 req.extensions_mut().insert(user);
             }
 
@@ -588,12 +591,24 @@ async fn callback(
     }
 
     let user_name = format!("{}-{}", ARGS.oauth_source_name.as_str(), user.sub.as_str());
-    if transaction
-        .person_by_user_name(user_name.as_str())
-        .await?
-        .is_none()
-    {
-        info!("creating person '{}'", user_name.as_str());
+
+    if let Some(person) = transaction.person_by_user_name(user_name.as_str()).await? {
+        info!(
+            "syncing person {} for user {}",
+            user_name.as_str(),
+            user.preferred_username.as_str()
+        );
+
+        transaction
+            .update_person(person.id, Some(user.name.as_str()), None, None)
+            .await?;
+    } else {
+        info!(
+            "creating person {} for user {}",
+            user_name.as_str(),
+            user.preferred_username.as_str()
+        );
+
         transaction
             .create_person(user.name.as_str(), user_name.as_str(), None)
             .await?;
