@@ -45,15 +45,15 @@
               type = t.port;
               default = 8080;
             };
-
-            dataDir = lib.mkOption {
-              description = "directory to store uploaded files";
-              type = t.nonEmptyStr;
-              default = "/var/lib/fscs-website-server";
-            };
           };
         };
         default = { };
+      };
+
+      dataDir = lib.mkOption {
+        description = "directory to store uploaded files";
+        type = t.nonEmptyStr;
+        default = "/var/lib/fscs-website-server";
       };
 
       calendars = lib.mkOption {
@@ -90,6 +90,7 @@
       };
 
       services.fscs-website-server.settings = {
+        data-dir = cfg.dataDir;
         database-url = "postgresql:///${config.users.users.fscs-website-server.name}?port=${toString config.services.postgresql.settings.port}";
 
         calendar = lib.mapAttrsToList (name: url: "${name}=${url}") cfg.calendars;
