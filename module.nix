@@ -29,7 +29,7 @@
       };
 
       settings = lib.mkOption {
-        descriptions = "settings, passed as commandline arguments";
+        description = "settings, passed as commandline arguments";
         type = t.submodule {
           freeformType = settingsType;
 
