@@ -2,9 +2,10 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
-    legislative_period::{LegislativePeriod, LegislativePeriodRepo},
-    sitzung::{Sitzung, SitzungKind},
     Result,
+    legislative_period::{LegislativePeriod, LegislativePeriodRepo},
+    sitzung::{Sitzung, SitzungKind, SitzungWithTops},
+    top_with_anträge_by_sitzung,
 };
 
 impl LegislativePeriodRepo for PgConnection {
@@ -37,8 +38,8 @@ impl LegislativePeriodRepo for PgConnection {
         Ok(result)
     }
 
-    async fn get_legislatives_sitzungen(&mut self, id: Uuid) -> Result<Vec<Sitzung>> {
-        let result = sqlx::query_as!(
+    async fn get_legislatives_sitzungen(&mut self, id: Uuid) -> Result<Vec<SitzungWithTops>> {
+        let sitzungen = sqlx::query_as!(
             Sitzung,
             r#"
                 SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
@@ -48,10 +49,20 @@ impl LegislativePeriodRepo for PgConnection {
                 "#,
             id
         )
-        .fetch_all(self)
+        .fetch_all(&mut *self)
         .await?;
 
-        Ok(result)
+        let mut sitzungen_with_tops = vec![];
+
+        for sitzung in &sitzungen {
+            let tops_with_anträge = top_with_anträge_by_sitzung(self, sitzung.id).await?;
+            sitzungen_with_tops.push(SitzungWithTops {
+                sitzung: sitzung.clone(),
+                tops: tops_with_anträge,
+            });
+        }
+
+        Ok(sitzungen_with_tops)
     }
 
     async fn patch_legislative(
