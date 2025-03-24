@@ -69,7 +69,7 @@ fn exp_default() -> i64 {
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct User {
-    #[serde(skip, default = "exp_default")]
+    #[serde(default = "exp_default")]
     pub exp: i64,
 
     pub name: String,
@@ -250,15 +250,14 @@ where
             // authorized ? continue to the next middleware/ErrorHandlerResponse
             match service.call(req).await {
                 Ok(mut res) if updated_cookies => {
-                    for cookie in [
+                    let cookies = [
                         jar.refresh_token().map(|r| format!("refresh_token={r}")),
                         jar.access_token().map(|a| format!("access_token={a}")),
                         jar.inner
                             .get("user")
                             .map(Cookie::value)
                             .map(|u| format!("user={u}")),
-                    ]
-                    .into_iter()
+                    ].into_iter()
                     .flatten()
                     .filter_map(|cookie| {
                         HeaderValue::from_str(&format!(
@@ -266,9 +265,12 @@ where
                             cookie, COOKIE_MAX_AGE
                         ))
                         .ok()
-                    }) {
+                    });
+
+                    for cookie in cookies {
                         res.headers_mut().append(header::SET_COOKIE, cookie);
                     }
+
                     Ok(res)
                 }
                 c => c,
