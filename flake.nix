@@ -135,7 +135,6 @@
 
             mkdir -p "$POSTGRES_DATA_DIR" "$SOCKET_DIR" "$DATA_DIR"
 
-
             ${pkgs.postgresql_16}/bin/initdb -D "$POSTGRES_DATA_DIR" --locale=C.utf8
 
             ${pkgs.postgresql_16}/bin/pg_ctl -D $POSTGRES_DATA_DIR status
@@ -155,11 +154,11 @@
               --data-dir $DATA_DIR \
               --max-file-size 10485760 \
               --oauth-source-name authentik \
+              --group FS_Rat_Informatik=Admin \
               --auth-url https://auth.inphima.de/application/o/authorize/ \
               --token-url https://auth.inphima.de/application/o/token/ \
               --user-info https://auth.inphima.de/application/o/userinfo/ \
               $@
-
 
             if [ ! "$ALREADY_RUNNING" -eq 0  ]; then
               echo Stopping the Database
