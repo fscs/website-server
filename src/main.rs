@@ -56,7 +56,7 @@ struct Args {
     calendars: Vec<(String, String)>,
     /// Define the max file size for uploads in bytes
     #[arg(long, default_value_t = 1024 * 1024 * 10)]
-    max_file_size: u64,
+    max_file_size: usize,
     /// Define the datadir for the uploads
     #[arg(long)]
     data_dir: PathBuf,

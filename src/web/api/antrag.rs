@@ -341,7 +341,7 @@ async fn add_antrag_attachment(
                 "The Provided file was empty".to_string(),
             ));
         }
-        length if length > usize::try_from(ARGS.max_file_size).unwrap() => {
+        length if length > ARGS.max_file_size => {
             return Ok(RestStatus::BadRequest(format!(
                 "The uploaded file is too large. Maximum size is {} bytes.",
                 ARGS.max_file_size
