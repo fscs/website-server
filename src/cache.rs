@@ -154,11 +154,7 @@ mod test {
                 Box::pin(async move {
                     let mut x = x.lock().unwrap();
                     *x += 1;
-                    if *x == 1 {
-                        Err(1)
-                    } else {
-                        Ok(2)
-                    }
+                    if *x == 1 { Err(1) } else { Ok(2) }
                 })
             },
             std::time::Duration::from_secs(60),

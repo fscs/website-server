@@ -2,14 +2,14 @@ use std::future::Future;
 use std::pin::Pin;
 
 use actix_cors::Cors;
-use actix_http::{header, StatusCode};
+use actix_http::{StatusCode, header};
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::middleware::{Compress, Logger, NormalizePath};
 use actix_web::web::{self, Data};
 use actix_web::{
-    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
-    ResponseError,
+    App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
+    ResponseError, get,
 };
 use serde::Serialize;
 use utoipa::OpenApi;
@@ -21,10 +21,10 @@ pub(crate) mod auth;
 pub(crate) mod calendar;
 pub(crate) mod files;
 
+use crate::ARGS;
 use crate::database::{DatabaseConnection, DatabasePool, DatabaseTransaction};
 use crate::domain::Error;
-use crate::ARGS;
-use auth::{oauth_client, AuthMiddle};
+use auth::{AuthMiddle, oauth_client};
 
 pub(super) enum RestStatus<T: Serialize> {
     Success(Option<T>),

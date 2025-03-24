@@ -1,9 +1,8 @@
 use std::borrow::Cow;
 
 use actix_web::{
-    get, post,
+    Responder, Scope, get, post,
     web::{self, Json as ActixJson},
-    Responder, Scope,
 };
 use actix_web_validator::Query;
 use chrono::{DateTime, Utc};
@@ -14,10 +13,10 @@ use validator::{Validate, ValidationError};
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
     domain::{
-        door_state::{DoorState, DoorStateRepo},
         Result,
+        door_state::{DoorState, DoorStateRepo},
     },
-    web::{auth, RestStatus},
+    web::{RestStatus, auth},
 };
 
 /// Create the doorstate service under /doorstate

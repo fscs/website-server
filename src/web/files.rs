@@ -4,16 +4,16 @@ use std::{
 };
 
 use actix_files::NamedFile;
-use actix_http::{header, StatusCode};
+use actix_http::{StatusCode, header};
 use actix_web::{
+    HttpRequest, HttpResponse, Responder,
     body::BoxBody,
     dev::HttpServiceFactory,
     get,
     http::header::{CacheControl, CacheDirective},
-    HttpRequest, HttpResponse, Responder,
 };
 
-use crate::{domain::Capability, CONTENT_DIR};
+use crate::{CONTENT_DIR, domain::Capability};
 
 use super::auth::User;
 
@@ -25,8 +25,12 @@ pub(crate) fn service() -> impl HttpServiceFactory {
 async fn serve_files(req: HttpRequest, user: Option<User>) -> HttpResponse<BoxBody> {
     // decide what the user gets to see
     let base_dir = match user {
-        Some(user) if user.has_capability(Capability::ViewProtected) => CONTENT_DIR.protected.as_path(),
-        Some(user) if user.has_capability(Capability::ViewProtected) => CONTENT_DIR.hidden.as_path(),
+        Some(user) if user.has_capability(Capability::ViewProtected) => {
+            CONTENT_DIR.protected.as_path()
+        }
+        Some(user) if user.has_capability(Capability::ViewProtected) => {
+            CONTENT_DIR.hidden.as_path()
+        }
         _ => CONTENT_DIR.public.as_path(),
     };
 
@@ -51,7 +55,7 @@ async fn serve_files(req: HttpRequest, user: Option<User>) -> HttpResponse<BoxBo
     let file = match NamedFile::open_async(actual_path.as_path()).await {
         Ok(f) => f,
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            return try_redirect(base_dir, sub_path.as_path(), req).await
+            return try_redirect(base_dir, sub_path.as_path(), req).await;
         }
         Err(_) => return err_not_found(base_dir, req).await,
     };

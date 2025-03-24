@@ -2,7 +2,7 @@ use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use super::{Result, sitzung::SitzungWithTops};
+use super::{sitzung::SitzungWithTops, Result};
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct LegislativePeriod {

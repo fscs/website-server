@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
 use actix_web::web::Path;
+use actix_web::{Responder, Scope, get, patch};
 use actix_web::{delete, put, web};
-use actix_web::{get, patch, Responder, Scope};
 use actix_web_validator::{Json as ActixJson, Query};
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -11,11 +11,11 @@ use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 use crate::database::{DatabaseConnection, DatabaseTransaction};
-use crate::domain::persons::{Abmeldung, Person};
 use crate::domain::Capability;
+use crate::domain::persons::{Abmeldung, Person};
 use crate::web::auth::{self, User};
 use crate::{
-    domain::{persons::PersonRepo, Result},
+    domain::{Result, persons::PersonRepo},
     web::RestStatus,
 };
 
@@ -276,17 +276,18 @@ async fn get_persons_by_role(
 ) -> Result<impl Responder> {
     let persons = conn.persons_with_role(params.role.as_str()).await?;
 
-    let result: Vec<_> = if maybe_user.is_some_and(|user| user.has_capability(Capability::ManagePersons)) {
-        persons
-            .into_iter()
-            .map(PublicPerson::private_from_person)
-            .collect()
-    } else {
-        persons
-            .into_iter()
-            .map(PublicPerson::public_from_person)
-            .collect()
-    };
+    let result: Vec<_> =
+        if maybe_user.is_some_and(|user| user.has_capability(Capability::ManagePersons)) {
+            persons
+                .into_iter()
+                .map(PublicPerson::private_from_person)
+                .collect()
+        } else {
+            persons
+                .into_iter()
+                .map(PublicPerson::public_from_person)
+                .collect()
+        };
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -299,7 +300,10 @@ async fn get_persons_by_role(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/by-matrix-id/{matrix_id}", wrap = "auth::capability::RequireManagePersons")]
+#[get(
+    "/by-matrix-id/{matrix_id}",
+    wrap = "auth::capability::RequireManagePersons"
+)]
 async fn get_person_by_matrix_id(
     matrix_id: Path<String>,
     mut conn: DatabaseConnection,
@@ -317,7 +321,10 @@ async fn get_person_by_matrix_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/by-username/{user_name}", wrap = "auth::capability::RequireManagePersons")]
+#[get(
+    "/by-username/{user_name}",
+    wrap = "auth::capability::RequireManagePersons"
+)]
 async fn get_person_by_user_name(
     user_name: Path<String>,
     mut conn: DatabaseConnection,
@@ -417,7 +424,10 @@ async fn revoke_role_from_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{person_id}/abmeldungen", wrap = "auth::capability::RequireManagePersons")]
+#[get(
+    "/{person_id}/abmeldungen",
+    wrap = "auth::capability::RequireManagePersons"
+)]
 async fn get_abmeldungen_by_person(
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -442,7 +452,10 @@ async fn get_abmeldungen_by_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("/{person_id}/abmeldungen", wrap = "auth::capability::RequireManagePersons")]
+#[put(
+    "/{person_id}/abmeldungen",
+    wrap = "auth::capability::RequireManagePersons"
+)]
 async fn create_abmeldung(
     person_id: Path<Uuid>,
     params: ActixJson<AbmeldungParams>,
@@ -473,7 +486,10 @@ async fn create_abmeldung(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{person_id}/abmeldungen", wrap = "auth::capability::RequireManagePersons")]
+#[delete(
+    "/{person_id}/abmeldungen",
+    wrap = "auth::capability::RequireManagePersons"
+)]
 async fn revoke_abmeldung(
     person_id: Path<Uuid>,
     params: ActixJson<AbmeldungParams>,

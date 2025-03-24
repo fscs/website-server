@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::domain::Result;
 use sqlx::pool::PoolConnection;
-use sqlx::{postgres::PgPoolOptions, PgConnection, PgPool, Postgres, Transaction};
+use sqlx::{PgConnection, PgPool, Postgres, Transaction, postgres::PgPoolOptions};
 
 pub mod antrag;
 pub mod antrag_top_map;

@@ -1,9 +1,8 @@
-use actix_http::{header, StatusCode};
-use actix_multipart::form::{tempfile::TempFile, MultipartForm};
+use actix_http::{StatusCode, header};
+use actix_multipart::form::{MultipartForm, tempfile::TempFile};
 use actix_web::{
-    delete, get, patch, post,
+    HttpResponse, Responder, Scope, delete, get, patch, post,
     web::{self, Path},
-    HttpResponse, Responder, Scope,
 };
 use actix_web_validator::Json as ActixJson;
 use log::debug;
@@ -13,19 +12,18 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
+    ARGS, UPLOAD_DIR,
     database::{DatabaseConnection, DatabaseTransaction},
     domain::{
-        self,
+        self, Capability, Result,
         antrag::{Antrag, AntragRepo},
         antrag_top_map::AntragTopMapRepo,
         attachment::AttachmentRepo,
-        Capability, Result,
     },
     web::{
-        auth::{self, User},
         RestStatus,
+        auth::{self, User},
     },
-    ARGS, UPLOAD_DIR,
 };
 
 /// Create the antrags service under /anträge
@@ -263,7 +261,10 @@ async fn get_antrag_attachment(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{antrag_id}/attachments/{attachment_id}", wrap = "auth::capability::RequireCreateAntrag")]
+#[delete(
+    "/{antrag_id}/attachments/{attachment_id}",
+    wrap = "auth::capability::RequireCreateAntrag"
+)]
 async fn delete_antrag_attachment(
     user: User,
     path_params: Path<(Uuid, Uuid)>,
@@ -309,7 +310,10 @@ async fn delete_antrag_attachment(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("/{antrag_id}/attachments", wrap = "auth::capability::RequireCreateAntrag")]
+#[post(
+    "/{antrag_id}/attachments",
+    wrap = "auth::capability::RequireCreateAntrag"
+)]
 async fn add_antrag_attachment(
     user: User,
     antrag_id: Path<Uuid>,
@@ -335,7 +339,7 @@ async fn add_antrag_attachment(
         0 => {
             return Ok(RestStatus::BadRequest(
                 "The Provided file was empty".to_string(),
-            ))
+            ));
         }
         length if length > usize::try_from(ARGS.max_file_size).unwrap() => {
             return Ok(RestStatus::BadRequest(format!(
@@ -363,7 +367,7 @@ async fn add_antrag_attachment(
         Err(_) => {
             return Err(domain::Error::Message(
                 "Could not create attachment".to_string(),
-            ))
+            ));
         }
     };
 

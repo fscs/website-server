@@ -1,7 +1,7 @@
 use sqlx::PgConnection;
 
-use crate::domain::attachment::{Attachment, AttachmentRepo};
 use crate::domain::Result;
+use crate::domain::attachment::{Attachment, AttachmentRepo};
 
 impl AttachmentRepo for PgConnection {
     async fn create_attachment(&mut self, filename: String) -> Result<Attachment> {

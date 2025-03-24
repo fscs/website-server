@@ -3,8 +3,8 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
-    sitzung::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind},
     Result,
+    sitzung::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind},
 };
 
 impl SitzungRepo for PgConnection {

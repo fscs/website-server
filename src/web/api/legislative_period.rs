@@ -1,7 +1,6 @@
 use actix_web::{
-    delete, get, patch, post,
+    Responder, Scope, delete, get, patch, post,
     web::{self, Path, Query},
-    Responder, Scope,
 };
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
@@ -11,11 +10,11 @@ use validator::Validate;
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
     domain::{
+        Result,
         legislative_period::{LegislativePeriod, LegislativePeriodRepo},
         sitzung::Sitzung,
-        Result,
     },
-    web::{auth, RestStatus},
+    web::{RestStatus, auth},
 };
 
 /// Create the legislative period service

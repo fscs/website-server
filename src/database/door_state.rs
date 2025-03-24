@@ -2,8 +2,8 @@ use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
 
 use crate::domain::{
-    door_state::{DoorState, DoorStateRepo},
     Result,
+    door_state::{DoorState, DoorStateRepo},
 };
 
 impl DoorStateRepo for PgConnection {

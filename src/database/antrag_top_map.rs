@@ -2,9 +2,9 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
+    Result,
     antrag::{Antrag, AntragData},
     antrag_top_map::{AntragTopMapRepo, AntragTopMapping},
-    Result,
 };
 
 use super::antrag::query_antragsstellende;

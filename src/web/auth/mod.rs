@@ -7,33 +7,32 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use actix_utils::future::{ready, Ready};
+use actix_utils::future::{Ready, ready};
 use actix_web::{
-    cookie::{time::Duration, Cookie, CookieJar, Key, SameSite},
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
+    FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
+    cookie::{Cookie, CookieJar, Key, SameSite, time::Duration},
+    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
     error::{self, ErrorUnauthorized},
     get,
     http::header,
     web::{self, Data},
-    FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
 use log::{debug, info};
 use oauth2::{
-    basic::BasicClient, http::HeaderValue, reqwest::async_http_client, AuthUrl, AuthorizationCode,
-    ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken,
+    TokenResponse, TokenUrl, basic::BasicClient, http::HeaderValue, reqwest::async_http_client,
 };
 use regex::Regex;
 use serde::Deserialize;
 
 use crate::{
+    ARGS,
     database::DatabaseTransaction,
     domain::{
-        self,
+        self, Capability,
         persons::{Person, PersonRepo},
-        Capability,
     },
-    ARGS,
 };
 
 pub mod capability;
@@ -257,7 +256,8 @@ where
                             .get("user")
                             .map(Cookie::value)
                             .map(|u| format!("user={u}")),
-                    ].into_iter()
+                    ]
+                    .into_iter()
                     .flatten()
                     .filter_map(|cookie| {
                         HeaderValue::from_str(&format!(

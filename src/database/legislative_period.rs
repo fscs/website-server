@@ -2,10 +2,9 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
-    Result,
     legislative_period::{LegislativePeriod, LegislativePeriodRepo},
     sitzung::{Sitzung, SitzungKind, SitzungWithTops},
-    top_with_anträge_by_sitzung,
+    top_with_anträge_by_sitzung, Result,
 };
 
 impl LegislativePeriodRepo for PgConnection {

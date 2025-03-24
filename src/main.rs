@@ -2,13 +2,7 @@
 
 use clap::Parser;
 use log::LevelFilter;
-use std::{
-    convert::identity,
-    error::Error,
-    path::PathBuf,
-    str::FromStr,
-    sync::LazyLock,
-};
+use std::{convert::identity, error::Error, path::PathBuf, str::FromStr, sync::LazyLock};
 
 mod cache;
 mod database;
