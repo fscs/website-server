@@ -186,7 +186,7 @@
               rustfmt
               clippy
               sqlx-cli
-              postgresql_16
+              postgresql
               cargo-watch
             ];
           };
