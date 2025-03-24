@@ -1,7 +1,7 @@
 #![warn(clippy::shadow_unrelated)]
 
 use clap::Parser;
-use log::LevelFilter;
+use log::{info, LevelFilter};
 use std::{convert::identity, error::Error, path::PathBuf, str::FromStr, sync::LazyLock};
 
 mod cache;
@@ -98,6 +98,9 @@ async fn main() -> domain::Result<()> {
                 .map_err(|e| domain::Error::Message(format!("{:?}", e)))?,
         )
         .init();
+
+    std::fs::create_dir_all(ARGS.data_dir.as_path())?;
+    std::fs::create_dir_all(UPLOAD_DIR.as_path())?;
 
     let database_url = ARGS.database_url.clone().map_or(
         std::env::var("DATABASE_URL").map_or(

@@ -127,9 +127,9 @@
 
           full = pkgs.writeScriptBin "run.sh" ''
             #!/usr/bin/env bash
-            POSTGRES_DATA_DIR="$PWD/db/data"
-            DATA_DIR="$PWD"
-            SOCKET_DIR="$PWD/db/sockets"
+            DATA_DIR="$PWD/data_dir"
+            POSTGRES_DATA_DIR="$DATA_DIR/db/data"
+            SOCKET_DIR="$DATA_DIR/db/sockets"
             SOCKET_URL="$(echo $SOCKET_DIR | sed 's/\//%2f/g')"
             export DATABASE_URL="postgresql://$SOCKET_URL:5432/postgres"
 
@@ -147,7 +147,6 @@
             fi
 
             echo Starting the server
-            echo "DATABASE_URL: $DATABASE_URL"
             ${lib.getExe default} \
               --database-url $DATABASE_URL \
               --content-dir test \
