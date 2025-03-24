@@ -99,7 +99,6 @@ async fn main() -> domain::Result<()> {
         )
         .init();
 
-    std::fs::create_dir_all(ARGS.data_dir.as_path())?;
     std::fs::create_dir_all(UPLOAD_DIR.as_path())?;
 
     let database_url = ARGS.database_url.clone().map_or(
