@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                    INSERT INTO legislative_period (name)\n                    VALUES ($1)\n                    RETURNING *\n                ",
+  "query": "\n                INSERT INTO legislative_period (name)\n                VALUES ($1)\n                RETURNING *\n            ",
   "describe": {
     "columns": [
       {
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "aced4eb4ffadec5c959c7f4bd9ca0303d7ba3e62f939c808d48e2a1dfa3ad7e9"
+  "hash": "bb50cfb29d81b17e30d9a71cfc15c59166c5fb1fc4a71b979c5429c1d2b8f829"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                    Select * from legislative_period\n                ",
+  "query": "\n                UPDATE legislative_period\n                SET name = $2\n                WHERE id = $1\n                RETURNING *\n            ",
   "describe": {
     "columns": [
       {
@@ -15,12 +15,15 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
     },
     "nullable": [
       false,
       false
     ]
   },
-  "hash": "cba6a44d51edf066a239d4b6af9d3e641bf8b6a840b39f58ad07b5f6686abcfa"
+  "hash": "13106d78ce239267d2b5a1539a40f1ad2b425cd55ffa1e3444c05337bb67552b"
 }

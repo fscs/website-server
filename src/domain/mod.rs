@@ -7,7 +7,7 @@ pub mod antrag_top_map;
 pub mod attachment;
 pub mod calendar;
 pub mod door_state;
-pub mod legislative_period;
+pub mod legislative_periods;
 pub mod persons;
 pub mod sitzung;
 

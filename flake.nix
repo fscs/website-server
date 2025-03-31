@@ -104,25 +104,26 @@
 
           database = pkgs.writeScriptBin "run.sh" ''
             #!/usr/bin/env bash
-            DATA_DIR="$PWD/db/data"
-            SOCKET_DIR="$PWD/db/sockets"
+            DATA_DIR="$PWD/data_dir"
+            POSTGRES_DATA_DIR="$DATA_DIR/db/data"
+            SOCKET_DIR="$DATA_DIR/db/sockets"
             SOCKET_URL="$(echo $SOCKET_DIR | sed 's/\//%2f/g')"
             export DATABASE_URL="postgresql://$SOCKET_URL:5432/postgres"
 
-            mkdir -p "$DATA_DIR" "$SOCKET_DIR"
+            mkdir -p "$POSTGRES_DATA_DIR" "$SOCKET_DIR" "$DATA_DIR"
 
             echo Initializing the Database
-            ${pkgs.postgresql_16}/bin/initdb -D "$DATA_DIR" --locale=C.utf8
+            ${pkgs.postgresql_16}/bin/initdb -D "$POSTGES_DATA_DIR" --locale=C.utf8
 
-            ${pkgs.postgresql_16}/bin/pg_ctl -D $DATA_DIR -o "-k $SOCKET_DIR" start
+            ${pkgs.postgresql_16}/bin/pg_ctl -D $POSTGRES_DATA_DIR -o "-k $SOCKET_DIR" start
 
-            trap "${pkgs.postgresql_16}/bin/pg_ctl -D $DATA_DIR stop; exit" SIGINT
+            trap "${pkgs.postgresql_16}/bin/pg_ctl -D $POSTGRES_DATA_DIR stop; exit" SIGINT
 
             ${pkgs.sqlx-cli}/bin/sqlx migrate run --source ./migrations  --database-url $DATABASE_URL
 
             read -p "Press enter to stop the database"
 
-            ${pkgs.postgresql_16}/bin/pg_ctl -D "$DATA_DIR" stop
+            ${pkgs.postgresql_16}/bin/pg_ctl -D "$POSTGRES_DATA_DIR" stop
           '';
 
           full = pkgs.writeScriptBin "run.sh" ''
