@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use super::Result;
 use super::antrag::Antrag;
+use super::legislative_periods::LegislativePeriod;
+use super::Result;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
 #[sqlx(type_name = "sitzungkind", rename_all = "lowercase")]
@@ -35,7 +36,7 @@ pub struct Sitzung {
     pub location: String,
     pub kind: SitzungKind,
     pub antragsfrist: DateTime<Utc>,
-    pub legislative_period_id: Uuid,
+    pub legislative_period: LegislativePeriod,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]

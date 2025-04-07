@@ -3,8 +3,8 @@ use uuid::Uuid;
 
 use crate::domain::{
     legislative_periods::{LegislativePeriod, LegislativePeriodRepo},
-    sitzung::{Sitzung, SitzungKind, SitzungWithTops},
-    top_with_anträge_by_sitzung, Result,
+    sitzung::{Sitzung, SitzungKind},
+    Result,
 };
 
 impl LegislativePeriodRepo for PgConnection {
@@ -51,12 +51,20 @@ impl LegislativePeriodRepo for PgConnection {
         Ok(result)
     }
 
-    async fn legislative_period_sitzungen(&mut self, id: Uuid) -> Result<Vec<SitzungWithTops>> {
-        let sitzungen = sqlx::query_as!(
-            Sitzung,
+    async fn legislative_period_sitzungen(&mut self, id: Uuid) -> Result<Vec<Sitzung>> {
+        let records = sqlx::query!(
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
+                SELECT 
+                    sitzungen.id, 
+                    datetime, 
+                    location, 
+                    kind AS "kind!: SitzungKind", 
+                    antragsfrist, 
+                    legislative_period.id AS legislative_id,
+                    legislative_period.name AS legislative_name
                 FROM sitzungen
+                JOIN legislative_period
+                ON sitzungen.legislative_period_id = legislative_period.id
                 WHERE legislative_period_id = $1
                 ORDER BY datetime ASC
                 "#,
@@ -65,17 +73,22 @@ impl LegislativePeriodRepo for PgConnection {
         .fetch_all(&mut *self)
         .await?;
 
-        let mut sitzungen_with_tops = vec![];
+        let result = records
+            .into_iter()
+            .map(|r| Sitzung {
+                id: r.id,
+                datetime: r.datetime,
+                location: r.location,
+                kind: r.kind,
+                antragsfrist: r.antragsfrist,
+                legislative_period: LegislativePeriod {
+                    id: r.legislative_id,
+                    name: r.legislative_name,
+                },
+            })
+            .collect();
 
-        for sitzung in &sitzungen {
-            let tops_with_anträge = top_with_anträge_by_sitzung(self, sitzung.id).await?;
-            sitzungen_with_tops.push(SitzungWithTops {
-                sitzung: sitzung.clone(),
-                tops: tops_with_anträge,
-            });
-        }
-
-        Ok(sitzungen_with_tops)
+        Ok(result)
     }
 
     async fn update_legislative_period(

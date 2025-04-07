@@ -2,9 +2,9 @@ use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use super::{sitzung::SitzungWithTops, Result};
+use super::{sitzung::Sitzung, Result};
 
-#[derive(Debug, Serialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, IntoParams, ToSchema, Clone)]
 pub struct LegislativePeriod {
     pub id: Uuid,
     pub name: String,
@@ -17,7 +17,7 @@ pub trait LegislativePeriodRepo {
 
     async fn legislative_periods(&mut self) -> Result<Vec<LegislativePeriod>>;
 
-    async fn legislative_period_sitzungen(&mut self, id: Uuid) -> Result<Vec<SitzungWithTops>>;
+    async fn legislative_period_sitzungen(&mut self, id: Uuid) -> Result<Vec<Sitzung>>;
 
     async fn update_legislative_period(
         &mut self,

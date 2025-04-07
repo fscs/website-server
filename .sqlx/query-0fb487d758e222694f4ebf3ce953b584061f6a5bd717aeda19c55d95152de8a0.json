@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist, legislative_period_id\n                FROM sitzungen\n                WHERE legislative_period_id = $1\n                ORDER BY datetime ASC\n                ",
+  "query": "\n                SELECT \n                    sitzungen.id, \n                    datetime, \n                    location, \n                    kind AS \"kind!: SitzungKind\", \n                    antragsfrist, \n                    legislative_period.id AS legislative_id,\n                    legislative_period.name AS legislative_name\n                FROM sitzungen\n                JOIN legislative_period\n                ON sitzungen.legislative_period_id = legislative_period.id\n                WHERE legislative_period_id = $1\n                ORDER BY datetime ASC\n                ",
   "describe": {
     "columns": [
       {
@@ -44,8 +44,13 @@
       },
       {
         "ordinal": 5,
-        "name": "legislative_period_id",
+        "name": "legislative_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "legislative_name",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -59,8 +64,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "e2eb4cee9392d1d21ab094f690c24931d12d3f51cb5ee2c549ffca4d41a8c800"
+  "hash": "0fb487d758e222694f4ebf3ce953b584061f6a5bd717aeda19c55d95152de8a0"
 }

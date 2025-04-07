@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                INSERT INTO sitzungen (datetime, location, kind, antragsfrist, legislative_period_id)\n                VALUES ($1, $2, $3, $4, $5) \n                RETURNING id, datetime, location, kind AS \"kind!: SitzungKind\", antragsfrist, legislative_period_id\n            ",
+  "query": "\n                WITH inserted as (\n                    INSERT INTO sitzungen (datetime, location, kind, antragsfrist, legislative_period_id)\n                    VALUES ($1, $2, $3, $4, $5) \n                    RETURNING *\n                ) SELECT \n                    inserted.id, \n                    datetime, \n                    location, \n                    kind AS \"kind!: SitzungKind\", \n                    antragsfrist, \n                    legislative_period.id as legislative_id, \n                    legislative_period.name as legislative_name\n                FROM inserted \n                JOIN legislative_period\n                on inserted.legislative_period_id = legislative_period.id\n            ",
   "describe": {
     "columns": [
       {
@@ -44,8 +44,13 @@
       },
       {
         "ordinal": 5,
-        "name": "legislative_period_id",
+        "name": "legislative_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "legislative_name",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -77,8 +82,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "19708f32b21999878a7787b27ed63fc9262216ab2a0488c63ef037871a9d8697"
+  "hash": "9251ece09f216d7d41cfe40e007170b47045d1438550faf42bce06f07e9b260f"
 }

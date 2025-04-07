@@ -3,8 +3,9 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
-    Result,
+    legislative_periods::LegislativePeriod,
     sitzung::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind},
+    Result,
 };
 
 impl SitzungRepo for PgConnection {
@@ -16,12 +17,23 @@ impl SitzungRepo for PgConnection {
         antragsfrist: DateTime<Utc>,
         legislative_period_id: Uuid,
     ) -> Result<Sitzung> {
-        let result = sqlx::query_as!(
-            Sitzung,
+        let record = sqlx::query!(
             r#"
-                INSERT INTO sitzungen (datetime, location, kind, antragsfrist, legislative_period_id)
-                VALUES ($1, $2, $3, $4, $5) 
-                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
+                WITH inserted as (
+                    INSERT INTO sitzungen (datetime, location, kind, antragsfrist, legislative_period_id)
+                    VALUES ($1, $2, $3, $4, $5) 
+                    RETURNING *
+                ) SELECT 
+                    inserted.id, 
+                    datetime, 
+                    location, 
+                    kind AS "kind!: SitzungKind", 
+                    antragsfrist, 
+                    legislative_period.id as legislative_id, 
+                    legislative_period.name as legislative_name
+                FROM inserted 
+                JOIN legislative_period
+                on inserted.legislative_period_id = legislative_period.id
             "#,
             datetime,
             location,
@@ -31,6 +43,18 @@ impl SitzungRepo for PgConnection {
         )
         .fetch_one(self)
         .await?;
+
+        let result = Sitzung {
+            id: record.id,
+            datetime: record.datetime,
+            location: record.location,
+            kind: record.kind,
+            antragsfrist: record.antragsfrist,
+            legislative_period: LegislativePeriod {
+                id: record.legislative_id,
+                name: record.legislative_name,
+            },
+        };
 
         Ok(result)
     }
@@ -75,31 +99,74 @@ impl SitzungRepo for PgConnection {
     }
 
     async fn sitzungen(&mut self) -> Result<Vec<Sitzung>> {
-        let result = sqlx::query_as!(
-            Sitzung,
+        let records = sqlx::query!(
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
+                SELECT 
+                    sitzungen.id, 
+                    datetime, 
+                    location, 
+                    kind AS "kind!: SitzungKind", 
+                    antragsfrist, 
+                    legislative_period.id AS legislative_id, 
+                    legislative_period.name AS legislative_name
                 FROM sitzungen
+                JOIN legislative_period 
+                ON sitzungen.legislative_period_id = legislative_period.id
             "#
         )
         .fetch_all(self)
         .await?;
 
+        let result = records
+            .into_iter()
+            .map(|r| Sitzung {
+                id: r.id,
+                datetime: r.datetime,
+                location: r.location,
+                kind: r.kind,
+                antragsfrist: r.antragsfrist,
+                legislative_period: LegislativePeriod {
+                    id: r.legislative_id,
+                    name: r.legislative_name,
+                },
+            })
+            .collect();
+
         Ok(result)
     }
 
     async fn sitzung_by_id(&mut self, id: Uuid) -> Result<Option<Sitzung>> {
-        let result = sqlx::query_as!(
-            Sitzung,
+        let record = sqlx::query!(
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
+                SELECT 
+                    sitzungen.id, 
+                    datetime, 
+                    location, 
+                    kind AS "kind!: SitzungKind", 
+                    antragsfrist, 
+                    legislative_period.id AS legislative_id,
+                    legislative_period.name AS legislative_name
                 FROM sitzungen
-                WHERE id = $1
+                JOIN legislative_period
+                ON sitzungen.legislative_period_id = legislative_period.id
+                WHERE sitzungen.id = $1
             "#,
-            id
+            id,
         )
         .fetch_optional(self)
         .await?;
+
+        let result = record.map(|r| Sitzung {
+            id: r.id,
+            datetime: r.datetime,
+            location: r.location,
+            kind: r.kind,
+            antragsfrist: r.antragsfrist,
+            legislative_period: LegislativePeriod {
+                id: r.legislative_id,
+                name: r.legislative_name,
+            },
+        });
 
         Ok(result)
     }
@@ -109,35 +176,43 @@ impl SitzungRepo for PgConnection {
         datetime: DateTime<Utc>,
         limit: Option<i64>,
     ) -> Result<Vec<Sitzung>> {
-        let result = if limit.is_some() {
-            sqlx::query_as!(
-                Sitzung,
-                r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
+        let records = sqlx::query!(
+            r#"
+                SELECT 
+                    sitzungen.id, 
+                    datetime, 
+                    location, 
+                    kind AS "kind!: SitzungKind", 
+                    antragsfrist, 
+                    legislative_period.id AS legislative_id,
+                    legislative_period.name AS legislative_name
                 FROM sitzungen
+                JOIN legislative_period
+                ON sitzungen.legislative_period_id = legislative_period.id
                 WHERE datetime >= $1
                 ORDER BY datetime ASC
                 LIMIT $2
             "#,
-                datetime,
-                limit,
-            )
-            .fetch_all(self)
-            .await?
-        } else {
-            sqlx::query_as!(
-                Sitzung,
-                r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
-                FROM sitzungen
-                WHERE datetime >= $1
-                ORDER BY datetime ASC
-            "#,
-                datetime
-            )
-            .fetch_all(self)
-            .await?
-        };
+            datetime,
+            limit,
+        )
+        .fetch_all(self)
+        .await?;
+
+        let result = records
+            .into_iter()
+            .map(|r| Sitzung {
+                id: r.id,
+                datetime: r.datetime,
+                location: r.location,
+                kind: r.kind,
+                antragsfrist: r.antragsfrist,
+                legislative_period: LegislativePeriod {
+                    id: r.legislative_id,
+                    name: r.legislative_name,
+                },
+            })
+            .collect();
 
         Ok(result)
     }
@@ -147,11 +222,19 @@ impl SitzungRepo for PgConnection {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<Sitzung>> {
-        let result = sqlx::query_as!(
-            Sitzung,
+        let records = sqlx::query!(
             r#"
-                SELECT id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
+                SELECT 
+                    sitzungen.id, 
+                    datetime, 
+                    location, 
+                    kind AS "kind!: SitzungKind", 
+                    antragsfrist, 
+                    legislative_period.id AS legislative_id,
+                    legislative_period.name AS legislative_name
                 FROM sitzungen
+                JOIN legislative_period
+                ON sitzungen.legislative_period_id = legislative_period.id
                 WHERE datetime >= $1 AND datetime <= $2
                 ORDER BY datetime ASC
             "#,
@@ -160,6 +243,21 @@ impl SitzungRepo for PgConnection {
         )
         .fetch_all(self)
         .await?;
+
+        let result = records
+            .into_iter()
+            .map(|r| Sitzung {
+                id: r.id,
+                datetime: r.datetime,
+                location: r.location,
+                kind: r.kind,
+                antragsfrist: r.antragsfrist,
+                legislative_period: LegislativePeriod {
+                    id: r.legislative_id,
+                    name: r.legislative_name,
+                },
+            })
+            .collect();
 
         Ok(result)
     }
@@ -206,18 +304,29 @@ impl SitzungRepo for PgConnection {
         antragsfrist: Option<DateTime<Utc>>,
         legislative_period_id: Option<Uuid>,
     ) -> Result<Option<Sitzung>> {
-        let result = sqlx::query_as!(
-            Sitzung,
+        let record = sqlx::query!(
             r#"
-                UPDATE sitzungen 
-                SET 
-                    datetime = COALESCE($1, datetime),
-                    location = COALESCE($2, location),
-                    kind = COALESCE($3, kind),
-                    antragsfrist = COALESCE($4, antragsfrist),
-                    legislative_period_id = COALESCE($5, legislative_period_id)
-                WHERE id = $6 
-                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
+                WITH updated AS (
+                    UPDATE sitzungen 
+                    SET 
+                        datetime = COALESCE($1, datetime),
+                        location = COALESCE($2, location),
+                        kind = COALESCE($3, kind),
+                        antragsfrist = COALESCE($4, antragsfrist),
+                        legislative_period_id = COALESCE($5, legislative_period_id)
+                    WHERE id = $6 
+                    RETURNING id, datetime, location, kind, antragsfrist, legislative_period_id
+                ) SELECT 
+                    updated.id, 
+                    datetime, 
+                    location, 
+                    kind AS "kind!: SitzungKind", 
+                    antragsfrist, 
+                    legislative_period.id as legislative_id, 
+                    legislative_period.name as legislative_name
+                FROM updated 
+                JOIN legislative_period
+                on updated.legislative_period_id = legislative_period.id
             "#,
             datetime,
             location,
@@ -228,6 +337,18 @@ impl SitzungRepo for PgConnection {
         )
         .fetch_optional(self)
         .await?;
+
+        let result = record.map(|r| Sitzung {
+            id: r.id,
+            datetime: r.datetime,
+            location: r.location,
+            kind: r.kind,
+            antragsfrist: r.antragsfrist,
+            legislative_period: LegislativePeriod {
+                id: r.legislative_id,
+                name: r.legislative_name,
+            },
+        });
 
         Ok(result)
     }
@@ -244,7 +365,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Top,
             r#"
-                UPDATE tops 
+                UPDATE tops
                 SET 
                     sitzung_id = COALESCE($2, sitzung_id),
                     name = COALESCE($3, name),
@@ -268,17 +389,40 @@ impl SitzungRepo for PgConnection {
     }
 
     async fn delete_sitzung(&mut self, id: Uuid) -> Result<Option<Sitzung>> {
-        let result = sqlx::query_as!(
-            Sitzung,
+        let record = sqlx::query!(
             r#"
-                DELETE FROM sitzungen
-                WHERE id = $1
-                RETURNING id, datetime, location, kind AS "kind!: SitzungKind", antragsfrist, legislative_period_id
+                WITH deleted AS (
+                    DELETE FROM sitzungen
+                    WHERE id = $1
+                    RETURNING id, datetime, location, kind, antragsfrist, legislative_period_id
+                ) SELECT 
+                    deleted.id, 
+                    datetime, 
+                    location, 
+                    kind AS "kind!: SitzungKind", 
+                    antragsfrist, 
+                    legislative_period.id as legislative_id, 
+                    legislative_period.name as legislative_name
+                FROM deleted 
+                JOIN legislative_period
+                on deleted.legislative_period_id = legislative_period.id
             "#,
             id
         )
         .fetch_optional(self)
         .await?;
+
+        let result = record.map(|r| Sitzung {
+            id: r.id,
+            datetime: r.datetime,
+            location: r.location,
+            kind: r.kind,
+            antragsfrist: r.antragsfrist,
+            legislative_period: LegislativePeriod {
+                id: r.legislative_id,
+                name: r.legislative_name,
+            },
+        });
 
         Ok(result)
     }
@@ -335,7 +479,7 @@ mod test {
         assert_eq!(sitzung.location, location);
         assert_eq!(sitzung.kind, sitzung_kind);
         assert_eq!(sitzung.antragsfrist, antragsfrist);
-        assert_eq!(sitzung.legislative_period_id, legislative_period_id);
+        assert_eq!(sitzung.legislative_period.id, legislative_period_id);
 
         Ok(())
     }

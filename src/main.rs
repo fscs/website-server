@@ -1,7 +1,7 @@
 #![warn(clippy::shadow_unrelated)]
 
 use clap::Parser;
-use log::{info, LevelFilter};
+use log::LevelFilter;
 use std::{convert::identity, error::Error, path::PathBuf, str::FromStr, sync::LazyLock};
 
 mod cache;
