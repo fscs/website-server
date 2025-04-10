@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 
 use actix_web::web::Path;
-use actix_web::{Responder, Scope, delete, get, patch, post, web};
+use actix_web::{delete, get, patch, post, web, Responder, Scope};
 use actix_web_validator::{Json as ActixJson, Query};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use sqlx::Database;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
@@ -14,12 +15,15 @@ use crate::database::{DatabaseConnection, DatabaseTransaction};
 use crate::domain::antrag_top_attachment_map::AntragTopMapping;
 use crate::domain::persons::Abmeldung;
 use crate::domain::sitzung::{Sitzung, SitzungWithTops, Top, TopWithAnträge};
+use crate::domain::templates::TemplatesRepo;
 use crate::domain::{
-    self, Result,
+    self,
     antrag_top_attachment_map::AntragTopAttachmentMap,
     sitzung::{SitzungKind, SitzungRepo, TopKind},
+    Result,
 };
-use crate::web::{RestStatus, auth};
+use crate::web::{auth, RestStatus};
+use crate::TEMPLATE_ENGINE;
 
 /// Create the sitzungs service under /sitzungen
 pub(crate) fn service() -> Scope {
@@ -40,7 +44,8 @@ fn register_sitzung_id_service(parent: Scope) -> Scope {
         .service(delete_sitzung_by_id)
         .service(get_abmeldungen_by_sitzung)
         .service(get_tops)
-        .service(post_tops);
+        .service(post_tops)
+        .service(get_sitzung_template);
 
     // must come last
     register_top_id_service(scope)
@@ -504,4 +509,38 @@ async fn delete_assoc_antrag(
     transaction.commit().await?;
 
     Ok(RestStatus::Success(result))
+}
+
+#[utoipa::path(
+    path = "/api/sitzungen/{sitzung_id}/template/{name}",
+    responses(
+        (status = 200, description = "Sucess", body = String),
+        (status = 400, description = "Bad Request"),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+#[get("/{sitzung_id}/template/{name}")]
+async fn get_sitzung_template(
+    path_params: Path<(Uuid, String)>,
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let (sitzung_id, template_name) = path_params.into_inner();
+
+    let Some(sitzung) = domain::sitzung_with_tops(&mut *conn, sitzung_id).await? else {
+        return Ok(RestStatus::NotFound);
+    };
+
+    let Some(template) = conn.template_by_name(&template_name).await? else {
+        return Ok(RestStatus::NotFound);
+    };
+
+    let result = TEMPLATE_ENGINE
+        .read()
+        .await
+        .template(&template.name)
+        .render(sitzung)
+        .to_string()?;
+
+    Ok(RestStatus::Success(Some(result)))
 }

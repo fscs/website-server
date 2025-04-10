@@ -28,6 +28,8 @@ pub enum Error {
     Reqwest(#[from] reqwest::Error),
     #[error("{0}")]
     Message(String),
+    #[error("{0}")]
+    Template(#[from] upon::Error),
 }
 
 #[derive(Debug, Clone, Copy, strum::EnumString, strum::Display, Eq, Hash, PartialEq)]

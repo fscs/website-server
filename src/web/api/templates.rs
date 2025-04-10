@@ -1,7 +1,6 @@
 use actix_web::web::Path;
-use actix_web::{delete, get, patch, web, Responder, Scope};
+use actix_web::{delete, get, patch, post, web, Responder, Scope};
 use actix_web_validator::Json as ActixJson;
-use actix_web_validator::Query;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
@@ -11,19 +10,27 @@ use crate::database::DatabaseConnection;
 use crate::domain::templates::{Template, TemplatesRepo};
 use crate::domain::Result;
 use crate::web::RestStatus;
+use crate::TEMPLATE_ENGINE;
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
-pub struct TemplatesByNameParams {
-    name: String,
-}
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct UpdateTemplateParams {
     inhalt: String,
 }
 
+#[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
+pub struct CreateTemplateParams {
+    name: String,
+    inhalt: String,
+}
+
 /// Create the sitzungs service under /sitzungen
 pub(crate) fn service() -> Scope {
-    web::scope("/templates").service(get_templates)
+    web::scope("/templates")
+        .service(get_templates)
+        .service(get_template_by_name)
+        .service(delete_template)
+        .service(patch_template)
+        .service(create_template)
 }
 
 #[utoipa::path(
@@ -41,19 +48,18 @@ async fn get_templates(mut conn: DatabaseConnection) -> Result<impl Responder> {
 }
 
 #[utoipa::path(
-    path = "/api/templates/by-name",
-    params(TemplatesByNameParams),
+    path = "/api/templates/{name}",
     responses(
         (status = 200, description = "Success", body = Template),
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/by-name")]
+#[get("/{name}")]
 async fn get_template_by_name(
-    params: Query<TemplatesByNameParams>,
+    name: Path<String>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
-    let result = conn.template_by_name(&params.name).await?;
+    let result = conn.template_by_name(&name).await?;
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -77,6 +83,7 @@ async fn delete_template(
 
 #[utoipa::path(
     path = "/api/templates/{template_name}",
+    request_body = UpdateTemplateParams,
     responses(
         (status = 200, description = "Success", body = Template),
         (status = 500, description = "Internal Server Error"),
@@ -89,6 +96,34 @@ async fn patch_template(
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     let result = conn.update_template(&name, &params.inhalt).await?;
+
+    Ok(RestStatus::Success(Some(result)))
+}
+
+#[utoipa::path(
+    path = "/api/templates",
+    request_body = CreateTemplateParams,
+    responses(
+        (status = 200, description = "Success", body = Template),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+#[post("")]
+async fn create_template(
+    params: ActixJson<CreateTemplateParams>,
+    mut conn: DatabaseConnection,
+) -> Result<impl Responder> {
+    let result = conn
+        .create_template(Template {
+            name: params.name.clone(),
+            inhalt: params.inhalt.clone(),
+        })
+        .await?;
+
+    TEMPLATE_ENGINE
+        .write()
+        .await
+        .add_template(params.name.clone(), params.inhalt.clone())?;
 
     Ok(RestStatus::Success(Some(result)))
 }

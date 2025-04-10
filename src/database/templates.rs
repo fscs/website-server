@@ -7,7 +7,7 @@ use crate::domain::templates::TemplatesRepo;
 use crate::domain::Result;
 
 impl TemplatesRepo for PgConnection {
-    async fn template_by_name(&mut self, name: &str) -> Result<Template> {
+    async fn template_by_name(&mut self, name: &str) -> Result<Option<Template>> {
         let result = sqlx::query_as!(
             Template,
             r#"
@@ -17,7 +17,7 @@ impl TemplatesRepo for PgConnection {
             "#,
             name
         )
-        .fetch_one(&mut *self)
+        .fetch_optional(&mut *self)
         .await?;
 
         Ok(result)

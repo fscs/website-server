@@ -1,6 +1,8 @@
 #![warn(clippy::shadow_unrelated)]
 
+use async_std::sync::RwLock;
 use clap::Parser;
+use domain::templates::TemplatesRepo;
 use log::LevelFilter;
 use std::{convert::identity, error::Error, path::PathBuf, str::FromStr, sync::LazyLock};
 
@@ -90,6 +92,9 @@ static CONTENT_DIR: LazyLock<ContentDir> = LazyLock::new(|| ContentDir {
 
 static UPLOAD_DIR: LazyLock<PathBuf> = LazyLock::new(|| ARGS.data_dir.join("uploads/attachments/"));
 
+static TEMPLATE_ENGINE: LazyLock<RwLock<upon::Engine>> =
+    LazyLock::new(|| RwLock::new(upon::Engine::new()));
+
 #[actix_web::main]
 async fn main() -> domain::Result<()> {
     pretty_env_logger::formatted_timed_builder()
@@ -119,6 +124,15 @@ async fn main() -> domain::Result<()> {
         .await
         .map_err(|e| domain::Error::Message(format!("error while running migrations: {:?}", e)))?;
     transaction.commit().await?;
+
+    let templates = database.aquire().await?.templates().await?;
+
+    for template in templates {
+        TEMPLATE_ENGINE
+            .write()
+            .await
+            .add_template(template.name, template.inhalt)?;
+    }
 
     let _ = web::start_server(database).await;
     Ok(())
