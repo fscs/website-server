@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::domain::Result;
 use sqlx::pool::PoolConnection;
-use sqlx::{PgConnection, PgPool, Postgres, Transaction, postgres::PgPoolOptions};
+use sqlx::{postgres::PgPoolOptions, PgConnection, PgPool, Postgres, Transaction};
 
 pub mod antrag;
 pub mod antrag_top_attachment_map;
@@ -12,6 +12,7 @@ pub mod door_state;
 pub mod legislative_periods;
 pub mod persons;
 pub mod sitzungen;
+pub mod templates;
 
 #[derive(Clone)]
 pub struct DatabasePool {

@@ -11,6 +11,7 @@ pub mod door_state;
 pub mod legislative_periods;
 pub mod persons;
 pub mod sitzung;
+pub mod templates;
 
 use persons::{Abmeldung, Person, PersonRepo};
 use sitzung::{SitzungRepo, SitzungWithTops, TopWithAnträge};
