@@ -1,8 +1,9 @@
-use actix_http::{StatusCode, header};
-use actix_multipart::form::{MultipartForm, tempfile::TempFile};
+use actix_http::{header, StatusCode};
+use actix_multipart::form::{tempfile::TempFile, MultipartForm};
 use actix_web::{
-    HttpResponse, Responder, Scope, delete, get, patch, post,
+    delete, get, patch, post,
     web::{self, Path},
+    HttpResponse, Responder, Scope,
 };
 use actix_web_validator::Json as ActixJson;
 use log::debug;
@@ -12,18 +13,19 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    ARGS, UPLOAD_DIR,
     database::{DatabaseConnection, DatabaseTransaction},
     domain::{
-        self, Capability, Result,
+        self,
         antrag::{Antrag, AntragRepo},
         antrag_top_attachment_map::AntragTopAttachmentMap,
         attachment::AttachmentRepo,
+        Capability, Result,
     },
     web::{
-        RestStatus,
         auth::{self, User},
+        RestStatus,
     },
+    ARGS, UPLOAD_DIR,
 };
 
 /// Create the antrags service under /anträge
@@ -175,10 +177,10 @@ async fn patch_antrag(
             return Ok(RestStatus::NotFound);
         };
 
-        if !antrag.creators.contains(&person.id) {
+        if !domain::can_person_modify_antrag(&mut *transaction, &person, &antrag).await? {
             return Ok(RestStatus::Status(
                 StatusCode::UNAUTHORIZED,
-                "you are not a creator of this antrag".to_string(),
+                "you are not allowed to edit this antrag".to_string(),
             ));
         }
     }
@@ -279,10 +281,10 @@ async fn delete_antrag_attachment(
             return Ok(RestStatus::NotFound);
         };
 
-        if !antrag.creators.contains(&person.id) {
+        if !domain::can_person_modify_antrag(&mut *transaction, &person, &antrag).await? {
             return Ok(RestStatus::Status(
                 StatusCode::UNAUTHORIZED,
-                "you are not a creator of this antrag".to_string(),
+                "you are not allowed to edit this antrag".to_string(),
             ));
         }
     }
@@ -327,10 +329,10 @@ async fn add_antrag_attachment(
     if !user.has_capability(Capability::ManageAnträge) {
         let person = user.query_person(&mut *transaction).await?;
 
-        if !antrag.creators.contains(&person.id) {
+        if !domain::can_person_modify_antrag(&mut *transaction, &person, &antrag).await? {
             return Ok(RestStatus::Status(
                 StatusCode::UNAUTHORIZED,
-                "you are not a creator of this antrag".to_string(),
+                "you are not allowed to edit this antrag".to_string(),
             ));
         }
     }

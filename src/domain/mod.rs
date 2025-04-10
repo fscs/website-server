@@ -1,3 +1,4 @@
+use antrag::Antrag;
 use antrag_top_attachment_map::AntragTopAttachmentMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -11,7 +12,7 @@ pub mod legislative_periods;
 pub mod persons;
 pub mod sitzung;
 
-use persons::{Abmeldung, PersonRepo};
+use persons::{Abmeldung, Person, PersonRepo};
 use sitzung::{SitzungRepo, SitzungWithTops, TopWithAnträge};
 
 pub type Result<T> = core::result::Result<T, Error>;
@@ -48,6 +49,17 @@ impl<T> SitzungAntragService for T where T: SitzungRepo + AntragTopAttachmentMap
 pub trait SitzungPersonService: SitzungRepo + PersonRepo {}
 
 impl<T> SitzungPersonService for T where T: SitzungRepo + PersonRepo {}
+
+pub async fn can_person_modify_antrag(
+    repo: &mut impl AntragTopAttachmentMap,
+    person: &Person,
+    antrag: &Antrag,
+) -> Result<bool> {
+    let result = antrag.creators.contains(&person.id)
+        && repo.tops_by_antrag(antrag.data.id).await?.is_empty();
+
+    Ok(result)
+}
 
 pub async fn top_with_anträge(
     repo: &mut impl SitzungAntragService,
