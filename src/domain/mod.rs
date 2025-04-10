@@ -1,9 +1,9 @@
-use antrag_top_map::AntragTopMapRepo;
+use antrag_top_attachment_map::AntragTopAttachmentMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 pub mod antrag;
-pub mod antrag_top_map;
+pub mod antrag_top_attachment_map;
 pub mod attachment;
 pub mod calendar;
 pub mod door_state;
@@ -41,9 +41,9 @@ pub enum Capability {
     ViewProtected,
 }
 
-pub trait SitzungAntragService: SitzungRepo + AntragTopMapRepo {}
+pub trait SitzungAntragService: SitzungRepo + AntragTopAttachmentMap {}
 
-impl<T> SitzungAntragService for T where T: SitzungRepo + AntragTopMapRepo {}
+impl<T> SitzungAntragService for T where T: SitzungRepo + AntragTopAttachmentMap {}
 
 pub trait SitzungPersonService: SitzungRepo + PersonRepo {}
 

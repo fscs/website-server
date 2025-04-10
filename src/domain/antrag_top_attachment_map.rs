@@ -2,6 +2,7 @@ use serde::Serialize;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
+use super::sitzung::Top;
 use super::Result;
 use super::antrag::Antrag;
 
@@ -11,8 +12,10 @@ pub struct AntragTopMapping {
     pub top_id: Uuid,
 }
 
-pub trait AntragTopMapRepo {
+pub trait AntragTopAttachmentMap {
     async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
+
+    async fn tops_by_antrag(&mut self, antrag_id: Uuid) -> Result<Vec<Top>>;
 
     async fn orphan_anträge(&mut self) -> Result<Vec<Antrag>>;
 

@@ -177,7 +177,7 @@ impl AntragRepo for PgConnection {
                     titel = COALESCE($1, titel),
                     begründung = COALESCE($2, begründung),
                     antragstext = COALESCE($3, antragstext),
-                    created_at = COALESCE($4, created_at)
+                    created_at = $4
                 WHERE id = $5
                 RETURNING *
             "#,

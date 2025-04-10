@@ -6,7 +6,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{PgConnection, PgPool, Postgres, Transaction, postgres::PgPoolOptions};
 
 pub mod antrag;
-pub mod antrag_top_map;
+pub mod antrag_top_attachment_map;
 pub mod attachment;
 pub mod door_state;
 pub mod legislative_periods;

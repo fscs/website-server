@@ -2,14 +2,35 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
-    Result,
     antrag::{Antrag, AntragData},
-    antrag_top_map::{AntragTopMapRepo, AntragTopMapping},
+    antrag_top_attachment_map::{AntragTopAttachmentMap, AntragTopMapping},
+    sitzung::{Top, TopKind},
+    Result,
 };
 
 use super::antrag::query_antragsstellende;
 
-impl AntragTopMapRepo for PgConnection {
+pub(super) async fn query_attachments(
+    conn: &mut PgConnection,
+    antrag_id: Uuid,
+) -> Result<Vec<Uuid>> {
+    let result = sqlx::query_scalar!(
+        r#"
+            SELECT id
+            FROM attachments
+            JOIN attachment_mapping
+            ON attachments.id = attachment_mapping.attachment_id
+            WHERE attachment_mapping.antrags_id = $1
+        "#,
+        antrag_id
+    )
+    .fetch_all(conn)
+    .await?;
+
+    Ok(result)
+}
+
+impl AntragTopAttachmentMap for PgConnection {
     async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>> {
         let anträge = sqlx::query_as!(
             AntragData,
@@ -34,7 +55,7 @@ impl AntragTopMapRepo for PgConnection {
 
         for data in anträge {
             let creators = query_antragsstellende(&mut *self, data.id).await?;
-            let attachments = query_antragsstellende(&mut *self, data.id).await?;
+            let attachments = query_attachments(&mut *self, data.id).await?;
 
             result.push(Antrag {
                 data: data.clone(),
@@ -42,6 +63,32 @@ impl AntragTopMapRepo for PgConnection {
                 attachments,
             })
         }
+
+        Ok(result)
+    }
+
+    async fn tops_by_antrag(
+        &mut self,
+        antrag_id: Uuid,
+    ) -> Result<Vec<crate::domain::sitzung::Top>> {
+        let result = sqlx::query_as!(
+            Top,
+            r#"
+                SELECT
+                    tops.id,
+                    name,
+                    weight,
+                    inhalt,
+                    kind AS "kind!: TopKind"
+                FROM tops
+                JOIN antragstop
+                ON tops.id = antragstop.top_id
+                WHERE antragstop.antrag_id = $1
+            "#,
+            antrag_id
+        )
+        .fetch_all(&mut *self)
+        .await?;
 
         Ok(result)
     }
@@ -69,7 +116,7 @@ impl AntragTopMapRepo for PgConnection {
 
         for data in anträge {
             let creators = query_antragsstellende(&mut *self, data.id).await?;
-            let attachments = query_antragsstellende(&mut *self, data.id).await?;
+            let attachments = query_attachments(&mut *self, data.id).await?;
 
             result.push(Antrag {
                 data: data.clone(),
@@ -132,14 +179,16 @@ mod test {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::antrag_top_map::AntragTopMapRepo;
+    use crate::domain::antrag_top_attachment_map::AntragTopAttachmentMap;
 
     #[sqlx::test(fixtures(
         "gimme_persons",
         "gimme_sitzungen",
         "gimme_tops",
         "gimme_antraege",
-        "gimme_antrag_mappings"
+        "gimme_antrag_mappings",
+        "gimme_attachments",
+        "gimme_attachment_mappings",
     ))]
     async fn anträge_by_top(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
@@ -149,10 +198,35 @@ mod test {
         let anträge = conn.anträge_by_top(top_id).await?;
 
         let antrag_id = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
+        let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap(); 
 
         assert_eq!(anträge.len(), 1);
 
-        assert!(anträge.iter().any(|e| e.data.id == antrag_id));
+        assert_eq!(anträge[0].data.id, antrag_id);
+        assert!(anträge[0].attachments.contains(&attachment_id));
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(
+        "gimme_persons",
+        "gimme_sitzungen",
+        "gimme_tops",
+        "gimme_antraege",
+        "gimme_antrag_mappings"
+    ))]
+    async fn tops_by_antrag(pool: PgPool) -> Result<()> {
+        let mut conn = pool.acquire().await?;
+
+        let antrag_id = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
+
+        let top_id = Uuid::parse_str("fd6b67df-60f2-453a-9ffc-93514c5ccdb1").unwrap();
+
+        let tops = conn.tops_by_antrag(antrag_id).await?;
+
+        assert_eq!(tops.len(), 1);
+
+        assert!(tops.iter().any(|e| e.id == top_id));
 
         Ok(())
     }

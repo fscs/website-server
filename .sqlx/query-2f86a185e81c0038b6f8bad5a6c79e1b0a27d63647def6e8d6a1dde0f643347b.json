@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    tops.id,\n                    name,\n                    weight,\n                    inhalt,\n                    kind AS \"kind!: TopKind\"\n                FROM tops\n                JOIN antragstop\n                ON tops.id = antragstop.top_id\n                WHERE antragstop.antrag_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "weight",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "inhalt",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "kind!: TopKind",
+        "type_info": {
+          "Custom": {
+            "name": "topkind",
+            "kind": {
+              "Enum": [
+                "regularia",
+                "bericht",
+                "normal",
+                "verschiedenes"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2f86a185e81c0038b6f8bad5a6c79e1b0a27d63647def6e8d6a1dde0f643347b"
+}

@@ -11,12 +11,12 @@ use validator::{Validate, ValidationError};
 
 use crate::database::{DatabaseConnection, DatabaseTransaction};
 
-use crate::domain::antrag_top_map::AntragTopMapping;
+use crate::domain::antrag_top_attachment_map::AntragTopMapping;
 use crate::domain::persons::Abmeldung;
 use crate::domain::sitzung::{Sitzung, SitzungWithTops, Top, TopWithAnträge};
 use crate::domain::{
     self, Result,
-    antrag_top_map::AntragTopMapRepo,
+    antrag_top_attachment_map::AntragTopAttachmentMap,
     sitzung::{SitzungKind, SitzungRepo, TopKind},
 };
 use crate::web::{RestStatus, auth};

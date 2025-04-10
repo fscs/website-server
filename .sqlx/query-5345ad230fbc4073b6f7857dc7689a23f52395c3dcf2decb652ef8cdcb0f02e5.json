@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id\n            FROM attachments\n            JOIN attachment_mapping\n            ON attachments.id = attachment_mapping.attachment_id\n            WHERE attachment_mapping.antrags_id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5345ad230fbc4073b6f7857dc7689a23f52395c3dcf2decb652ef8cdcb0f02e5"
+}

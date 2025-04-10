@@ -17,7 +17,7 @@ use crate::{
     domain::{
         self, Capability, Result,
         antrag::{Antrag, AntragRepo},
-        antrag_top_map::AntragTopMapRepo,
+        antrag_top_attachment_map::AntragTopAttachmentMap,
         attachment::AttachmentRepo,
     },
     web::{

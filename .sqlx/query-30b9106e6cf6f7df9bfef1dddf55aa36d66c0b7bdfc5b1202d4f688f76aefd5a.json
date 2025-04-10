@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                UPDATE anträge\n                SET\n                    titel = COALESCE($1, titel),\n                    begründung = COALESCE($2, begründung),\n                    antragstext = COALESCE($3, antragstext),\n                    created_at = COALESCE($4, created_at)\n                WHERE id = $5\n                RETURNING *\n            ",
+  "query": "\n                UPDATE anträge\n                SET\n                    titel = COALESCE($1, titel),\n                    begründung = COALESCE($2, begründung),\n                    antragstext = COALESCE($3, antragstext),\n                    created_at = $4\n                WHERE id = $5\n                RETURNING *\n            ",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "71b531a3857ea22be665ecd529818ce7aff0d23f1d54b8586eec551680bf8f33"
+  "hash": "30b9106e6cf6f7df9bfef1dddf55aa36d66c0b7bdfc5b1202d4f688f76aefd5a"
 }
