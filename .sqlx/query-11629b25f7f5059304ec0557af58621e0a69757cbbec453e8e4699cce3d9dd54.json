@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            DELETE FROM templates\n            WHERE name = $1\n            RETURNING *\n            ",
+  "query": "\n                DELETE FROM templates\n                WHERE name = $1\n                RETURNING *\n            ",
   "describe": {
     "columns": [
       {
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "bd220f84e662fdbdc12a3a0a037c420ad0d3dbf86062eb22e221c80cec9315ce"
+  "hash": "11629b25f7f5059304ec0557af58621e0a69757cbbec453e8e4699cce3d9dd54"
 }

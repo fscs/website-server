@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO templates (name, inhalt)\n            VALUES ($1, $2)\n            RETURNING name, inhalt\n            ",
+  "query": "\n                SELECT name, inhalt\n                FROM templates\n            ",
   "describe": {
     "columns": [
       {
@@ -15,15 +15,12 @@
       }
     ],
     "parameters": {
-      "Left": [
-        "Text",
-        "Text"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
       false
     ]
   },
-  "hash": "555f6b83d453e448c6789dfd89d575734b2636e672ee7716c9b544bbaa2c22c2"
+  "hash": "efb43cf384b807bced824450736580ef6bd43e17d7d59ba5ffa42a2f4520cefa"
 }

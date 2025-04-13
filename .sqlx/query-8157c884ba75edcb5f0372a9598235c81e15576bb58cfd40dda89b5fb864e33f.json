@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT name, inhalt\n            FROM templates\n            WHERE name = $1\n            ",
+  "query": "\n                SELECT name, inhalt\n                FROM templates\n                WHERE name = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "58d7be39ac3b05f165127bdb9c2c80bc3e92593840864343458f6e3ae5947f5a"
+  "hash": "8157c884ba75edcb5f0372a9598235c81e15576bb58cfd40dda89b5fb864e33f"
 }

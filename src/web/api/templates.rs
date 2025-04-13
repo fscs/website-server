@@ -23,7 +23,7 @@ pub struct CreateTemplateParams {
     inhalt: String,
 }
 
-/// Create the sitzungs service under /sitzungen
+/// Create the template service under /templates
 pub(crate) fn service() -> Scope {
     web::scope("/templates")
         .service(get_templates)
@@ -78,6 +78,8 @@ async fn delete_template(
 ) -> Result<impl Responder> {
     let result = conn.delete_template(&name).await?;
 
+    TEMPLATE_ENGINE.write().await.remove_template(&name);
+
     Ok(RestStatus::Success(Some(result)))
 }
 
@@ -96,6 +98,10 @@ async fn patch_template(
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     let result = conn.update_template(&name, &params.inhalt).await?;
+
+    let mut write_handle = TEMPLATE_ENGINE.write().await;
+    write_handle.remove_template(&name);
+    write_handle.add_template(name.clone(), params.inhalt.clone())?;
 
     Ok(RestStatus::Success(Some(result)))
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE templates\n            SET inhalt = $1\n            WHERE name = $2\n            RETURNING name, inhalt\n            ",
+  "query": "\n                UPDATE templates\n                SET inhalt = $1\n                WHERE name = $2\n                RETURNING name, inhalt\n            ",
   "describe": {
     "columns": [
       {
@@ -25,5 +25,5 @@
       false
     ]
   },
-  "hash": "8f70852d8809754d9d305ec89d04078934cfa4b384118c69b0ff8f63477bd8ca"
+  "hash": "f2cb91bbec7f0aa6eb9d7af76d1290525c7fc7d36074699822a3a8e823e810a6"
 }

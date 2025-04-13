@@ -11,9 +11,9 @@ impl TemplatesRepo for PgConnection {
         let result = sqlx::query_as!(
             Template,
             r#"
-            SELECT name, inhalt
-            FROM templates
-            WHERE name = $1
+                SELECT name, inhalt
+                FROM templates
+                WHERE name = $1
             "#,
             name
         )
@@ -27,8 +27,8 @@ impl TemplatesRepo for PgConnection {
         let result = sqlx::query_as!(
             Template,
             r#"
-            SELECT name, inhalt
-            FROM templates
+                SELECT name, inhalt
+                FROM templates
             "#,
         )
         .fetch_all(&mut *self)
@@ -40,9 +40,9 @@ impl TemplatesRepo for PgConnection {
         let result = sqlx::query_as!(
             Template,
             r#"
-            INSERT INTO templates (name, inhalt)
-            VALUES ($1, $2)
-            RETURNING name, inhalt
+                INSERT INTO templates (name, inhalt)
+                VALUES ($1, $2)
+                RETURNING name, inhalt
             "#,
             template.name,
             template.inhalt
@@ -57,9 +57,9 @@ impl TemplatesRepo for PgConnection {
         let result = sqlx::query_as!(
             Template,
             r#"
-            DELETE FROM templates
-            WHERE name = $1
-            RETURNING *
+                DELETE FROM templates
+                WHERE name = $1
+                RETURNING *
             "#,
             name
         )
@@ -73,10 +73,10 @@ impl TemplatesRepo for PgConnection {
         let result = sqlx::query_as!(
             Template,
             r#"
-            UPDATE templates
-            SET inhalt = $1
-            WHERE name = $2
-            RETURNING name, inhalt
+                UPDATE templates
+                SET inhalt = $1
+                WHERE name = $2
+                RETURNING name, inhalt
             "#,
             inhalt,
             name
@@ -99,7 +99,7 @@ mod test {
     async fn templates_by_name(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let result = conn.template_by_name("mhhm").await?;
+        let result = conn.template_by_name("mhhm").await?.unwrap();
 
         assert_eq!(result.name, "mhhm");
         assert_eq!(result.inhalt, "ähhh");

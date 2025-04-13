@@ -67,19 +67,21 @@ impl<T: Sync> TimedCache<T> {
     /// ```
     pub(crate) async fn get(&self) -> impl Deref<Target = T> + '_ {
         let data = self.data_last_updated.read().await;
-        if (data)
-            .iter()
-            .any(|d| d.last_updated + self.duration > SystemTime::now())
+
+        if data
+            .as_ref()
+            .is_some_and(|d| d.last_updated + self.duration > SystemTime::now())
         {
             ReadWrapper(data)
         } else {
-            drop(data);
+            drop(data); // drop the read handle, so we can write the lock
+
             let mut write = self.data_last_updated.write().await;
             // Write only needed if not already updated
             if (*write).is_none()
                 || (*write)
-                    .iter()
-                    .any(|d| d.last_updated + self.duration < SystemTime::now())
+                    .as_ref()
+                    .is_some_and(|d| d.last_updated + self.duration < SystemTime::now())
             {
                 let new_data = (*self.generator)().await;
 
@@ -88,6 +90,7 @@ impl<T: Sync> TimedCache<T> {
                     last_updated: SystemTime::now(),
                 });
             }
+
             let result = RwLockWriteGuard::downgrade(write);
             ReadWrapper(result)
         }
@@ -134,7 +137,7 @@ mod test {
     use crate::cache::TimedCache;
 
     #[tokio::test]
-    async fn test_cache() {
+    async fn basic() {
         let cache = TimedCache::with_generator(
             || Box::pin(async { 0 }),
             std::time::Duration::from_secs(60),
@@ -144,7 +147,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_retry() {
+    async fn retry() {
         let x = Arc::new(Mutex::new(0));
         let a = x.clone();
 
@@ -154,7 +157,11 @@ mod test {
                 Box::pin(async move {
                     let mut x = x.lock().unwrap();
                     *x += 1;
-                    if *x == 1 { Err(1) } else { Ok(2) }
+                    if *x == 1 {
+                        Err(1)
+                    } else {
+                        Ok(2)
+                    }
                 })
             },
             std::time::Duration::from_secs(60),
