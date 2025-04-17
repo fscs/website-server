@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 
-use actix_web::web::Path;
+use actix_web::web::{Data, Path};
 use actix_web::{delete, get, patch, post, web, Responder, Scope};
 use actix_web_validator::{Json as ActixJson, Query};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use icalendar::Calendar;
+use serde::{Deserialize, Serialize};
 use sqlx::Database;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -13,7 +14,8 @@ use validator::{Validate, ValidationError};
 use crate::database::{DatabaseConnection, DatabaseTransaction};
 
 use crate::domain::antrag_top_attachment_map::AntragTopMapping;
-use crate::domain::persons::Abmeldung;
+use crate::domain::calendar::{CalendarEvent, CalendarRepo};
+use crate::domain::persons::{Abmeldung, Person};
 use crate::domain::sitzung::{Sitzung, SitzungWithTops, Top, TopWithAnträge};
 use crate::domain::templates::TemplatesRepo;
 use crate::domain::{
@@ -22,6 +24,7 @@ use crate::domain::{
     sitzung::{SitzungKind, SitzungRepo, TopKind},
     Result,
 };
+use crate::web::calendar::CalendarData;
 use crate::web::{auth, RestStatus};
 use crate::TEMPLATE_ENGINE;
 
@@ -107,6 +110,19 @@ pub struct SitzungenAfterParams {
 pub struct SitzungBetweenParams {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct TemplateRenderStruct {
+    sitzung: SitzungWithTops,
+    persons: Vec<Person>,
+    calendars: Vec<TemplateCalendar>,
+}
+
+#[derive(Debug, Serialize, IntoParams, ToSchema)]
+pub struct TemplateCalendar {
+    name: String,
+    events: Vec<CalendarEvent>,
 }
 
 fn validate_sitzung_between_params(
@@ -524,12 +540,31 @@ async fn delete_assoc_antrag(
 async fn get_sitzung_template(
     path_params: Path<(Uuid, String)>,
     mut conn: DatabaseConnection,
+    calendars: Data<CalendarData>,
 ) -> Result<impl Responder> {
     let (sitzung_id, template_name) = path_params.into_inner();
 
     let Some(sitzung) = domain::sitzung_with_tops(&mut *conn, sitzung_id).await? else {
         return Ok(RestStatus::NotFound);
     };
+
+    let persons = domain::persons::PersonRepo::persons(&mut *conn).await?;
+
+    let calendar_names = calendars.calendar_names();
+
+    let mut calendars_events = Vec::new();
+    for name in calendar_names {
+        let Some(events) = calendars
+            .calender_by_name(&Cow::Borrowed(name.as_str()))
+            .await?
+        else {
+            return Ok(RestStatus::NotFound);
+        };
+        calendars_events.push(TemplateCalendar {
+            name: name.to_string(),
+            events,
+        });
+    }
 
     let Some(template) = conn.template_by_name(&template_name).await? else {
         return Ok(RestStatus::NotFound);
@@ -539,7 +574,11 @@ async fn get_sitzung_template(
         .read()
         .await
         .template(&template.name)
-        .render(sitzung)
+        .render(TemplateRenderStruct {
+            sitzung,
+            persons,
+            calendars: calendars_events,
+        })
         .to_string()?;
 
     Ok(RestStatus::Success(Some(result)))

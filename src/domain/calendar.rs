@@ -2,8 +2,9 @@ use chrono::{DateTime, Utc};
 use utoipa::{IntoParams, ToSchema};
 
 use super::Result;
+use serde::Serialize;
 
-#[derive(serde::Serialize, Clone, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, Clone, IntoParams, ToSchema)]
 pub struct CalendarEvent {
     pub summary: Option<String>,
     pub location: Option<String>,
