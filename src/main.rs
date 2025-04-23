@@ -134,6 +134,5 @@ async fn main() -> domain::Result<()> {
             .add_template(template.name, template.inhalt)?;
     }
 
-    let _ = web::start_server(database).await;
-    Ok(())
+    web::start_server(database).await
 }
