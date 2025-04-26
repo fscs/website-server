@@ -1,3 +1,4 @@
+use async_std::fs;
 use actix_http::{header, StatusCode};
 use actix_multipart::form::{tempfile::TempFile, MultipartForm};
 use actix_web::{
@@ -251,7 +252,7 @@ async fn get_antrag_attachment(
             header::CONTENT_DISPOSITION,
             format!("attachment; filename=\"{}\"", attachment.filename),
         ))
-        .body(std::fs::read(file_path)?))
+        .body(fs::read(file_path).await?))
 }
 
 #[utoipa::path(
@@ -295,7 +296,7 @@ async fn delete_antrag_attachment(
 
     let file_path = UPLOAD_DIR.as_path();
 
-    std::fs::remove_file(file_path.join(attachment_id.to_string()))?;
+    fs::remove_file(file_path.join(attachment_id.to_string())).await?;
 
     transaction.commit().await?;
 
@@ -377,8 +378,8 @@ async fn add_antrag_attachment(
         .add_attachment_to_antrag(*antrag_id, attachment.id)
         .await?;
 
-    std::fs::copy(temp_file_path, file_path.join(attachment.id.to_string()))?;
-    std::fs::remove_file(temp_file_path)?;
+    fs::copy(temp_file_path, file_path.join(attachment.id.to_string())).await?;
+    fs::remove_file(temp_file_path).await?;
 
     transaction.commit().await?;
 

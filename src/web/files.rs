@@ -1,4 +1,4 @@
-use std::{
+use async_std::{
     io,
     path::{Component, Path, PathBuf},
 };
@@ -44,7 +44,7 @@ async fn serve_files(req: HttpRequest, user: Option<User>) -> HttpResponse<BoxBo
     }
 
     let path = base_dir.join(sub_path.as_path());
-    let actual_path = if path.is_dir() {
+    let actual_path = if path.is_dir().await {
         path.join("index.html")
     } else {
         path
@@ -112,7 +112,7 @@ async fn err_not_found(base_dir: &Path, req: HttpRequest) -> HttpResponse<BoxBod
 async fn try_redirect(base_dir: &Path, path: &Path, req: HttpRequest) -> HttpResponse<BoxBody> {
     let fs_redirect_path = base_dir.join("de").join(path);
 
-    if !fs_redirect_path.exists() {
+    if !fs_redirect_path.exists().await {
         return err_not_found(base_dir, req).await;
     }
 

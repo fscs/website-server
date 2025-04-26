@@ -1,10 +1,10 @@
 #![warn(clippy::shadow_unrelated)]
 
-use async_std::sync::RwLock;
+use async_std::{fs, path::PathBuf, sync::RwLock};
 use clap::Parser;
 use domain::templates::TemplatesRepo;
 use log::LevelFilter;
-use std::{convert::identity, error::Error, path::PathBuf, str::FromStr, sync::LazyLock};
+use std::{error::Error, str::FromStr, sync::LazyLock};
 
 mod cache;
 mod database;
@@ -104,15 +104,13 @@ async fn main() -> domain::Result<()> {
         )
         .init();
 
-    std::fs::create_dir_all(UPLOAD_DIR.as_path())?;
+    fs::create_dir_all(UPLOAD_DIR.as_path()).await?;
 
-    let database_url = ARGS.database_url.clone().map_or(
-        std::env::var("DATABASE_URL").map_or(
-            "postgres://postgres:postgres@localhost/postgres".to_string(),
-            identity,
-        ),
-        identity,
-    );
+    let database_url = ARGS
+        .database_url
+        .clone()
+        .or(std::env::var("DATABASE_URL").ok())
+        .unwrap_or("postgres://postgres:postgres@localhost/postgres".to_string());
 
     let database = DatabasePool::new(&database_url)
         .await

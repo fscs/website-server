@@ -3,7 +3,7 @@ use actix_web::body::EitherBody;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
 use actix_web::{HttpMessage, HttpResponse};
 use futures_util::future::LocalBoxFuture;
-use std::sync::Arc;
+use async_std::sync::Arc;
 
 use crate::domain::Capability;
 

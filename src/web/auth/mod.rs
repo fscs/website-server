@@ -7,32 +7,33 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use actix_utils::future::{Ready, ready};
+use actix_utils::future::{ready, Ready};
 use actix_web::{
-    FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
-    cookie::{Cookie, CookieJar, Key, SameSite, time::Duration},
-    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
+    cookie::{time::Duration, Cookie, CookieJar, Key, SameSite},
+    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     error::{self, ErrorUnauthorized},
     get,
     http::header,
     web::{self, Data},
+    FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
 use log::{debug, info};
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken,
-    TokenResponse, TokenUrl, basic::BasicClient, http::HeaderValue, reqwest::async_http_client,
+    basic::BasicClient, http::HeaderValue, reqwest::async_http_client, AuthUrl, AuthorizationCode,
+    ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl,
 };
 use regex::Regex;
 use serde::Deserialize;
 
 use crate::{
-    ARGS,
     database::DatabaseTransaction,
     domain::{
-        self, Capability,
+        self,
         persons::{Person, PersonRepo},
+        Capability,
     },
+    ARGS,
 };
 
 pub mod capability;
@@ -450,8 +451,8 @@ struct AuthRequest {
 }
 
 pub(crate) fn oauth_client() -> OauthClient {
-    let client_id = std::env::var("CLIENT_ID").expect("No CLIENT ID set");
-    let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+    let client_id = std::env::var("CLIENT_ID").expect("No CLIENT_ID set");
+    let client_secret = std::env::var("CLIENT_SECRET").expect("No CLIENT_SECRET set");
     let singning_key = std::env::var("SIGNING_KEY").expect("No SIGNING_KEY set");
 
     OauthClient {
