@@ -88,7 +88,8 @@ Example `--group siko=ManageSitzungen,ManageÄntrage`
 A NixOS Module is provided.
 
 Example flake.nix
-```
+
+```nix
 {
     inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     inputs.fscs-website-server.url = "github:fscs/website-server";
@@ -108,21 +109,29 @@ Example flake.nix
 ```nix
 services.fscs-website-server = {
     enable = true;
-    package = <website-server-package>; # optional
+
+    # optional
+    package = <website-server-package>;
     
     # Environment File passed to the systemd service. Specify your OAuth
     # configuration here!
-    environmentFile = "path to environment file"; # optional
+    environmentFile = "path to environment file";
     
     # path to the data dir. stuff like uploaded attachments will be placed here.
-    dataDir = null; # optional
+    # 
+    # optional, defaults to /var/lib/fscs-website-server
+    dataDir = null;
     
     # calendars to mirror, the name and url are passed as key-value pairs
+    #
+    # optional
     calendars = {
         events = "https://dav.domain.tld/calendar/events.ical?export";
     };
     
     # groups specified as pairs of group names and lists of capability names
+    # 
+    # optional
     groups = {
         siko = [ "ManageSitzungen" "ManageÄntrage" ];
     };
@@ -132,6 +141,7 @@ services.fscs-website-server = {
     # see below for reference
     settings = {
         port = 9000;
+        oauth-source-name = "authentik";
     };
 };
 ```
