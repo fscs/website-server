@@ -52,7 +52,7 @@
 
       dataDir = lib.mkOption {
         description = "directory to store uploaded files";
-        type = t.strMatching "[a-zA-z0-9\-\_]+";
+        type = t.nonEmptyStr;
         default = "fscs-website-server";
         apply = v: "/var/lib/${v}";
       };
