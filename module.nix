@@ -110,7 +110,8 @@
           RestartSec = 5;
           StateDirectory = cfg.dataDir;
           LimitNOFILE = "8192";
-          CapabilityBoundingSet = [ "" ];
+          AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
+          CapabilityBoundingSet = [ "CAP_NET_BIND_SERVICE" ];
           DeviceAllow = [ "" ];
           DevicePolicy = "closed";
           LockPersonality = true;
@@ -118,7 +119,6 @@
           NoNewPrivileges = true;
           PrivateDevices = true;
           PrivateTmp = true;
-          PrivateUsers = true;
           ProcSubset = "pid";
           ProtectClock = true;
           ProtectControlGroups = true;
