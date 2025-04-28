@@ -52,8 +52,9 @@
 
       dataDir = lib.mkOption {
         description = "directory to store uploaded files";
-        type = t.nonEmptyStr;
-        default = "/var/lib/fscs-website-server";
+        type = t.strMatching "[a-zA-z0-9\-\_]+";
+        default = "fscs-website-server";
+        apply = v: "/var/lib/${v}";
       };
 
       calendars = lib.mkOption {
@@ -108,7 +109,7 @@
           User = config.users.users.fscs-website-server.name;
           Restart = "always";
           RestartSec = 5;
-          ReadWritePaths=cfg.dataDir;
+          StateDirectory=builtins.baseNameOf cfg.dataDir;
           LimitNOFILE = "8192";
           AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
           CapabilityBoundingSet = [ "CAP_NET_BIND_SERVICE" ];
