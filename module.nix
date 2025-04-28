@@ -108,7 +108,7 @@
           User = config.users.users.fscs-website-server.name;
           Restart = "always";
           RestartSec = 5;
-          StateDirectory = cfg.dataDir;
+          ReadWritePaths=cfg.dataDir;
           LimitNOFILE = "8192";
           AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
           CapabilityBoundingSet = [ "CAP_NET_BIND_SERVICE" ];
