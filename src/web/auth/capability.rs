@@ -56,14 +56,14 @@ macro_rules! capability_middleware {
                     if req
                         .extensions()
                         .get::<User>()
-                        .is_some_and(|user| !user.has_capability($cap))
+                        .is_some_and(|user| user.has_capability($cap))
                     {
-                        return Ok(req.into_response(
-                            HttpResponse::Unauthorized().finish().map_into_right_body(),
-                        ));
+                        return Ok(service.call(req).await?.map_into_left_body())
                     }
 
-                    Ok(service.call(req).await?.map_into_left_body())
+                    return Ok(req.into_response(
+                        HttpResponse::Unauthorized().finish().map_into_right_body(),
+                    ));
                 })
             }
         }
