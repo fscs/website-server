@@ -89,12 +89,6 @@ capability_middleware!(
 );
 
 capability_middleware!(
-    RequireManageDoor,
-    RequireManageDoorMiddleware,
-    Capability::ManageDoor
-);
-
-capability_middleware!(
     RequireCreateAntrag,
     RequireCreateAntragMiddleware,
     Capability::CreateAntrag

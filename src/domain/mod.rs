@@ -7,7 +7,6 @@ pub mod antrag;
 pub mod antrag_top_attachment_map;
 pub mod attachment;
 pub mod calendar;
-pub mod door_state;
 pub mod legislative_periods;
 pub mod persons;
 pub mod sitzung;
@@ -39,7 +38,6 @@ pub enum Capability {
     ManageSitzungen,
     ManageAnträge,
     ManagePersons,
-    ManageDoor,
     CreateAntrag,
     ViewHidden,
     ViewProtected,

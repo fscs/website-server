@@ -75,8 +75,6 @@ Example `--group siko=ManageSitzungen,ManageÄntrage`
     - View extended Info about Persons
     - Create, edit and delete Persons
     - Create, delete and view Abmeldungen
-- `ManageDoor`
-    - Create door events
 - `ViewHidden`
     - view content in the `hidden` folder
 - `ViewProtected`

@@ -2,7 +2,6 @@ use actix_web::{web, Scope};
 
 pub(crate) mod antrag;
 pub(crate) mod calendar;
-pub(crate) mod door_state;
 pub(crate) mod legislative_periods;
 pub(crate) mod persons;
 pub(crate) mod roles;
@@ -16,7 +15,6 @@ pub(crate) fn service() -> Scope {
         .service(persons::service())
         .service(roles::service())
         .service(antrag::service())
-        .service(door_state::service())
         .service(sitzungen::service())
         .service(legislative_periods::service())
         .service(templates::service())
