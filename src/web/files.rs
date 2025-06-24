@@ -28,7 +28,7 @@ async fn serve_files(req: HttpRequest, user: Option<User>) -> HttpResponse<BoxBo
         Some(user) if user.has_capability(Capability::ViewProtected) => {
             CONTENT_DIR.protected.as_path()
         }
-        Some(user) if user.has_capability(Capability::ViewProtected) => {
+        Some(user) if user.has_capability(Capability::ViewHidden) => {
             CONTENT_DIR.hidden.as_path()
         }
         _ => CONTENT_DIR.public.as_path(),
