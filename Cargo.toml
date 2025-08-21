@@ -11,7 +11,7 @@ actix-files = { version = "0", features = [ "experimental-io-uring", ] }
 actix-http = "3"
 actix-multipart = "0"
 actix-utils = "3"
-actix-web = { version = "4", features = [ "secure-cookies", "rustls", ] }
+actix-web = { version = "4", features = [ "secure-cookies", "rustls-0_23", ] }
 actix-web-validator = "6"
 async-std = "1"
 chrono = { version = "0", features = [ "serde", ] }
@@ -26,9 +26,9 @@ regex = "1"
 reqwest = { version = "0", features = [ "blocking", "json", "rustls-tls", "http2", "macos-system-configuration", "charset", ], default-features = false }
 serde = { version = "1", features = [ "derive", ] }
 serde_json = { version = "1", features = [ "raw_value", ] }
-sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls-ring", "postgres", "uuid", "json", "chrono", ] }
+sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls", "postgres", "uuid", "json", "chrono", ] }
 strum = { version = "0", features = [ "derive", ] }
-thiserror = "1"
+thiserror = "2"
 upon = "0.9"
 utoipa = { version = "5", features = [ "actix_extras", "chrono", "uuid", "openapi_extensions", ] }
 utoipa-swagger-ui = { version = "9", features = [ "actix-web", "vendored", ] }
