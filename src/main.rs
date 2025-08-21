@@ -11,7 +11,7 @@ mod database;
 mod domain;
 mod web;
 
-use crate::database::DatabasePool;
+use crate::{database::DatabasePool, domain::Capability};
 
 #[derive(Parser)]
 struct Args {
@@ -30,22 +30,27 @@ struct Args {
     /// Postgres Database Url to connect to
     #[arg(short, long)]
     database_url: Option<String>,
+
     /// Oauth Source Name
-    #[arg(short, long)]
-    oauth_source_name: String,
+    #[arg(short, long, requires_all = ["auth_url", "token_url", "user_info"])]
+    oauth_source_name: Option<String>,
     /// Oauth Url to authorize against
-    #[arg(short, long)]
-    auth_url: String,
+    #[arg(short, long, requires_all = ["oauth_source_name", "token_url", "user_info"])]
+    auth_url: Option<String>,
+    /// Oauth Url to get tokens from
+    #[arg(short, long, requires_all = ["auth_url", "oauth_source_name", "user_info"])]
+    token_url: Option<String>,
+    /// Oauth Url to get user info from
+    #[arg(short, long, requires_all = ["auth_url", "token_url", "oauth_source_name"])]
+    user_info: Option<String>,
     /// Specifiy a group and grant it capabilities.. Parameter should be formatted like
     /// 'GroupName=CapName[,CapName]'
     #[arg(long = "group", value_parser = parse_key_val::<String, String>)]
     groups: Vec<(String, String)>,
-    /// Oauth Url to get tokens from
-    #[arg(short, long)]
-    token_url: String,
-    /// Oauth Url to get user info from
-    #[arg(short, long)]
-    user_info: String,
+    /// Specify Capabilities to be granted to Users that arent logged in
+    #[arg(long = "default-capability")]
+    default_capabilities: Vec<Capability>,
+
     /// How many web workers to spawn. Default is the number of CPU cores
     #[arg(short = 'j', long)]
     workers: Option<usize>,

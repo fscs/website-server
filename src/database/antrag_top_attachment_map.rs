@@ -198,7 +198,7 @@ mod test {
         let anträge = conn.anträge_by_top(top_id).await?;
 
         let antrag_id = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
-        let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap(); 
+        let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap();
 
         assert_eq!(anträge.len(), 1);
 

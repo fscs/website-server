@@ -2,15 +2,16 @@ use std::future::Future;
 use std::pin::Pin;
 
 use actix_cors::Cors;
-use actix_http::{StatusCode, header};
+use actix_http::{header, StatusCode};
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
-use actix_web::middleware::{Compress, Logger, NormalizePath};
+use actix_web::middleware::{Compress, Condition, Logger, NormalizePath};
 use actix_web::web::{self, Data};
 use actix_web::{
-    App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
-    ResponseError, get,
+    get, App, FromRequest, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
+    ResponseError,
 };
+use log::info;
 use serde::Serialize;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -21,10 +22,10 @@ pub(crate) mod auth;
 pub(crate) mod calendar;
 pub(crate) mod files;
 
-use crate::ARGS;
 use crate::database::{DatabaseConnection, DatabasePool, DatabaseTransaction};
 use crate::domain::Error;
-use auth::{AuthMiddle, oauth_client};
+use crate::ARGS;
+use auth::AuthMiddle;
 
 pub(super) enum RestStatus<T: Serialize> {
     Success(Option<T>),
@@ -123,6 +124,12 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     let database_data = Data::new(database);
     let calendar_data = Data::new(calendar::CalendarData::new());
 
+    let enable_oauth = ARGS.oauth_source_name.is_some();
+
+    if !enable_oauth {
+        info!("OAuth is DISABLED");
+    }
+
     let server = HttpServer::new(move || {
         let mut cors = Cors::default()
             .allow_any_method()
@@ -133,16 +140,22 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             cors = cors.allowed_origin(allowed.as_str())
         }
 
-        App::new()
+        let app = if enable_oauth {
+            // app data cant be conditional :(
+            App::new().app_data(Data::new(auth::oauth_client()))
+        } else {
+            App::new()
+        };
+
+        app
             // app data
             .app_data(database_data.clone())
             .app_data(calendar_data.clone())
-            .app_data(Data::new(oauth_client()))
             // middlewares
             .wrap(Compress::default())
-            .wrap(AuthMiddle)
             .wrap(cors)
             .wrap(Logger::default())
+            .wrap(Condition::new(enable_oauth, AuthMiddle))
             // /api/docs needs to be before /api. also cannot be wrapped with normalized path and
             // needs this weird redirect, because its well special
             .service(redirect_docs)

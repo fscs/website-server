@@ -1,4 +1,4 @@
-use actix_web::{Responder, Scope, delete, get, put, web};
+use actix_web::{delete, get, put, web, Responder, Scope};
 use actix_web_validator::Json as ActixJson;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
@@ -7,10 +7,10 @@ use validator::Validate;
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
     domain::{
-        Result,
         persons::{PersonRepo, Role},
+        Result,
     },
-    web::{RestStatus, auth},
+    web::{auth, RestStatus},
 };
 
 // Create the roles service under /roles

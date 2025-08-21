@@ -4,12 +4,12 @@ use chrono::{DateTime, NaiveTime, Utc};
 use icalendar::{Component, DatePerhapsTime, Event, EventLike};
 
 use crate::{
-    ARGS,
     cache::TimedCache,
     domain::{
-        Error, Result,
         calendar::{CalendarEvent, CalendarRepo},
+        Error, Result,
     },
+    ARGS,
 };
 
 pub(super) struct CalendarData {

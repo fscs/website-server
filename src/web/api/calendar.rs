@@ -1,10 +1,10 @@
 use actix_web::web::{Data, Path};
-use actix_web::{Responder, Scope, get, web};
+use actix_web::{get, web, Responder, Scope};
 
-use crate::domain::Result;
 use crate::domain::calendar::{CalendarEvent, CalendarRepo};
-use crate::web::RestStatus;
+use crate::domain::Result;
 use crate::web::calendar::CalendarData;
+use crate::web::RestStatus;
 
 // Create the calendar service under /calendar
 pub(crate) fn service() -> Scope {

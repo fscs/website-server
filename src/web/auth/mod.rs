@@ -11,8 +11,7 @@ use actix_utils::future::{ready, Ready};
 use actix_web::{
     cookie::{time::Duration, Cookie, CookieJar, Key, SameSite},
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    error::{self, ErrorUnauthorized},
-    get,
+    error, get,
     http::header,
     web::{self, Data},
     FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
@@ -39,6 +38,8 @@ use crate::{
 pub mod capability;
 
 const COOKIE_MAX_AGE: Duration = Duration::days(30);
+
+const ANONYMOUS_USER_NAME: &str = "fscs-website-anonymous";
 
 static AUTH_COOKIE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::from_str("(refresh_token=[.--;]*;)|(access_token=[.--;]*;)|(user=[.--;]*;)").unwrap()
@@ -106,18 +107,30 @@ impl User {
     }
 
     pub async fn query_person(&self, repo: &mut impl PersonRepo) -> domain::Result<Person> {
-        let user_name = format!("{}-{}", ARGS.oauth_source_name.as_str(), self.sub.as_str());
+        let user_name = if self.sub == ANONYMOUS_USER_NAME {
+            // ewwwwww
+            self.sub.clone()
+        } else if let Some(source_name) = ARGS.oauth_source_name.as_ref() {
+            format!("{}-{}", source_name.as_str(), self.sub.as_str())
+        } else {
+            self.sub.clone()
+        };
+
         repo.person_by_user_name(user_name.as_str())
             .await?
             .ok_or_else(|| {
-                domain::Error::Message(
-                    "no corresponding person found in database, try logging out and back in again"
-                        .to_string(),
-                )
+                domain::Error::Message(format!(
+                    "no corresponding person found for username {}, try logging out and back in again",
+                    user_name
+                ))
             })
     }
 
     pub fn has_capability(&self, cap: Capability) -> bool {
+        if ARGS.default_capabilities.contains(&cap) {
+            return true;
+        }
+
         let fun = |allowed_groups: &HashSet<String>| {
             self.groups
                 .iter()
@@ -128,8 +141,21 @@ impl User {
             CAPABILITY_SET
                 .get(&Capability::Admin)
                 .map(fun)
-                .unwrap_or(false)
+                .unwrap_or(ARGS.default_capabilities.contains(&Capability::Admin))
         })
+    }
+}
+
+impl Default for User {
+    fn default() -> Self {
+        User {
+            exp: -1,
+            name: "Anonymous".to_string(),
+            preferred_username: "Anonymous".to_string(),
+            sub: ANONYMOUS_USER_NAME.to_string(),
+            groups: vec![],
+            extra: HashMap::new(),
+        }
     }
 }
 
@@ -144,11 +170,11 @@ impl FromRequest for User {
         let req = req.clone();
 
         Box::pin(async move {
-            if let Some(user) = req.extensions().get::<User>() {
-                Ok(user.to_owned())
-            } else {
-                Err(ErrorUnauthorized("Could not obtain user info"))
-            }
+            Ok(req
+                .extensions()
+                .get::<User>()
+                .map(ToOwned::to_owned)
+                .unwrap_or_default())
         })
     }
 }
@@ -241,8 +267,10 @@ where
 
             if let Some(user) = maybe_user {
                 debug!(
-                    "user {} aquired (sub: {}-{})",
-                    user.preferred_username, ARGS.oauth_source_name, user.sub
+                    "oauth user {} aquired (sub: {}-{})",
+                    user.preferred_username,
+                    ARGS.oauth_source_name.as_ref().unwrap(),
+                    user.sub
                 );
                 req.extensions_mut().insert(user);
             }
@@ -459,11 +487,11 @@ pub(crate) fn oauth_client() -> OauthClient {
         client: BasicClient::new(
             ClientId::new(client_id),
             Some(ClientSecret::new(client_secret)),
-            AuthUrl::new(ARGS.auth_url.clone()).unwrap(),
-            Some(TokenUrl::new(ARGS.token_url.clone()).unwrap()),
+            AuthUrl::new(ARGS.auth_url.as_ref().unwrap().clone()).unwrap(),
+            Some(TokenUrl::new(ARGS.token_url.as_ref().unwrap().clone()).unwrap()),
         ),
         reqwest_client: reqwest::Client::new(),
-        user_info: ARGS.user_info.clone(),
+        user_info: ARGS.user_info.as_ref().unwrap().clone(),
         singning_key: Key::from(singning_key.as_bytes()),
     }
 }
@@ -593,11 +621,15 @@ async fn callback(
         response_builder.cookie(cookie.clone());
     }
 
-    let user_name = format!("{}-{}", ARGS.oauth_source_name.as_str(), user.sub.as_str());
+    let user_name = format!(
+        "{}-{}",
+        ARGS.oauth_source_name.as_ref().unwrap().as_str(),
+        user.sub.as_str()
+    );
 
     if let Some(person) = transaction.person_by_user_name(user_name.as_str()).await? {
         info!(
-            "syncing person {} for user {}",
+            "syncing person {} for oauth user {}",
             user_name.as_str(),
             user.preferred_username.as_str()
         );
@@ -607,7 +639,7 @@ async fn callback(
             .await?;
     } else {
         info!(
-            "creating person {} for user {}",
+            "creating person {} for oauth user {}",
             user_name.as_str(),
             user.preferred_username.as_str()
         );

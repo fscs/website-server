@@ -4,16 +4,16 @@ use async_std::{
 };
 
 use actix_files::NamedFile;
-use actix_http::{StatusCode, header};
+use actix_http::{header, StatusCode};
 use actix_web::{
-    HttpRequest, HttpResponse, Responder,
     body::BoxBody,
     dev::HttpServiceFactory,
     get,
     http::header::{CacheControl, CacheDirective},
+    HttpRequest, HttpResponse, Responder,
 };
 
-use crate::{CONTENT_DIR, domain::Capability};
+use crate::{domain::Capability, CONTENT_DIR};
 
 use super::auth::User;
 
@@ -22,16 +22,14 @@ pub(crate) fn service() -> impl HttpServiceFactory {
 }
 
 #[get("/{filename:.*}")]
-async fn serve_files(req: HttpRequest, user: Option<User>) -> HttpResponse<BoxBody> {
+async fn serve_files(req: HttpRequest, user: User) -> HttpResponse<BoxBody> {
     // decide what the user gets to see
-    let base_dir = match user {
-        Some(user) if user.has_capability(Capability::ViewProtected) => {
-            CONTENT_DIR.protected.as_path()
-        }
-        Some(user) if user.has_capability(Capability::ViewHidden) => {
-            CONTENT_DIR.hidden.as_path()
-        }
-        _ => CONTENT_DIR.public.as_path(),
+    let base_dir = if user.has_capability(Capability::ViewProtected) {
+        CONTENT_DIR.protected.as_path()
+    } else if user.has_capability(Capability::ViewHidden) {
+        CONTENT_DIR.hidden.as_path()
+    } else {
+        CONTENT_DIR.public.as_path()
     };
 
     let sub_path: PathBuf = req.match_info().query("filename").parse().unwrap();

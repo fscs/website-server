@@ -1,9 +1,9 @@
-use actix_utils::future::{Ready, ready};
+use actix_utils::future::{ready, Ready};
 use actix_web::body::EitherBody;
-use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
+use actix_web::dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::{HttpMessage, HttpResponse};
-use futures_util::future::LocalBoxFuture;
 use async_std::sync::Arc;
+use futures_util::future::LocalBoxFuture;
 
 use crate::domain::Capability;
 
@@ -56,9 +56,11 @@ macro_rules! capability_middleware {
                     if req
                         .extensions()
                         .get::<User>()
-                        .is_some_and(|user| user.has_capability($cap))
+                        .map(ToOwned::to_owned)
+                        .unwrap_or_default()
+                        .has_capability($cap)
                     {
-                        return Ok(service.call(req).await?.map_into_left_body())
+                        return Ok(service.call(req).await?.map_into_left_body());
                     }
 
                     return Ok(req.into_response(

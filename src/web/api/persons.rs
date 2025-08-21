@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
 use actix_web::web::Path;
-use actix_web::{Responder, Scope, get, patch};
 use actix_web::{delete, put, web};
+use actix_web::{get, patch, Responder, Scope};
 use actix_web_validator::{Json as ActixJson, Query};
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -11,11 +11,11 @@ use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 use crate::database::{DatabaseConnection, DatabaseTransaction};
-use crate::domain::Capability;
 use crate::domain::persons::{Abmeldung, Person};
+use crate::domain::Capability;
 use crate::web::auth::{self, User};
 use crate::{
-    domain::{Result, persons::PersonRepo},
+    domain::{persons::PersonRepo, Result},
     web::RestStatus,
 };
 
@@ -130,24 +130,20 @@ fn validate_abmeldung_params(
     )
 )]
 #[get("")]
-async fn get_persons(
-    maybe_user: Option<User>,
-    mut conn: DatabaseConnection,
-) -> Result<impl Responder> {
+async fn get_persons(user: User, mut conn: DatabaseConnection) -> Result<impl Responder> {
     let persons = conn.persons().await?;
 
-    let result: Vec<_> =
-        if maybe_user.is_some_and(|user| user.has_capability(Capability::ManagePersons)) {
-            persons
-                .into_iter()
-                .map(PublicPerson::private_from_person)
-                .collect()
-        } else {
-            persons
-                .into_iter()
-                .map(PublicPerson::public_from_person)
-                .collect()
-        };
+    let result: Vec<_> = if user.has_capability(Capability::ManagePersons) {
+        persons
+            .into_iter()
+            .map(PublicPerson::private_from_person)
+            .collect()
+    } else {
+        persons
+            .into_iter()
+            .map(PublicPerson::public_from_person)
+            .collect()
+    };
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -162,14 +158,14 @@ async fn get_persons(
 )]
 #[get("/{person_id}")]
 async fn get_person_by_id(
-    maybe_user: Option<User>,
+    user: User,
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     let person = conn.person_by_id(*person_id).await?;
 
     let result = person.map(|p| {
-        if maybe_user.is_some_and(|user| user.has_capability(Capability::ManagePersons)) {
+        if user.has_capability(Capability::ManagePersons) {
             PublicPerson::private_from_person(p)
         } else {
             PublicPerson::public_from_person(p)
@@ -270,24 +266,23 @@ async fn patch_person(
 )]
 #[get("/by-role")]
 async fn get_persons_by_role(
-    maybe_user: Option<User>,
+    user: User,
     params: Query<PersonsByRoleParams>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     let persons = conn.persons_with_role(params.role.as_str()).await?;
 
-    let result: Vec<_> =
-        if maybe_user.is_some_and(|user| user.has_capability(Capability::ManagePersons)) {
-            persons
-                .into_iter()
-                .map(PublicPerson::private_from_person)
-                .collect()
-        } else {
-            persons
-                .into_iter()
-                .map(PublicPerson::public_from_person)
-                .collect()
-        };
+    let result: Vec<_> = if user.has_capability(Capability::ManagePersons) {
+        persons
+            .into_iter()
+            .map(PublicPerson::private_from_person)
+            .collect()
+    } else {
+        persons
+            .into_iter()
+            .map(PublicPerson::public_from_person)
+            .collect()
+    };
 
     Ok(RestStatus::Success(Some(result)))
 }

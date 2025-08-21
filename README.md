@@ -37,6 +37,8 @@ Example: `--calendar events=https://dav.domain.tld/calendar/events.ical?export`
 
 ### Access Control
 
+By default, Users act as the special "Anonymous" User. It can be granted permissions via the `--default-capability` flag.
+
 The server supports OAuth2 based Authorization. 
 
 Set it up using the following command line flags:
@@ -79,7 +81,6 @@ Example `--group siko=ManageSitzungen,ManageÄntrage`
     - view content in the `hidden` folder
 - `ViewProtected`
     - view content in the `protected` folder
-
 
 ## NixOS Module
 
@@ -147,7 +148,8 @@ services.fscs-website-server = {
 ## Commandline Options
 
 ```
-Usage: fscs-website-backend [OPTIONS] --content-dir <CONTENT_DIR> --oauth-source-name <OAUTH_SOURCE_NAME> --auth-url <AUTH_URL> --token-url <TOKEN_URL> --user-info <USER_INFO> --data-dir <DATA_DIR>
+```sh
+Usage: fscs-website-backend [OPTIONS] --content-dir <CONTENT_DIR> --data-dir <DATA_DIR>
 
 Options:
   -p, --port <PORT>
@@ -164,12 +166,14 @@ Options:
           Oauth Source Name
   -a, --auth-url <AUTH_URL>
           Oauth Url to authorize against
-      --group <GROUPS>
-          Specifiy a group and grant it capabilities.. Parameter should be formatted like 'GroupName=CapName[,CapName]'
   -t, --token-url <TOKEN_URL>
           Oauth Url to get tokens from
   -u, --user-info <USER_INFO>
           Oauth Url to get user info from
+      --group <GROUPS>
+          Specifiy a group and grant it capabilities.. Parameter should be formatted like 'GroupName=CapName[,CapName]'
+      --default-capability <DEFAULT_CAPABILITIES>
+          Specify Capabilities to be granted to Users that arent logged in
   -j, --workers <WORKERS>
           How many web workers to spawn. Default is the number of CPU cores
       --cors-allowed-origin <CORS_ALLOWED_ORIGIN>
@@ -183,5 +187,3 @@ Options:
   -h, --help
           Print help
 ```
-
-

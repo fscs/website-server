@@ -1,6 +1,7 @@
 use actix_web::{
-    Responder, Scope, delete, get, patch, post,
+    delete, get, patch, post,
     web::{self, Path, Query},
+    Responder, Scope,
 };
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
@@ -10,11 +11,11 @@ use validator::Validate;
 use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
     domain::{
-        Result,
         legislative_periods::{LegislativePeriod, LegislativePeriodRepo},
         sitzung::Sitzung,
+        Result,
     },
-    web::{RestStatus, auth},
+    web::{auth, RestStatus},
 };
 
 /// Create the legislative period service
@@ -66,7 +67,7 @@ async fn get_legislatives(mut conn: DatabaseConnection) -> Result<impl Responder
 #[get("/{id}")]
 async fn get_legislative_by_id(
     id: Path<Uuid>,
-    mut conn: DatabaseConnection
+    mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
     let result = conn.legislativ_period_by_id(*id).await?;
 

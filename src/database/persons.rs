@@ -3,8 +3,8 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
-    Result,
     persons::{Abmeldung, Person, PersonRepo, PersonRoleMapping},
+    Result,
 };
 
 impl PersonRepo for PgConnection {
@@ -674,11 +674,9 @@ mod test {
 
         let remaining_abmeldungen = conn.abmeldungen_by_person(person_id).await?;
 
-        assert!(
-            remaining_abmeldungen
-                .iter()
-                .any(|e| e.anfangsdatum == end && e.ablaufdatum == old_end)
-        );
+        assert!(remaining_abmeldungen
+            .iter()
+            .any(|e| e.anfangsdatum == end && e.ablaufdatum == old_end));
 
         Ok(())
     }
@@ -698,11 +696,9 @@ mod test {
 
         let remaining_abmeldungen = conn.abmeldungen_by_person(person_id).await?;
 
-        assert!(
-            remaining_abmeldungen
-                .iter()
-                .any(|e| e.anfangsdatum == old_start && e.ablaufdatum == start)
-        );
+        assert!(remaining_abmeldungen
+            .iter()
+            .any(|e| e.anfangsdatum == old_start && e.ablaufdatum == start));
 
         Ok(())
     }
@@ -745,17 +741,13 @@ mod test {
 
         assert_eq!(remaining_abmeldungen.len(), 5);
 
-        assert!(
-            remaining_abmeldungen
-                .iter()
-                .any(|e| e.anfangsdatum == left_start && e.ablaufdatum == left_end)
-        );
+        assert!(remaining_abmeldungen
+            .iter()
+            .any(|e| e.anfangsdatum == left_start && e.ablaufdatum == left_end));
 
-        assert!(
-            remaining_abmeldungen
-                .iter()
-                .any(|e| e.anfangsdatum == right_start && e.ablaufdatum == right_end)
-        );
+        assert!(remaining_abmeldungen
+            .iter()
+            .any(|e| e.anfangsdatum == right_start && e.ablaufdatum == right_end));
 
         Ok(())
     }

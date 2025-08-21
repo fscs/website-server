@@ -153,11 +153,7 @@
               --content-dir test \
               --data-dir $DATA_DIR \
               --max-file-size 10485760 \
-              --oauth-source-name authentik \
-              --group FS_Rat_Informatik=Admin \
-              --auth-url https://auth.inphima.de/application/o/authorize/ \
-              --token-url https://auth.inphima.de/application/o/token/ \
-              --user-info https://auth.inphima.de/application/o/userinfo/ \
+              --default-capability Admin \
               $@
 
             if [ ! "$ALREADY_RUNNING" -eq 0  ]; then
