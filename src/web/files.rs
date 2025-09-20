@@ -13,6 +13,7 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder,
 };
 
+use crate::web::cors_permissive;
 use crate::{domain::Capability, CONTENT_DIR};
 
 use super::auth::User;
@@ -21,7 +22,7 @@ pub(crate) fn service() -> impl HttpServiceFactory {
     serve_files
 }
 
-#[get("/{filename:.*}")]
+#[get("/{filename:.*}", wrap = "cors_permissive()")]
 async fn serve_files(req: HttpRequest, user: User) -> HttpResponse<BoxBody> {
     // decide what the user gets to see
     let base_dir = if user.has_capability(Capability::ViewProtected) {

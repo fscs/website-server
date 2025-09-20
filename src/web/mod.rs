@@ -27,6 +27,23 @@ use crate::domain::Error;
 use crate::ARGS;
 use auth::AuthMiddle;
 
+pub fn cors_permissive() -> Cors {
+    Cors::permissive().max_age(0).allow_any_method()
+}
+
+pub fn cors_restrictive() -> Cors {
+    let mut cors = Cors::default()
+        .allow_any_method()
+        .allow_any_header()
+        .supports_credentials();
+
+    for allowed in &ARGS.cors_allowed_origin {
+        cors = cors.allowed_origin(allowed.as_str())
+    }
+
+    cors
+}
+
 pub(super) enum RestStatus<T: Serialize> {
     Success(Option<T>),
     Created(Option<T>),
@@ -131,15 +148,6 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     }
 
     let server = HttpServer::new(move || {
-        let mut cors = Cors::default()
-            .allow_any_method()
-            .allow_any_header()
-            .supports_credentials();
-
-        for allowed in &ARGS.cors_allowed_origin {
-            cors = cors.allowed_origin(allowed.as_str())
-        }
-
         let app = if enable_oauth {
             // app data cant be conditional :(
             App::new().app_data(Data::new(auth::oauth_client()))
@@ -153,7 +161,6 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
             .app_data(calendar_data.clone())
             // middlewares
             .wrap(Compress::default())
-            .wrap(cors)
             .wrap(Logger::default())
             .wrap(Condition::new(enable_oauth, AuthMiddle))
             // /api/docs needs to be before /api. also cannot be wrapped with normalized path and
@@ -180,7 +187,7 @@ pub async fn start_server(database: DatabasePool) -> Result<(), Error> {
     Ok(())
 }
 
-#[get("/api/docs")]
+#[get("/api/docs", wrap = "cors_permissive()")]
 pub async fn redirect_docs() -> impl Responder {
     HttpResponse::PermanentRedirect()
         .insert_header((header::LOCATION, "/api/docs/"))

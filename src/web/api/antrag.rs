@@ -25,7 +25,7 @@ use crate::{
     },
     web::{
         auth::{self, User},
-        RestStatus,
+        cors_permissive, cors_restrictive, RestStatus,
     },
     ARGS, UPLOAD_DIR,
 };
@@ -83,7 +83,7 @@ pub struct UploadAntrag {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("")]
+#[get("", wrap = "cors_permissive()")]
 async fn get_antraege(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.antraege().await?;
 
@@ -97,7 +97,7 @@ async fn get_antraege(mut conn: DatabaseConnection) -> Result<impl Responder> {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/orphans")]
+#[get("/orphans", wrap = "cors_permissive()")]
 async fn get_orphan_antraege(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.orphan_antraege().await?;
 
@@ -112,7 +112,7 @@ async fn get_orphan_antraege(mut conn: DatabaseConnection) -> Result<impl Respon
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{antrag_id}")]
+#[get("/{antrag_id}", wrap = "cors_permissive()")]
 async fn get_antrag_by_id(
     antrag_id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -132,7 +132,11 @@ async fn get_antrag_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("", wrap = "auth::capability::RequireCreateAntrag")]
+#[post(
+    "",
+    wrap = "auth::capability::RequireCreateAntrag",
+    wrap = "cors_restrictive()"
+)]
 async fn create_antrag(
     user: User,
     params: ActixJson<CreateAntragParams>,
@@ -166,7 +170,11 @@ async fn create_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{antrag_id}", wrap = "auth::capability::RequireCreateAntrag")]
+#[patch(
+    "/{antrag_id}",
+    wrap = "auth::capability::RequireCreateAntrag",
+    wrap = "cors_restrictive()"
+)]
 async fn patch_antrag(
     user: User,
     params: ActixJson<UpdateAntragParams>,
@@ -213,7 +221,11 @@ async fn patch_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{antrag_id}", wrap = "auth::capability::RequireManageAntraege")]
+#[delete(
+    "/{antrag_id}",
+    wrap = "auth::capability::RequireManageAntraege",
+    wrap = "cors_restrictive()"
+)]
 async fn delete_antrag(
     antrag_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
@@ -234,7 +246,7 @@ async fn delete_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{antrag_id}/attachments/{attachment_id}")]
+#[get("/{antrag_id}/attachments/{attachment_id}", wrap = "cors_permissive()")]
 async fn get_antrag_attachment(
     path_params: Path<(Uuid, Uuid)>,
     mut conn: DatabaseConnection,
@@ -269,7 +281,8 @@ async fn get_antrag_attachment(
 )]
 #[delete(
     "/{antrag_id}/attachments/{attachment_id}",
-    wrap = "auth::capability::RequireCreateAntrag"
+    wrap = "auth::capability::RequireCreateAntrag",
+    wrap = "cors_restrictive()"
 )]
 async fn delete_antrag_attachment(
     user: User,
@@ -318,7 +331,8 @@ async fn delete_antrag_attachment(
 )]
 #[post(
     "/{antrag_id}/attachments",
-    wrap = "auth::capability::RequireCreateAntrag"
+    wrap = "auth::capability::RequireCreateAntrag",
+    wrap = "cors_restrictive()"
 )]
 async fn add_antrag_attachment(
     user: User,

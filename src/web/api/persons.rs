@@ -16,7 +16,7 @@ use crate::domain::Capability;
 use crate::web::auth::{self, User};
 use crate::{
     domain::{persons::PersonRepo, Result},
-    web::RestStatus,
+    web::{cors_restrictive, RestStatus},
 };
 
 /// Create the persons service under /persons
@@ -129,7 +129,7 @@ fn validate_abmeldung_params(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("")]
+#[get("", wrap = "cors_restrictive()")]
 async fn get_persons(user: User, mut conn: DatabaseConnection) -> Result<impl Responder> {
     let persons = conn.persons().await?;
 
@@ -156,7 +156,7 @@ async fn get_persons(user: User, mut conn: DatabaseConnection) -> Result<impl Re
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{person_id}")]
+#[get("/{person_id}", wrap = "cors_restrictive()")]
 async fn get_person_by_id(
     user: User,
     person_id: Path<Uuid>,
@@ -185,7 +185,11 @@ async fn get_person_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("", wrap = "auth::capability::RequireManagePersons")]
+#[put(
+    "",
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
+)]
 async fn put_person(
     params: ActixJson<CreatePersonParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -212,7 +216,11 @@ async fn put_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{person_id}", wrap = "auth::capability::RequireManagePersons")]
+#[delete(
+    "/{person_id}",
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
+)]
 async fn delete_person_by_id(
     person_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
@@ -235,7 +243,11 @@ async fn delete_person_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{person_id}", wrap = "auth::capability::RequireManagePersons")]
+#[patch(
+    "/{person_id}",
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
+)]
 async fn patch_person(
     person_id: Path<Uuid>,
     params: ActixJson<UpdatePersonParams>,
@@ -264,7 +276,7 @@ async fn patch_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/by-role")]
+#[get("/by-role", wrap = "cors_restrictive()")]
 async fn get_persons_by_role(
     user: User,
     params: Query<PersonsByRoleParams>,
@@ -297,7 +309,8 @@ async fn get_persons_by_role(
 )]
 #[get(
     "/by-matrix-id/{matrix_id}",
-    wrap = "auth::capability::RequireManagePersons"
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
 )]
 async fn get_person_by_matrix_id(
     matrix_id: Path<String>,
@@ -318,7 +331,8 @@ async fn get_person_by_matrix_id(
 )]
 #[get(
     "/by-username/{user_name}",
-    wrap = "auth::capability::RequireManagePersons"
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
 )]
 async fn get_person_by_user_name(
     user_name: Path<String>,
@@ -337,7 +351,7 @@ async fn get_person_by_user_name(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{person_id}/roles")]
+#[get("/{person_id}/roles", wrap = "cors_restrictive()")]
 async fn roles_by_person(
     person_id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -362,7 +376,11 @@ async fn roles_by_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("/{person_id}/roles", wrap = "auth::capability::RequireManagePersons")]
+#[put(
+    "/{person_id}/roles",
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
+)]
 async fn add_role_to_person(
     person_id: Path<Uuid>,
     params: ActixJson<RoleParams>,
@@ -392,7 +410,11 @@ async fn add_role_to_person(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{person_id}/roles", wrap = "auth::capability::RequireManagePersons")]
+#[delete(
+    "/{person_id}/roles",
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
+)]
 async fn revoke_role_from_person(
     person_id: Path<Uuid>,
     params: ActixJson<RoleParams>,
@@ -421,7 +443,8 @@ async fn revoke_role_from_person(
 )]
 #[get(
     "/{person_id}/abmeldungen",
-    wrap = "auth::capability::RequireManagePersons"
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
 )]
 async fn get_abmeldungen_by_person(
     person_id: Path<Uuid>,
@@ -449,7 +472,8 @@ async fn get_abmeldungen_by_person(
 )]
 #[put(
     "/{person_id}/abmeldungen",
-    wrap = "auth::capability::RequireManagePersons"
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
 )]
 async fn create_abmeldung(
     person_id: Path<Uuid>,
@@ -483,7 +507,8 @@ async fn create_abmeldung(
 )]
 #[delete(
     "/{person_id}/abmeldungen",
-    wrap = "auth::capability::RequireManagePersons"
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
 )]
 async fn revoke_abmeldung(
     person_id: Path<Uuid>,

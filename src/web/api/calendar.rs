@@ -4,7 +4,7 @@ use actix_web::{get, web, Responder, Scope};
 use crate::domain::calendar::{CalendarEvent, CalendarRepo};
 use crate::domain::Result;
 use crate::web::calendar::CalendarData;
-use crate::web::RestStatus;
+use crate::web::{cors_permissive, RestStatus};
 
 // Create the calendar service under /calendar
 pub(crate) fn service() -> Scope {
@@ -20,7 +20,7 @@ pub(crate) fn service() -> Scope {
         (status = 400, description = "Bad Request"),
     )
 )]
-#[get("")]
+#[get("", wrap = "cors_permissive()")]
 async fn get_calendars(calendars: Data<CalendarData>) -> impl Responder {
     RestStatus::Success(Some(calendars.calendar_names()))
 }
@@ -33,7 +33,7 @@ async fn get_calendars(calendars: Data<CalendarData>) -> impl Responder {
         (status = 404, description = "Not Found"),
     )
 )]
-#[get("/{name}")]
+#[get("/{name}", wrap = "cors_permissive()")]
 async fn get_calendar_by_name(
     name: Path<String>,
     calendars: Data<CalendarData>,

@@ -10,7 +10,7 @@ use crate::{
         persons::{PersonRepo, Role},
         Result,
     },
-    web::{auth, RestStatus},
+    web::{cors_permissive, cors_restrictive, auth, RestStatus},
 };
 
 // Create the roles service under /roles
@@ -34,7 +34,7 @@ pub struct RoleParams {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("")]
+#[get("", wrap = "cors_permissive()")]
 async fn get_roles(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.roles().await?;
 
@@ -51,7 +51,11 @@ async fn get_roles(mut conn: DatabaseConnection) -> Result<impl Responder> {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[put("", wrap = "auth::capability::RequireManagePersons")]
+#[put(
+    "",
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
+)]
 async fn create_role(
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -74,7 +78,11 @@ async fn create_role(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("", wrap = "auth::capability::RequireManagePersons")]
+#[delete(
+    "",
+    wrap = "auth::capability::RequireManagePersons",
+    wrap = "cors_restrictive()"
+)]
 async fn delete_role(
     params: ActixJson<RoleParams>,
     mut transaction: DatabaseTransaction<'_>,

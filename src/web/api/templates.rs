@@ -9,7 +9,7 @@ use crate::database::DatabaseConnection;
 
 use crate::domain::templates::{Template, TemplatesRepo};
 use crate::domain::Result;
-use crate::web::RestStatus;
+use crate::web::{cors_permissive, cors_restrictive, RestStatus};
 use crate::TEMPLATE_ENGINE;
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
@@ -40,7 +40,7 @@ pub(crate) fn service() -> Scope {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("")]
+#[get("", wrap = "cors_permissive()")]
 async fn get_templates(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.templates().await?;
 
@@ -54,7 +54,7 @@ async fn get_templates(mut conn: DatabaseConnection) -> Result<impl Responder> {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{name}")]
+#[get("/{name}", wrap = "cors_permissive()")]
 async fn get_template_by_name(
     name: Path<String>,
     mut conn: DatabaseConnection,
@@ -71,7 +71,7 @@ async fn get_template_by_name(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{template_name}")]
+#[delete("/{template_name}", wrap = "cors_restrictive()")]
 async fn delete_template(
     name: Path<String>,
     mut conn: DatabaseConnection,
@@ -91,7 +91,7 @@ async fn delete_template(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{template_name}")]
+#[patch("/{template_name}", wrap = "cors_restrictive()")]
 async fn patch_template(
     name: Path<String>,
     params: ActixJson<UpdateTemplateParams>,
@@ -114,7 +114,7 @@ async fn patch_template(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("")]
+#[post("", wrap = "cors_restrictive()")]
 async fn create_template(
     params: ActixJson<CreateTemplateParams>,
     mut conn: DatabaseConnection,

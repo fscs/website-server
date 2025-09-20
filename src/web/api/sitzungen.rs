@@ -23,7 +23,7 @@ use crate::domain::{
     Result,
 };
 use crate::web::calendar::CalendarData;
-use crate::web::{auth, RestStatus};
+use crate::web::{auth, cors_permissive, cors_restrictive, RestStatus};
 use crate::TEMPLATE_ENGINE;
 
 /// Create the sitzungs service under /sitzungen
@@ -146,7 +146,7 @@ pub struct AssocAntragParams {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("")]
+#[get("", wrap = "cors_permissive()")]
 async fn get_sitzungen(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.sitzungen().await?;
 
@@ -163,7 +163,11 @@ async fn get_sitzungen(mut conn: DatabaseConnection) -> Result<impl Responder> {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("", wrap = "auth::capability::RequireManageSitzungen")]
+#[post(
+    "",
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
+)]
 async fn post_sitzungen(
     params: ActixJson<CreateSitzungParams>,
     mut transaction: DatabaseTransaction<'_>,
@@ -193,7 +197,7 @@ async fn post_sitzungen(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/after")]
+#[get("/after", wrap = "cors_permissive()")]
 async fn get_sitzungen_after(
     params: Query<SitzungenAfterParams>,
     mut conn: DatabaseConnection,
@@ -213,7 +217,7 @@ async fn get_sitzungen_after(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/between")]
+#[get("/between", wrap = "cors_permissive()")]
 async fn get_sitzungen_between(
     params: Query<SitzungBetweenParams>,
     mut conn: DatabaseConnection,
@@ -231,7 +235,7 @@ async fn get_sitzungen_between(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{sitzung_id}")]
+#[get("/{sitzung_id}", wrap = "cors_permissive()")]
 async fn get_sitzung_by_id(
     sitzung_id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -252,7 +256,11 @@ async fn get_sitzung_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{sitzung_id}", wrap = "auth::capability::RequireManageSitzungen")]
+#[patch(
+    "/{sitzung_id}",
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
+)]
 async fn patch_sitzung_by_id(
     sitzung_id: Path<Uuid>,
     params: ActixJson<UpdateSitzungParams>,
@@ -283,7 +291,11 @@ async fn patch_sitzung_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{sitzung_id}", wrap = "auth::capability::RequireManageSitzungen")]
+#[delete(
+    "/{sitzung_id}",
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
+)]
 async fn delete_sitzung_by_id(
     sitzung_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
@@ -303,7 +315,7 @@ async fn delete_sitzung_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{sitzung_id}/abmeldungen")]
+#[get("/{sitzung_id}/abmeldungen", wrap = "cors_permissive()")]
 async fn get_abmeldungen_by_sitzung(
     sitzung_id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -326,7 +338,7 @@ async fn get_abmeldungen_by_sitzung(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{sitzung_id}/tops")]
+#[get("/{sitzung_id}/tops", wrap = "cors_permissive()")]
 async fn get_tops(sitzung_id: Path<Uuid>, mut conn: DatabaseConnection) -> Result<impl Responder> {
     if conn.sitzung_by_id(*sitzung_id).await?.is_none() {
         return Ok(RestStatus::NotFound);
@@ -350,7 +362,8 @@ async fn get_tops(sitzung_id: Path<Uuid>, mut conn: DatabaseConnection) -> Resul
 )]
 #[post(
     "/{sitzung_id}/tops",
-    wrap = "auth::capability::RequireManageSitzungen"
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
 )]
 async fn post_tops(
     sitzung_id: Path<Uuid>,
@@ -388,7 +401,8 @@ async fn post_tops(
 )]
 #[patch(
     "/{sitzung_id}/tops/{top_id}",
-    wrap = "auth::capability::RequireManageSitzungen"
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
 )]
 async fn patch_tops(
     path_params: Path<(Uuid, Uuid)>,
@@ -428,7 +442,8 @@ async fn patch_tops(
 )]
 #[delete(
     "/{sitzung_id}/tops/{top_id}",
-    wrap = "auth::capability::RequireManageSitzungen"
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
 )]
 async fn delete_tops(
     path_params: Path<(Uuid, Uuid)>,
@@ -460,7 +475,8 @@ async fn delete_tops(
 )]
 #[patch(
     "/{sitzung_id}/tops/{top_id}/assoc",
-    wrap = "auth::capability::RequireManageSitzungen"
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
 )]
 async fn assoc_antrag(
     path_params: Path<(Uuid, Uuid)>,
@@ -499,7 +515,8 @@ async fn assoc_antrag(
 )]
 #[delete(
     "/{sitzung_id}/tops/{top_id}/assoc",
-    wrap = "auth::capability::RequireManageSitzungen"
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
 )]
 async fn delete_assoc_antrag(
     path_params: Path<(Uuid, Uuid)>,
@@ -534,7 +551,7 @@ async fn delete_assoc_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{sitzung_id}/template/{name}")]
+#[get("/{sitzung_id}/template/{name}", wrap = "cors_permissive()")]
 async fn get_sitzung_template(
     path_params: Path<(Uuid, String)>,
     mut conn: DatabaseConnection,

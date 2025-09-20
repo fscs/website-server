@@ -15,7 +15,7 @@ use crate::{
         sitzung::Sitzung,
         Result,
     },
-    web::{auth, RestStatus},
+    web::{auth, cors_permissive, cors_restrictive, RestStatus},
 };
 
 /// Create the legislative period service
@@ -48,7 +48,7 @@ pub struct CreateLegislativeParams {
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("")]
+#[get("", wrap = "cors_permissive()")]
 async fn get_legislatur_perioden(mut conn: DatabaseConnection) -> Result<impl Responder> {
     let result = conn.legislatur_perioden().await?;
 
@@ -64,7 +64,7 @@ async fn get_legislatur_perioden(mut conn: DatabaseConnection) -> Result<impl Re
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{id}")]
+#[get("/{id}", wrap = "cors_permissive()")]
 async fn get_legislatur_periode_by_id(
     id: Path<Uuid>,
     mut conn: DatabaseConnection,
@@ -81,7 +81,7 @@ async fn get_legislatur_periode_by_id(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[get("/{id}/sitzungen")]
+#[get("/{id}/sitzungen", wrap = "cors_permissive()")]
 async fn get_sitzungen_by_legislatur_periode(
     mut conn: DatabaseConnection,
     id: Path<Uuid>,
@@ -101,7 +101,11 @@ async fn get_sitzungen_by_legislatur_periode(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[post("", wrap = "auth::capability::RequireManageSitzungen")]
+#[post(
+    "",
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
+)]
 async fn create_legislatur_periode(
     params: Query<CreateLegislativeParams>,
     mut conn: DatabaseConnection,
@@ -121,7 +125,11 @@ async fn create_legislatur_periode(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[patch("/{id}", wrap = "auth::capability::RequireManageSitzungen")]
+#[patch(
+    "/{id}",
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
+)]
 async fn patch_legislatur_periode(
     id: Path<Uuid>,
     params: actix_web_validator::Json<CreateLegislativeParams>,
@@ -145,7 +153,11 @@ async fn patch_legislatur_periode(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{id}", wrap = "auth::capability::RequireManageSitzungen")]
+#[delete(
+    "/{id}",
+    wrap = "auth::capability::RequireManageSitzungen",
+    wrap = "cors_restrictive()"
+)]
 async fn delete_legislatur_periode(
     id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
