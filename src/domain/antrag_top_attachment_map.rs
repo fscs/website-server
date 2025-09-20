@@ -13,11 +13,11 @@ pub struct AntragTopMapping {
 }
 
 pub trait AntragTopAttachmentMap {
-    async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
+    async fn antraege_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>>;
 
     async fn tops_by_antrag(&mut self, antrag_id: Uuid) -> Result<Vec<Top>>;
 
-    async fn orphan_anträge(&mut self) -> Result<Vec<Antrag>>;
+    async fn orphan_antraege(&mut self) -> Result<Vec<Antrag>>;
 
     async fn attach_antrag_to_top(
         &mut self,

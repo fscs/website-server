@@ -113,7 +113,7 @@
             mkdir -p "$POSTGRES_DATA_DIR" "$SOCKET_DIR" "$DATA_DIR"
 
             echo Initializing the Database
-            ${pkgs.postgresql_16}/bin/initdb -D "$POSTGES_DATA_DIR" --locale=C.utf8
+            ${pkgs.postgresql_16}/bin/initdb -D "$POSTGRES_DATA_DIR" --locale=C.utf8
 
             ${pkgs.postgresql_16}/bin/pg_ctl -D $POSTGRES_DATA_DIR -o "-k $SOCKET_DIR" start
 

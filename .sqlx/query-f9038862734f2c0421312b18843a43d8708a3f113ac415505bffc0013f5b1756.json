@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE antraege\n                SET\n                    titel = COALESCE($1, titel),\n                    begruendung = COALESCE($2, begruendung),\n                    antragstext = COALESCE($3, antragstext),\n                    erstellt_am = $4\n                WHERE id = $5\n                RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "titel",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "antragstext",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "begruendung",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "erstellt_am",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f9038862734f2c0421312b18843a43d8708a3f113ac415505bffc0013f5b1756"
+}

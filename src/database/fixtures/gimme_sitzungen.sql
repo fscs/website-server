@@ -1,5 +1,5 @@
-Insert into legislative_period (id, name) values ('f4b3b3b3-3b3b-3b3b-3b3b-3b3b3b3b3b3b', 'Test');
-INSERT INTO sitzungen (id, datetime, location, kind, legislative_period_id) VALUES 
+Insert into legislatur_perioden (id, name) values ('f4b3b3b3-3b3b-3b3b-3b3b-3b3b3b3b3b3b', 'Test');
+INSERT INTO sitzungen (id, datetime, ort, typ, legislatur_periode_id) VALUES 
     ('dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00', '2024-09-10T12:30:00+02:00', 'ein uni raum', 'vv', 'f4b3b3b3-3b3b-3b3b-3b3b-3b3b3b3b3b3b'),
     ('177b861d-0447-45ce-bc56-9eb68991cbda', '2024-09-17T14:30:00+02:00', 'ein uni raum', 'wahlvv', 'f4b3b3b3-3b3b-3b3b-3b3b-3b3b3b3b3b3b'),
     ('76f4a8a9-8944-4d89-b6b8-8cdbc1acedb2', '2024-09-24T12:30:00+02:00', 'ein uni raum', 'vv', 'f4b3b3b3-3b3b-3b3b-3b3b-3b3b3b3b3b3b'),

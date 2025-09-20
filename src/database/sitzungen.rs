@@ -3,8 +3,8 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
-    legislative_periods::LegislativePeriod,
-    sitzung::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind},
+    legislatur_periode::LegislaturPeriode,
+    sitzung::{Sitzung, SitzungRepo, SitzungTyp, Top, TopTyp},
     Result,
 };
 
@@ -12,34 +12,34 @@ impl SitzungRepo for PgConnection {
     async fn create_sitzung(
         &mut self,
         datetime: DateTime<Utc>,
-        location: &str,
-        kind: SitzungKind,
+        ort: &str,
+        typ: SitzungTyp,
         antragsfrist: DateTime<Utc>,
-        legislative_period_id: Uuid,
+        legislatur_periode_id: Uuid,
     ) -> Result<Sitzung> {
         let record = sqlx::query!(
             r#"
                 WITH inserted as (
-                    INSERT INTO sitzungen (datetime, location, kind, antragsfrist, legislative_period_id)
+                    INSERT INTO sitzungen (datetime, ort, typ, antragsfrist, legislatur_periode_id)
                     VALUES ($1, $2, $3, $4, $5) 
                     RETURNING *
                 ) SELECT 
                     inserted.id, 
                     datetime, 
-                    location, 
-                    kind AS "kind!: SitzungKind", 
+                    ort, 
+                    typ AS "typ!: SitzungTyp", 
                     antragsfrist, 
-                    legislative_period.id as legislative_id, 
-                    legislative_period.name as legislative_name
+                    legislatur_perioden.id as legislative_id,
+                    legislatur_perioden.name as legislative_name
                 FROM inserted 
-                JOIN legislative_period
-                on inserted.legislative_period_id = legislative_period.id
+                JOIN legislatur_perioden
+                on inserted.legislatur_periode_id = legislatur_perioden.id
             "#,
             datetime,
-            location,
-            kind as SitzungKind,
+            ort,
+            typ as SitzungTyp,
             antragsfrist,
-            legislative_period_id
+            legislatur_periode_id
         )
         .fetch_one(self)
         .await?;
@@ -47,10 +47,10 @@ impl SitzungRepo for PgConnection {
         let result = Sitzung {
             id: record.id,
             datetime: record.datetime,
-            location: record.location,
-            kind: record.kind,
+            ort: record.ort,
+            typ: record.typ,
             antragsfrist: record.antragsfrist,
-            legislative_period: LegislativePeriod {
+            legislatur_periode: LegislaturPeriode {
                 id: record.legislative_id,
                 name: record.legislative_name,
             },
@@ -64,16 +64,16 @@ impl SitzungRepo for PgConnection {
         sitzung_id: Uuid,
         name: &str,
         inhalt: &str,
-        kind: TopKind,
+        typ: TopTyp,
     ) -> Result<Top> {
         let weight = sqlx::query!(
             r#"
                 SELECT MAX(weight)
                 FROM tops 
-                WHERE sitzung_id = $1 and kind = $2
+                WHERE sitzung_id = $1 and typ = $2
             "#,
             sitzung_id,
-            kind as TopKind,
+            typ as TopTyp,
         )
         .fetch_one(&mut *self)
         .await?
@@ -82,15 +82,15 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Top,
             r#"
-                INSERT INTO tops (name, sitzung_id, weight, inhalt, kind)
+                INSERT INTO tops (name, sitzung_id, weight, inhalt, typ)
                 VALUES ($1, $2, $3, $4 ,$5) 
-                RETURNING id, name, weight, inhalt, kind AS "kind!: TopKind"
+                RETURNING id, name, weight, inhalt, typ AS "typ!: TopTyp"
             "#,
             name,
             sitzung_id,
             weight.unwrap_or(0) + 1,
             inhalt,
-            kind as TopKind,
+            typ as TopTyp,
         )
         .fetch_one(&mut *self)
         .await?;
@@ -104,14 +104,14 @@ impl SitzungRepo for PgConnection {
                 SELECT 
                     sitzungen.id, 
                     datetime, 
-                    location, 
-                    kind AS "kind!: SitzungKind", 
+                    ort, 
+                    typ AS "typ!: SitzungTyp", 
                     antragsfrist, 
-                    legislative_period.id AS legislative_id, 
-                    legislative_period.name AS legislative_name
+                    legislatur_perioden.id AS legislative_id, 
+                    legislatur_perioden.name AS legislative_name
                 FROM sitzungen
-                JOIN legislative_period 
-                ON sitzungen.legislative_period_id = legislative_period.id
+                JOIN legislatur_perioden 
+                ON sitzungen.legislatur_periode_id = legislatur_perioden.id
             "#
         )
         .fetch_all(self)
@@ -122,10 +122,10 @@ impl SitzungRepo for PgConnection {
             .map(|r| Sitzung {
                 id: r.id,
                 datetime: r.datetime,
-                location: r.location,
-                kind: r.kind,
+                ort: r.ort,
+                typ: r.typ,
                 antragsfrist: r.antragsfrist,
-                legislative_period: LegislativePeriod {
+                legislatur_periode: LegislaturPeriode {
                     id: r.legislative_id,
                     name: r.legislative_name,
                 },
@@ -141,14 +141,14 @@ impl SitzungRepo for PgConnection {
                 SELECT 
                     sitzungen.id, 
                     datetime, 
-                    location, 
-                    kind AS "kind!: SitzungKind", 
+                    ort, 
+                    typ AS "typ!: SitzungTyp", 
                     antragsfrist, 
-                    legislative_period.id AS legislative_id,
-                    legislative_period.name AS legislative_name
+                    legislatur_perioden.id AS legislative_id,
+                    legislatur_perioden.name AS legislative_name
                 FROM sitzungen
-                JOIN legislative_period
-                ON sitzungen.legislative_period_id = legislative_period.id
+                JOIN legislatur_perioden
+                ON sitzungen.legislatur_periode_id = legislatur_perioden.id
                 WHERE sitzungen.id = $1
             "#,
             id,
@@ -159,10 +159,10 @@ impl SitzungRepo for PgConnection {
         let result = record.map(|r| Sitzung {
             id: r.id,
             datetime: r.datetime,
-            location: r.location,
-            kind: r.kind,
+            ort: r.ort,
+            typ: r.typ,
             antragsfrist: r.antragsfrist,
-            legislative_period: LegislativePeriod {
+            legislatur_periode: LegislaturPeriode {
                 id: r.legislative_id,
                 name: r.legislative_name,
             },
@@ -181,14 +181,14 @@ impl SitzungRepo for PgConnection {
                 SELECT 
                     sitzungen.id, 
                     datetime, 
-                    location, 
-                    kind AS "kind!: SitzungKind", 
+                    ort, 
+                    typ AS "typ!: SitzungTyp", 
                     antragsfrist, 
-                    legislative_period.id AS legislative_id,
-                    legislative_period.name AS legislative_name
+                    legislatur_perioden.id AS legislative_id,
+                    legislatur_perioden.name AS legislative_name
                 FROM sitzungen
-                JOIN legislative_period
-                ON sitzungen.legislative_period_id = legislative_period.id
+                JOIN legislatur_perioden 
+                ON sitzungen.legislatur_periode_id = legislatur_perioden.id
                 WHERE datetime >= $1
                 ORDER BY datetime ASC
                 LIMIT $2
@@ -204,10 +204,10 @@ impl SitzungRepo for PgConnection {
             .map(|r| Sitzung {
                 id: r.id,
                 datetime: r.datetime,
-                location: r.location,
-                kind: r.kind,
+                ort: r.ort,
+                typ: r.typ,
                 antragsfrist: r.antragsfrist,
-                legislative_period: LegislativePeriod {
+                legislatur_periode: LegislaturPeriode {
                     id: r.legislative_id,
                     name: r.legislative_name,
                 },
@@ -227,14 +227,14 @@ impl SitzungRepo for PgConnection {
                 SELECT 
                     sitzungen.id, 
                     datetime, 
-                    location, 
-                    kind AS "kind!: SitzungKind", 
+                    ort, 
+                    typ AS "typ!: SitzungTyp", 
                     antragsfrist, 
-                    legislative_period.id AS legislative_id,
-                    legislative_period.name AS legislative_name
+                    legislatur_perioden.id AS legislative_id,
+                    legislatur_perioden.name AS legislative_name
                 FROM sitzungen
-                JOIN legislative_period
-                ON sitzungen.legislative_period_id = legislative_period.id
+                JOIN legislatur_perioden
+                ON sitzungen.legislatur_periode_id = legislatur_perioden.id
                 WHERE datetime >= $1 AND datetime <= $2
                 ORDER BY datetime ASC
             "#,
@@ -249,10 +249,10 @@ impl SitzungRepo for PgConnection {
             .map(|r| Sitzung {
                 id: r.id,
                 datetime: r.datetime,
-                location: r.location,
-                kind: r.kind,
+                ort: r.ort,
+                typ: r.typ,
                 antragsfrist: r.antragsfrist,
-                legislative_period: LegislativePeriod {
+                legislatur_periode: LegislaturPeriode {
                     id: r.legislative_id,
                     name: r.legislative_name,
                 },
@@ -266,7 +266,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Top,
             r#"
-                SELECT id, name, weight, inhalt, kind AS "kind!: TopKind"
+                SELECT id, name, weight, inhalt, typ AS "typ!: TopTyp"
                 FROM tops
                 WHERE id = $1
             "#,
@@ -282,7 +282,7 @@ impl SitzungRepo for PgConnection {
         let result = sqlx::query_as!(
             Top,
             r#"
-                SELECT id, name, weight, inhalt, kind AS "kind!: TopKind"
+                SELECT id, name, weight, inhalt, typ AS "typ!: TopTyp"
                 FROM tops
                 WHERE sitzung_id = $1
                 ORDER BY weight ASC
@@ -299,8 +299,8 @@ impl SitzungRepo for PgConnection {
         &mut self,
         id: Uuid,
         datetime: Option<DateTime<Utc>>,
-        location: Option<&'a str>,
-        kind: Option<SitzungKind>,
+        ort: Option<&'a str>,
+        typ: Option<SitzungTyp>,
         antragsfrist: Option<DateTime<Utc>>,
         legislative_period_id: Option<Uuid>,
     ) -> Result<Option<Sitzung>> {
@@ -310,27 +310,27 @@ impl SitzungRepo for PgConnection {
                     UPDATE sitzungen 
                     SET 
                         datetime = COALESCE($1, datetime),
-                        location = COALESCE($2, location),
-                        kind = COALESCE($3, kind),
+                        ort = COALESCE($2, ort),
+                        typ = COALESCE($3, typ),
                         antragsfrist = COALESCE($4, antragsfrist),
-                        legislative_period_id = COALESCE($5, legislative_period_id)
+                        legislatur_periode_id = COALESCE($5, legislatur_periode_id)
                     WHERE id = $6 
-                    RETURNING id, datetime, location, kind, antragsfrist, legislative_period_id
+                    RETURNING id, datetime, ort, typ, antragsfrist, legislatur_periode_id
                 ) SELECT 
                     updated.id, 
                     datetime, 
-                    location, 
-                    kind AS "kind!: SitzungKind", 
+                    ort, 
+                    typ AS "typ!: SitzungTyp", 
                     antragsfrist, 
-                    legislative_period.id as legislative_id, 
-                    legislative_period.name as legislative_name
+                    legislatur_perioden.id as legislative_id, 
+                    legislatur_perioden.name as legislative_name
                 FROM updated 
-                JOIN legislative_period
-                on updated.legislative_period_id = legislative_period.id
+                JOIN legislatur_perioden
+                on updated.legislatur_periode_id = legislatur_perioden.id
             "#,
             datetime,
-            location,
-            kind as Option<SitzungKind>,
+            ort,
+            typ as Option<SitzungTyp>,
             antragsfrist,
             legislative_period_id,
             id
@@ -341,10 +341,10 @@ impl SitzungRepo for PgConnection {
         let result = record.map(|r| Sitzung {
             id: r.id,
             datetime: r.datetime,
-            location: r.location,
-            kind: r.kind,
+            ort: r.ort,
+            typ: r.typ,
             antragsfrist: r.antragsfrist,
-            legislative_period: LegislativePeriod {
+            legislatur_periode: LegislaturPeriode {
                 id: r.legislative_id,
                 name: r.legislative_name,
             },
@@ -359,7 +359,7 @@ impl SitzungRepo for PgConnection {
         sitzung_id: Option<Uuid>,
         name: Option<&'a str>,
         inhalt: Option<&'a str>,
-        kind: Option<TopKind>,
+        typ: Option<TopTyp>,
         weight: Option<i64>,
     ) -> Result<Option<Top>> {
         let result = sqlx::query_as!(
@@ -369,16 +369,16 @@ impl SitzungRepo for PgConnection {
                 SET 
                     sitzung_id = COALESCE($2, sitzung_id),
                     name = COALESCE($3, name),
-                    kind = COALESCE($4, kind),
+                    typ = COALESCE($4, typ),
                     inhalt = COALESCE($5, inhalt),
                     weight = COALESCE($6, weight)
                 WHERE id = $1 
-                RETURNING id, name, weight, inhalt, kind AS "kind!: TopKind"
+                RETURNING id, name, weight, inhalt, typ AS "typ!: TopTyp"
             "#,
             id,
             sitzung_id,
             name,
-            kind as Option<TopKind>,
+            typ as Option<TopTyp>,
             inhalt,
             weight
         )
@@ -394,18 +394,18 @@ impl SitzungRepo for PgConnection {
                 WITH deleted AS (
                     DELETE FROM sitzungen
                     WHERE id = $1
-                    RETURNING id, datetime, location, kind, antragsfrist, legislative_period_id
+                    RETURNING id, datetime, ort, typ, antragsfrist, legislatur_periode_id
                 ) SELECT 
                     deleted.id, 
                     datetime, 
-                    location, 
-                    kind AS "kind!: SitzungKind", 
+                    ort, 
+                    typ AS "typ!: SitzungTyp", 
                     antragsfrist, 
-                    legislative_period.id as legislative_id, 
-                    legislative_period.name as legislative_name
+                    legislatur_perioden.id as legislative_id, 
+                    legislatur_perioden.name as legislative_name
                 FROM deleted 
-                JOIN legislative_period
-                on deleted.legislative_period_id = legislative_period.id
+                JOIN legislatur_perioden 
+                on deleted.legislatur_periode_id = legislatur_perioden.id
             "#,
             id
         )
@@ -415,10 +415,10 @@ impl SitzungRepo for PgConnection {
         let result = record.map(|r| Sitzung {
             id: r.id,
             datetime: r.datetime,
-            location: r.location,
-            kind: r.kind,
+            ort: r.ort,
+            typ: r.typ,
             antragsfrist: r.antragsfrist,
-            legislative_period: LegislativePeriod {
+            legislatur_periode: LegislaturPeriode {
                 id: r.legislative_id,
                 name: r.legislative_name,
             },
@@ -433,7 +433,7 @@ impl SitzungRepo for PgConnection {
             r#"
                 DELETE FROM tops
                 WHERE id = $1
-                RETURNING id, name, weight, inhalt, kind AS "kind!: TopKind"
+                RETURNING id, name, weight, inhalt, typ AS "typ!: TopTyp"
             "#,
             id
         )
@@ -451,7 +451,7 @@ mod test {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::sitzung::{SitzungKind, SitzungRepo, TopKind};
+    use crate::domain::sitzung::{SitzungRepo, SitzungTyp, TopTyp};
 
     #[sqlx::test(fixtures("gimme_legislative_period"))]
     async fn create_sitzung(pool: PgPool) -> Result<()> {
@@ -459,7 +459,7 @@ mod test {
 
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T10:30:00+02:00").unwrap();
         let location = "ein uni raum";
-        let sitzung_kind = SitzungKind::VV;
+        let sitzung_kind = SitzungTyp::VV;
         let antragsfrist = DateTime::parse_from_rfc3339("2024-09-07T10:30:00+02:00").unwrap();
 
         let legislative_period_id =
@@ -476,10 +476,10 @@ mod test {
             .await?;
 
         assert_eq!(sitzung.datetime, datetime);
-        assert_eq!(sitzung.location, location);
-        assert_eq!(sitzung.kind, sitzung_kind);
+        assert_eq!(sitzung.ort, location);
+        assert_eq!(sitzung.typ, sitzung_kind);
         assert_eq!(sitzung.antragsfrist, antragsfrist);
-        assert_eq!(sitzung.legislative_period.id, legislative_period_id);
+        assert_eq!(sitzung.legislatur_periode.id, legislative_period_id);
 
         Ok(())
     }
@@ -491,7 +491,7 @@ mod test {
         let sitzung_id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
 
         let first_title = "hallo";
-        let first_top_kind = TopKind::Normal;
+        let first_top_kind = TopTyp::Normal;
         let first_inhalt = "wheres da content";
 
         let first_top = conn
@@ -499,7 +499,7 @@ mod test {
             .await?;
 
         let second_title = "haaaalllo";
-        let second_top_kind = TopKind::Normal;
+        let second_top_kind = TopTyp::Normal;
         let second_inhalt = "zweiter inhalt";
 
         let second_top = conn
@@ -507,12 +507,12 @@ mod test {
             .await?;
 
         assert_eq!(first_top.name, first_title);
-        assert_eq!(first_top.kind, first_top_kind);
+        assert_eq!(first_top.typ, first_top_kind);
         assert_eq!(first_top.inhalt, first_inhalt);
         assert_eq!(first_top.weight, 1);
 
         assert_eq!(second_top.name, second_title);
-        assert_eq!(second_top.kind, second_top_kind);
+        assert_eq!(second_top.typ, second_top_kind);
         assert_eq!(second_top.inhalt, second_inhalt);
         assert_eq!(second_top.weight, 2);
 
@@ -526,13 +526,13 @@ mod test {
         let sitzung_id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
 
         let title = "hallo";
-        let kind = TopKind::Normal;
+        let kind = TopTyp::Normal;
         let inhalt = "mein inhalt";
 
         let top = conn.create_top(sitzung_id, title, inhalt, kind).await?;
 
         assert_eq!(top.name, title);
-        assert_eq!(top.kind, kind);
+        assert_eq!(top.typ, kind);
         assert_eq!(top.inhalt, inhalt);
         assert_eq!(top.weight, 5);
 
@@ -546,13 +546,13 @@ mod test {
         let id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T12:30:00+02:00").unwrap();
         let location = "ein uni raum";
-        let sitzung_kind = SitzungKind::VV;
+        let sitzung_kind = SitzungTyp::VV;
 
         let sitzung = conn.sitzung_by_id(id).await?.unwrap();
 
         assert_eq!(sitzung.datetime, datetime);
-        assert_eq!(sitzung.location, location);
-        assert_eq!(sitzung.kind, sitzung_kind);
+        assert_eq!(sitzung.ort, location);
+        assert_eq!(sitzung.typ, sitzung_kind);
 
         Ok(())
     }
@@ -608,11 +608,11 @@ mod test {
         let top = conn.top_by_id(id).await?.unwrap();
 
         let weight = 4;
-        let top_kind = TopKind::Normal;
+        let top_kind = TopTyp::Normal;
 
         assert_eq!(top.id, id);
         assert_eq!(top.weight, weight);
-        assert_eq!(top.kind, top_kind);
+        assert_eq!(top.typ, top_kind);
 
         Ok(())
     }
@@ -653,7 +653,7 @@ mod test {
 
         let sitzung_id = Uuid::parse_str("76f4a8a9-8944-4d89-b6b8-8cdbc1acedb2").unwrap();
 
-        let new_sitzung_kind = SitzungKind::Konsti;
+        let new_sitzung_kind = SitzungTyp::Konsti;
 
         let sitzung = conn
             .update_sitzung(sitzung_id, None, None, Some(new_sitzung_kind), None, None)
@@ -665,8 +665,8 @@ mod test {
 
         assert_eq!(sitzung.id, sitzung_id);
         assert_eq!(sitzung.datetime, old_datetime);
-        assert_eq!(sitzung.location, old_location);
-        assert_eq!(sitzung.kind, new_sitzung_kind);
+        assert_eq!(sitzung.ort, old_location);
+        assert_eq!(sitzung.typ, new_sitzung_kind);
 
         Ok(())
     }
@@ -684,11 +684,11 @@ mod test {
             .await?
             .unwrap();
 
-        let old_top_kind = TopKind::Normal;
+        let old_top_kind = TopTyp::Normal;
         let old_weight = 4;
 
         assert_eq!(top.name, new_name);
-        assert_eq!(top.kind, old_top_kind);
+        assert_eq!(top.typ, old_top_kind);
         assert_eq!(top.weight, old_weight);
 
         Ok(())

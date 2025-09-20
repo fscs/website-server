@@ -14,12 +14,12 @@ use crate::database::{DatabaseConnection, DatabaseTransaction};
 use crate::domain::antrag_top_attachment_map::AntragTopMapping;
 use crate::domain::calendar::{CalendarEvent, CalendarRepo};
 use crate::domain::persons::{Abmeldung, Person};
-use crate::domain::sitzung::{Sitzung, SitzungWithTops, Top, TopWithAnträge};
+use crate::domain::sitzung::{Sitzung, SitzungWithTops, Top, TopWithAntraege};
 use crate::domain::templates::TemplatesRepo;
 use crate::domain::{
     self,
     antrag_top_attachment_map::AntragTopAttachmentMap,
-    sitzung::{SitzungKind, SitzungRepo, TopKind},
+    sitzung::{SitzungRepo, SitzungTyp, TopTyp},
     Result,
 };
 use crate::web::calendar::CalendarData;
@@ -64,8 +64,8 @@ fn register_top_id_service(parent: Scope) -> Scope {
 pub struct CreateSitzungParams {
     datetime: DateTime<Utc>,
     #[validate(length(min = 1))]
-    location: String,
-    kind: SitzungKind,
+    ort: String,
+    typ: SitzungTyp,
     antragsfrist: DateTime<Utc>,
     legislative_period: Uuid,
 }
@@ -74,7 +74,7 @@ pub struct CreateSitzungParams {
 pub struct CreateTopParams {
     #[validate(length(min = 1))]
     name: String,
-    kind: TopKind,
+    typ: TopTyp,
     inhalt: String,
 }
 
@@ -82,17 +82,17 @@ pub struct CreateTopParams {
 pub struct UpdateSitzungParams {
     datetime: Option<DateTime<Utc>>,
     #[validate(length(min = 1))]
-    location: Option<String>,
-    kind: Option<SitzungKind>,
+    ort: Option<String>,
+    typ: Option<SitzungTyp>,
     antragsfrist: Option<DateTime<Utc>>,
-    legislative_period: Option<Uuid>,
+    legislatur_periode_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, IntoParams, ToSchema, Validate)]
 pub struct UpdateTopParams {
     #[validate(length(min = 1))]
     name: Option<String>,
-    kind: Option<TopKind>,
+    typ: Option<TopTyp>,
     inhalt: Option<String>,
     weight: Option<i64>,
 }
@@ -171,8 +171,8 @@ async fn post_sitzungen(
     let result = transaction
         .create_sitzung(
             params.datetime,
-            params.location.as_str(),
-            params.kind,
+            params.ort.as_str(),
+            params.typ,
             params.antragsfrist,
             params.legislative_period,
         )
@@ -262,10 +262,10 @@ async fn patch_sitzung_by_id(
         .update_sitzung(
             *sitzung_id,
             params.datetime,
-            params.location.as_deref(),
-            params.kind,
+            params.ort.as_deref(),
+            params.typ,
             params.antragsfrist,
-            params.legislative_period,
+            params.legislatur_periode_id,
         )
         .await?;
 
@@ -320,7 +320,7 @@ async fn get_abmeldungen_by_sitzung(
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/tops",
     responses(
-        (status = 200, description = "Success", body = Vec<TopWithAnträge>),
+        (status = 200, description = "Success", body = Vec<TopWithAntraege>),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
@@ -332,7 +332,7 @@ async fn get_tops(sitzung_id: Path<Uuid>, mut conn: DatabaseConnection) -> Resul
         return Ok(RestStatus::NotFound);
     }
 
-    let result = domain::top_with_anträge_by_sitzung(&mut *conn, *sitzung_id).await?;
+    let result = domain::top_with_antraege_by_sitzung(&mut *conn, *sitzung_id).await?;
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -366,7 +366,7 @@ async fn post_tops(
             *sitzung_id,
             params.name.as_str(),
             params.inhalt.as_str(),
-            params.kind,
+            params.typ,
         )
         .await?;
 
@@ -407,7 +407,7 @@ async fn patch_tops(
             None, // we dont allow moving tops
             params.name.as_deref(),
             params.inhalt.as_deref(),
-            params.kind,
+            params.typ,
             params.weight,
         )
         .await?;

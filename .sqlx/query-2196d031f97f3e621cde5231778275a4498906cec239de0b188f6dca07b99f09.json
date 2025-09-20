@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO tops (name, sitzung_id, weight, inhalt, typ)\n                VALUES ($1, $2, $3, $4 ,$5) \n                RETURNING id, name, weight, inhalt, typ AS \"typ!: TopTyp\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "weight",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "inhalt",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "typ!: TopTyp",
+        "type_info": {
+          "Custom": {
+            "name": "topkind",
+            "kind": {
+              "Enum": [
+                "regularia",
+                "bericht",
+                "normal",
+                "verschiedenes"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Int8",
+        "Text",
+        {
+          "Custom": {
+            "name": "topkind",
+            "kind": {
+              "Enum": [
+                "regularia",
+                "bericht",
+                "normal",
+                "verschiedenes"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2196d031f97f3e621cde5231778275a4498906cec239de0b188f6dca07b99f09"
+}

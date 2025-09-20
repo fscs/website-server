@@ -7,6 +7,7 @@ use actix_web::{
 };
 use actix_web_validator::Json as ActixJson;
 use async_std::fs;
+use chrono::Utc;
 use log::debug;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
@@ -17,9 +18,9 @@ use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
     domain::{
         self,
+        anhang::AnhangRepo,
         antrag::{Antrag, AntragRepo},
         antrag_top_attachment_map::AntragTopAttachmentMap,
-        attachment::AttachmentRepo,
         Capability, Result,
     },
     web::{
@@ -29,12 +30,12 @@ use crate::{
     ARGS, UPLOAD_DIR,
 };
 
-/// Create the antrags service under /anträge
+/// Create the antrags service under /antraege
 pub(crate) fn service() -> Scope {
-    let scope = web::scope("/anträge")
-        .service(get_anträge)
+    let scope = web::scope("/antraege")
+        .service(get_antraege)
         .service(create_antrag)
-        .service(get_orphan_anträge);
+        .service(get_orphan_antraege);
 
     // must come last
     register_antrag_id_service(scope)
@@ -53,7 +54,7 @@ fn register_antrag_id_service(parent: Scope) -> Scope {
 #[derive(Debug, IntoParams, Deserialize, ToSchema, Validate)]
 pub struct CreateAntragParams {
     #[validate(length(min = 1))]
-    begründung: String,
+    begruendung: String,
     #[validate(length(min = 1))]
     antragstext: String,
     #[validate(length(min = 1))]
@@ -63,7 +64,7 @@ pub struct CreateAntragParams {
 #[derive(Debug, IntoParams, Deserialize, ToSchema, Validate)]
 pub struct UpdateAntragParams {
     #[validate(length(min = 1))]
-    begründung: Option<String>,
+    begruendung: Option<String>,
     #[validate(length(min = 1))]
     antragstext: Option<String>,
     #[validate(length(min = 1))]
@@ -76,35 +77,35 @@ pub struct UploadAntrag {
 }
 
 #[utoipa::path(
-    path = "/api/anträge",
+    path = "/api/antraege",
     responses(
         (status = 200, description = "Success", body = Vec<Antrag>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[get("")]
-async fn get_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
-    let result = conn.anträge().await?;
+async fn get_antraege(mut conn: DatabaseConnection) -> Result<impl Responder> {
+    let result = conn.antraege().await?;
 
     Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
-    path = "/api/anträge/orphans",
+    path = "/api/antraege/orphans",
     responses(
         (status = 200, description = "Success", body = Vec<Antrag>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[get("/orphans")]
-async fn get_orphan_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
-    let result = conn.orphan_anträge().await?;
+async fn get_orphan_antraege(mut conn: DatabaseConnection) -> Result<impl Responder> {
+    let result = conn.orphan_antraege().await?;
 
     Ok(RestStatus::Success(Some(result)))
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}",
+    path = "/api/antraege/{antrag_id}",
     responses(
         (status = 200, description = "Success", body = Antrag),
         (status = 404, description = "Not Found"),
@@ -122,7 +123,7 @@ async fn get_antrag_by_id(
 }
 
 #[utoipa::path(
-    path = "/api/anträge",
+    path = "/api/antraege",
     request_body = CreateAntragParams,
     responses(
         (status = 201, description = "Created", body = Antrag),
@@ -143,8 +144,9 @@ async fn create_antrag(
         .create_antrag(
             &[person.id],
             &params.titel,
-            &params.begründung,
+            &params.begruendung,
             &params.antragstext,
+            Utc::now(),
         )
         .await?;
 
@@ -154,7 +156,7 @@ async fn create_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}",
+    path = "/api/antraege/{antrag_id}",
     request_body = UpdateAntragParams,
     responses(
         (status = 200, description = "Success", body = Antrag),
@@ -173,7 +175,7 @@ async fn patch_antrag(
 ) -> Result<impl Responder> {
     let person = user.query_person(&mut *transaction).await?;
 
-    if !user.has_capability(Capability::ManageAnträge) {
+    if !user.has_capability(Capability::ManageAntraege) {
         let Some(antrag) = transaction.antrag_by_id(*antrag_id).await? else {
             return Ok(RestStatus::NotFound);
         };
@@ -189,9 +191,10 @@ async fn patch_antrag(
     let result = transaction
         .update_antrag(
             *antrag_id,
+            Utc::now(),
             None,
             params.titel.as_deref(),
-            params.begründung.as_deref(),
+            params.begruendung.as_deref(),
             params.antragstext.as_deref(),
         )
         .await?;
@@ -202,7 +205,7 @@ async fn patch_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}",
+    path = "/api/antraege/{antrag_id}",
     responses(
         (status = 200, description = "Success"),
         (status = 401, description = "Unauthorized"),
@@ -210,7 +213,7 @@ async fn patch_antrag(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-#[delete("/{antrag_id}", wrap = "auth::capability::RequireManageAnträge")]
+#[delete("/{antrag_id}", wrap = "auth::capability::RequireManageAntraege")]
 async fn delete_antrag(
     antrag_id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
@@ -223,7 +226,7 @@ async fn delete_antrag(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}/attachments/{attachment_id}",
+    path = "/api/antraege/{antrag_id}/attachments/{attachment_id}",
     responses(
         (status = 200, description = "Success"),
         (status = 401, description = "Unauthorized"),
@@ -238,7 +241,7 @@ async fn get_antrag_attachment(
 ) -> Result<impl Responder> {
     let (_antrag_id, attachment_id) = path_params.into_inner();
 
-    let Some(attachment) = conn.attachment_by_id(attachment_id).await? else {
+    let Some(attachment) = conn.anhang_by_id(attachment_id).await? else {
         return Ok(HttpResponse::NotFound().finish());
     };
 
@@ -256,7 +259,7 @@ async fn get_antrag_attachment(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}/attachments/{attachment_id}",
+    path = "/api/antraege/{antrag_id}/attachments/{attachment_id}",
     responses(
         (status = 200, description = "Success"),
         (status = 401, description = "Unauthorized"),
@@ -275,7 +278,7 @@ async fn delete_antrag_attachment(
 ) -> Result<impl Responder> {
     let (antrag_id, attachment_id) = path_params.into_inner();
 
-    if !user.has_capability(Capability::ManageAnträge) {
+    if !user.has_capability(Capability::ManageAntraege) {
         let person = user.query_person(&mut *transaction).await?;
 
         let Some(antrag) = transaction.antrag_by_id(antrag_id).await? else {
@@ -291,7 +294,7 @@ async fn delete_antrag_attachment(
     }
 
     transaction
-        .delete_attachment_from_antrag(antrag_id, attachment_id)
+        .delete_anhang_from_antrag(antrag_id, attachment_id)
         .await?;
 
     let file_path = UPLOAD_DIR.as_path();
@@ -304,7 +307,7 @@ async fn delete_antrag_attachment(
 }
 
 #[utoipa::path(
-    path = "/api/anträge/{antrag_id}/attachments",
+    path = "/api/antraege/{antrag_id}/attachments",
     responses(
         (status = 200, description = "Success"),
         (status = 400, description = "Bad Request"),
@@ -327,7 +330,7 @@ async fn add_antrag_attachment(
         return Ok(RestStatus::NotFound);
     };
 
-    if !user.has_capability(Capability::ManageAnträge) {
+    if !user.has_capability(Capability::ManageAntraege) {
         let person = user.query_person(&mut *transaction).await?;
 
         if !domain::can_person_modify_antrag(&mut *transaction, &person, &antrag).await? {
@@ -363,7 +366,7 @@ async fn add_antrag_attachment(
 
     let file_path = UPLOAD_DIR.as_path();
 
-    let attachment = transaction.create_attachment(file_name.to_string()).await;
+    let attachment = transaction.create_anhang(file_name.to_string()).await;
 
     let attachment = match attachment {
         Ok(attachment) => attachment,
@@ -375,7 +378,7 @@ async fn add_antrag_attachment(
     };
 
     transaction
-        .add_attachment_to_antrag(*antrag_id, attachment.id)
+        .add_anhang_to_antrag(*antrag_id, attachment.id)
         .await?;
 
     fs::copy(temp_file_path, file_path.join(attachment.id.to_string())).await?;

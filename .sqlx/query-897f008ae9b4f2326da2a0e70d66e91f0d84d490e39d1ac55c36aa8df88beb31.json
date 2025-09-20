@@ -1,0 +1,75 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE tops\n                SET \n                    sitzung_id = COALESCE($2, sitzung_id),\n                    name = COALESCE($3, name),\n                    typ = COALESCE($4, typ),\n                    inhalt = COALESCE($5, inhalt),\n                    weight = COALESCE($6, weight)\n                WHERE id = $1 \n                RETURNING id, name, weight, inhalt, typ AS \"typ!: TopTyp\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "weight",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "inhalt",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "typ!: TopTyp",
+        "type_info": {
+          "Custom": {
+            "name": "topkind",
+            "kind": {
+              "Enum": [
+                "regularia",
+                "bericht",
+                "normal",
+                "verschiedenes"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        {
+          "Custom": {
+            "name": "topkind",
+            "kind": {
+              "Enum": [
+                "regularia",
+                "bericht",
+                "normal",
+                "verschiedenes"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "897f008ae9b4f2326da2a0e70d66e91f0d84d490e39d1ac55c36aa8df88beb31"
+}

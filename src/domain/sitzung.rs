@@ -4,13 +4,13 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use super::antrag::Antrag;
-use super::legislative_periods::LegislativePeriod;
+use super::legislatur_periode::LegislaturPeriode;
 use super::Result;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
 #[sqlx(type_name = "sitzungkind", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
-pub enum SitzungKind {
+pub enum SitzungTyp {
     Normal,
     VV,
     WahlVV,
@@ -22,7 +22,7 @@ pub enum SitzungKind {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
 #[sqlx(type_name = "topkind", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
-pub enum TopKind {
+pub enum TopTyp {
     Regularia,
     Bericht,
     Normal,
@@ -33,10 +33,10 @@ pub enum TopKind {
 pub struct Sitzung {
     pub id: Uuid,
     pub datetime: DateTime<Utc>,
-    pub location: String,
-    pub kind: SitzungKind,
+    pub ort: String,
+    pub typ: SitzungTyp,
     pub antragsfrist: DateTime<Utc>,
-    pub legislative_period: LegislativePeriod,
+    pub legislatur_periode: LegislaturPeriode,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
@@ -45,36 +45,31 @@ pub struct Top {
     pub weight: i64,
     pub name: String,
     pub inhalt: String,
-    pub kind: TopKind,
+    pub typ: TopTyp,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct SitzungWithTops {
     #[serde(flatten)]
     pub sitzung: Sitzung,
-    pub tops: Vec<TopWithAnträge>,
+    pub tops: Vec<TopWithAntraege>,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
-pub struct SitzungenWithTops {
-    pub sitzungen: Vec<SitzungWithTops>,
-}
-
-#[derive(Debug, Serialize, IntoParams, ToSchema)]
-pub struct TopWithAnträge {
+pub struct TopWithAntraege {
     #[serde(flatten)]
     pub top: Top,
-    pub anträge: Vec<Antrag>,
+    pub antraege: Vec<Antrag>,
 }
 
 pub trait SitzungRepo {
     async fn create_sitzung(
         &mut self,
         datetime: DateTime<Utc>,
-        location: &str,
-        kind: SitzungKind,
+        ort: &str,
+        typ: SitzungTyp,
         antragsfrist: DateTime<Utc>,
-        legislative_period: Uuid,
+        legislatur_periode: Uuid,
     ) -> Result<Sitzung>;
 
     async fn create_top(
@@ -82,7 +77,7 @@ pub trait SitzungRepo {
         sitzung_id: Uuid,
         name: &str,
         inhalt: &str,
-        kind: TopKind,
+        typ: TopTyp,
     ) -> Result<Top>;
 
     async fn sitzungen(&mut self) -> Result<Vec<Sitzung>>;
@@ -109,10 +104,10 @@ pub trait SitzungRepo {
         &mut self,
         id: Uuid,
         datetime: Option<DateTime<Utc>>,
-        location: Option<&'a str>,
-        kind: Option<SitzungKind>,
+        ort: Option<&'a str>,
+        typ: Option<SitzungTyp>,
         antragsfrist: Option<DateTime<Utc>>,
-        legislative_period: Option<Uuid>,
+        legislatur_periode: Option<Uuid>,
     ) -> Result<Option<Sitzung>>;
 
     async fn update_top<'a>(
@@ -121,7 +116,7 @@ pub trait SitzungRepo {
         sitzung_id: Option<Uuid>,
         name: Option<&'a str>,
         inhalt: Option<&'a str>,
-        kind: Option<TopKind>,
+        typ: Option<TopTyp>,
         weight: Option<i64>,
     ) -> Result<Option<Top>>;
 

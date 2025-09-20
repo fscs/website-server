@@ -1,4 +1,4 @@
-INSERT INTO tops (id, name, sitzung_id, weight, kind, inhalt)
+INSERT INTO tops (id, name, sitzung_id, weight, typ, inhalt)
     VALUES 
         ('fd6b67df-60f2-453a-9ffc-93514c5ccdb1', 'one', 'dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00', 1, 'normal', 'das'),
         ('c5f7f1cf-9c40-47de-8385-9d7e9853f57f', 'two', 'dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00', 2, 'normal', 'ist'),

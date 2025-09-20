@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, QueryBuilder};
 use uuid::Uuid;
 
@@ -65,38 +65,39 @@ pub(super) async fn query_attachments(
 impl AntragRepo for PgConnection {
     async fn create_antrag(
         &mut self,
-        creators: &[Uuid],
+        ersteller: &[Uuid],
         title: &str,
-        reason: &str,
+        begruendung: &str,
         antragstext: &str,
+        erstellt_am: DateTime<Utc>,
     ) -> Result<Antrag> {
         let antrag = sqlx::query_as!(
             AntragData,
             r#"
-                INSERT INTO anträge (titel, antragstext, begründung, created_at) 
+                INSERT INTO antraege (titel, antragstext, begruendung, erstellt_am) 
                 VALUES ($1, $2, $3, $4) 
                 RETURNING *
             "#,
             title,
             antragstext,
-            reason,
-            Utc::now()
+            begruendung,
+            erstellt_am
         )
         .fetch_one(&mut *self)
         .await?;
 
-        insert_antragsstellende(&mut *self, antrag.id, creators).await?;
+        insert_antragsstellende(&mut *self, antrag.id, ersteller).await?;
 
         let result = Antrag {
             data: antrag,
-            creators: creators.to_vec(),
-            attachments: vec![],
+            ersteller: ersteller.to_vec(),
+            anhaenge: vec![],
         };
 
         Ok(result)
     }
 
-    async fn anträge(&mut self) -> Result<Vec<Antrag>> {
+    async fn antraege(&mut self) -> Result<Vec<Antrag>> {
         let anträge = sqlx::query_as!(
             AntragData,
             r#"
@@ -104,9 +105,9 @@ impl AntragRepo for PgConnection {
                     id,
                     titel,
                     antragstext,
-                    begründung,
-                    created_at
-                FROM anträge
+                    begruendung,
+                    erstellt_am 
+                FROM antraege
             "#
         )
         .fetch_all(&mut *self)
@@ -120,8 +121,8 @@ impl AntragRepo for PgConnection {
 
             result.push(Antrag {
                 data: data.clone(),
-                creators,
-                attachments,
+                ersteller: creators,
+                anhaenge: attachments,
             })
         }
 
@@ -133,12 +134,12 @@ impl AntragRepo for PgConnection {
             AntragData,
             r#"
                 SELECT 
-                    anträge.id,
-                    anträge.titel,
-                    anträge.antragstext,
-                    anträge.begründung,
-                    anträge.created_at
-                FROM anträge
+                    antraege.id,
+                    antraege.titel,
+                    antraege.antragstext,
+                    antraege.begruendung,
+                    antraege.erstellt_am
+                FROM antraege
                 WHERE id = $1
             "#,
             id
@@ -154,8 +155,8 @@ impl AntragRepo for PgConnection {
 
         let result = Antrag {
             data,
-            creators,
-            attachments,
+            ersteller: creators,
+            anhaenge: attachments,
         };
 
         Ok(Some(result))
@@ -164,6 +165,7 @@ impl AntragRepo for PgConnection {
     async fn update_antrag<'a>(
         &mut self,
         id: Uuid,
+        erstellt_am: DateTime<Utc>,
         creators: Option<&'a [Uuid]>,
         title: Option<&'a str>,
         reason: Option<&'a str>,
@@ -172,19 +174,19 @@ impl AntragRepo for PgConnection {
         let Some(antrag) = sqlx::query_as!(
             AntragData,
             r#"
-                UPDATE anträge
+                UPDATE antraege
                 SET
                     titel = COALESCE($1, titel),
-                    begründung = COALESCE($2, begründung),
+                    begruendung = COALESCE($2, begruendung),
                     antragstext = COALESCE($3, antragstext),
-                    created_at = $4
+                    erstellt_am = $4
                 WHERE id = $5
                 RETURNING *
             "#,
             title,
             reason,
             antragstext,
-            Utc::now(),
+            erstellt_am,
             id
         )
         .fetch_optional(&mut *self)
@@ -215,8 +217,8 @@ impl AntragRepo for PgConnection {
 
         let result = Antrag {
             data: antrag,
-            creators: new_creators,
-            attachments,
+            ersteller: new_creators,
+            anhaenge: attachments,
         };
 
         Ok(Some(result))
@@ -226,7 +228,7 @@ impl AntragRepo for PgConnection {
         let result = sqlx::query_as!(
             AntragData,
             r#"
-                DELETE FROM anträge 
+                DELETE FROM antraege 
                 WHERE id = $1
                 RETURNING *
             "#,
@@ -238,11 +240,7 @@ impl AntragRepo for PgConnection {
         Ok(result)
     }
 
-    async fn add_attachment_to_antrag(
-        &mut self,
-        antrags_id: Uuid,
-        attachment_id: Uuid,
-    ) -> Result<()> {
+    async fn add_anhang_to_antrag(&mut self, antrags_id: Uuid, attachment_id: Uuid) -> Result<()> {
         sqlx::query!(
             r#"
                 INSERT INTO attachment_mapping (antrags_id, attachment_id) 
@@ -257,7 +255,7 @@ impl AntragRepo for PgConnection {
         Ok(())
     }
 
-    async fn delete_attachment_from_antrag(
+    async fn delete_anhang_from_antrag(
         &mut self,
         antrags_id: Uuid,
         attachment_id: Uuid,
@@ -280,6 +278,7 @@ impl AntragRepo for PgConnection {
 #[cfg(test)]
 mod test {
     use anyhow::Result;
+    use chrono::{DateTime, Utc};
     use sqlx::PgPool;
     use uuid::Uuid;
 
@@ -294,20 +293,28 @@ mod test {
             Uuid::parse_str("51288f16-4442-4d7c-9606-3dce198b0601").unwrap(),
         ];
 
-        let title = "Blumen für Valentin";
-        let reason = "Valentin deserves them";
-        let antragstext = "get them";
+        let title = "Volthahn";
+        let begruendung = "Volt gut";
+        let antragstext = "Wir brauchen Volt";
+        let erstellt_am = DateTime::UNIX_EPOCH;
 
         let antrag = conn
-            .create_antrag(creators.as_slice(), title, reason, antragstext)
+            .create_antrag(
+                creators.as_slice(),
+                title,
+                begruendung,
+                antragstext,
+                erstellt_am,
+            )
             .await?;
 
         let creator_entries = super::query_antragsstellende(&mut conn, antrag.data.id).await?;
 
         assert_eq!(antrag.data.titel, title);
         assert_eq!(antrag.data.antragstext, antragstext);
-        assert_eq!(antrag.data.begründung, reason);
-        assert_eq!(antrag.creators, creators);
+        assert_eq!(antrag.data.begruendung, begruendung);
+        assert_eq!(antrag.data.erstellt_am, erstellt_am);
+        assert_eq!(antrag.ersteller, creators);
 
         assert_eq!(creator_entries, creators);
 
@@ -318,17 +325,20 @@ mod test {
     async fn create_antrag_no_creators(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let title = "Blumen für Valentin";
-        let reason = "Valentin deserves them";
-        let antragstext = "get them";
+        let title = "Volthahn";
+        let begruendung = "Volt gut";
+        let antragstext = "Wir brauchen Volt";
+        let erstellt_am = DateTime::UNIX_EPOCH;
 
-        let antrag = conn.create_antrag(&[], title, reason, antragstext).await?;
+        let antrag = conn
+            .create_antrag(&[], title, begruendung, antragstext, erstellt_am)
+            .await?;
 
         assert_eq!(antrag.data.titel, title);
         assert_eq!(antrag.data.antragstext, antragstext);
-        assert_eq!(antrag.data.begründung, reason);
+        assert_eq!(antrag.data.begruendung, begruendung);
 
-        assert!(antrag.creators.is_empty());
+        assert!(antrag.ersteller.is_empty());
 
         Ok(())
     }
@@ -350,7 +360,7 @@ mod test {
     async fn anträge_empty_creators(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let antrag = conn.anträge().await?;
+        let antrag = conn.antraege().await?;
 
         assert!(!antrag.is_empty());
 
@@ -361,16 +371,17 @@ mod test {
     async fn anträge(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let anträge = conn.anträge().await?;
+        let anträge = conn.antraege().await?;
 
         let creators1 = vec![
             Uuid::parse_str("5a5a134d-9345-4c36-a466-1c3bb806b240").unwrap(),
             Uuid::parse_str("51288f16-4442-4d7c-9606-3dce198b0601").unwrap(),
         ];
-        let title1 = "Blumen für Valentin";
-        let reason1 = "Valentin deserves them";
-        let antragstext1 = "get them";
+
         let id1 = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
+        let title1 = "Volthahn";
+        let begruendung1 = "Volt gut";
+        let antragstext1 = "Wir brauchen Volt";
         let created_at1 = "2021-08-01T00:00:00Z";
 
         let antrag1 = Antrag {
@@ -378,18 +389,19 @@ mod test {
                 titel: title1.to_string(),
                 id: id1,
                 antragstext: antragstext1.to_string(),
-                begründung: reason1.to_string(),
-                created_at: created_at1.parse().unwrap(),
+                begruendung: begruendung1.to_string(),
+                erstellt_am: created_at1.parse().unwrap(),
             },
-            creators: creators1,
-            attachments: vec![],
+            ersteller: creators1,
+            anhaenge: vec![],
         };
 
         let creators2 = vec![Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap()];
-        let title2 = "blub";
-        let reason2 = "bulabsb";
-        let antragstext2 = "blub";
+
         let id2 = Uuid::parse_str("5c51d5c0-3943-4695-844d-4c47da854fac").unwrap();
+        let title2 = "blub";
+        let begruendung2 = "bulabsb";
+        let antragstext2 = "blub";
         let created_at2 = "2021-08-02T00:00:00Z";
 
         let antrag2 = Antrag {
@@ -397,11 +409,11 @@ mod test {
                 titel: title2.to_string(),
                 id: id2,
                 antragstext: antragstext2.to_string(),
-                begründung: reason2.to_string(),
-                created_at: created_at2.parse().unwrap(),
+                begruendung: begruendung2.to_string(),
+                erstellt_am: created_at2.parse().unwrap(),
             },
-            creators: creators2,
-            attachments: vec![],
+            ersteller: creators2,
+            anhaenge: vec![],
         };
 
         assert_eq!(anträge.len(), 2);
@@ -423,16 +435,18 @@ mod test {
             Uuid::parse_str("51288f16-4442-4d7c-9606-3dce198b0601").unwrap(),
         ];
 
-        let title = "Blumen für Valentin";
-        let reason = "Valentin deserves them";
-        let antragstext = "get them";
+        let title = "Volthahn";
+        let begruendung = "Volt gut";
+        let antragstext = "Wir brauchen Volt";
+        let erstellt_am: DateTime<Utc> = "2021-08-01T00:00:00Z".parse().unwrap();
 
         let antrag = conn.antrag_by_id(id).await?.unwrap();
 
         assert_eq!(antrag.data.titel, title);
         assert_eq!(antrag.data.antragstext, antragstext);
-        assert_eq!(antrag.data.begründung, reason);
-        assert_eq!(antrag.creators, creators);
+        assert_eq!(antrag.data.begruendung, begruendung);
+        assert_eq!(antrag.data.erstellt_am, erstellt_am);
+        assert_eq!(antrag.ersteller, creators);
 
         Ok(())
     }
@@ -443,19 +457,21 @@ mod test {
 
         let antrag_id = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
 
-        let old_title = "Blumen für Valentin";
-        let old_reason = "Valentin deserves them";
+        let old_title = "Volthahn";
+        let old_begruendung = "Volt gut";
 
         let new_creators = vec![
             Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap(),
             Uuid::parse_str("51288f16-4442-4d7c-9606-3dce198b0601").unwrap(),
         ];
 
-        let new_antragstext = "get them faster";
+        let new_antragstext = "aber sie schimmelt manchmal :(";
+        let new_erstellt_am = DateTime::UNIX_EPOCH;
 
         let antrag = conn
             .update_antrag(
                 antrag_id,
+                new_erstellt_am,
                 Some(new_creators.as_slice()),
                 None,
                 None,
@@ -464,10 +480,11 @@ mod test {
             .await?
             .unwrap();
 
-        assert_eq!(antrag.creators, new_creators);
+        assert_eq!(antrag.ersteller, new_creators);
         assert_eq!(antrag.data.antragstext, new_antragstext);
         assert_eq!(antrag.data.titel, old_title);
-        assert_eq!(antrag.data.begründung, old_reason);
+        assert_eq!(antrag.data.begruendung, old_begruendung);
+        assert_eq!(antrag.data.erstellt_am, new_erstellt_am);
 
         Ok(())
     }
@@ -494,13 +511,12 @@ mod test {
         let antrag_id = Uuid::parse_str("5c51d5c0-3943-4695-844d-4c47da854fac").unwrap();
         let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap();
 
-        conn.add_attachment_to_antrag(antrag_id, attachment_id)
-            .await?;
+        conn.add_anhang_to_antrag(antrag_id, attachment_id).await?;
 
         let antrag = conn.antrag_by_id(antrag_id).await?.unwrap();
 
-        assert_eq!(antrag.attachments.len(), 1);
-        assert_eq!(antrag.attachments[0], attachment_id);
+        assert_eq!(antrag.anhaenge.len(), 1);
+        assert_eq!(antrag.anhaenge[0], attachment_id);
 
         Ok(())
     }
@@ -514,16 +530,16 @@ mod test {
 
         let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap();
 
-        conn.delete_attachment_from_antrag(antrag_id, attachment_id)
+        conn.delete_anhang_from_antrag(antrag_id, attachment_id)
             .await?;
-        conn.delete_attachment_from_antrag(antrag2_id, attachment_id)
+        conn.delete_anhang_from_antrag(antrag2_id, attachment_id)
             .await?;
 
         let antrag = conn.antrag_by_id(antrag_id).await?.unwrap();
         let antrag2 = conn.antrag_by_id(antrag_id).await?.unwrap();
 
-        assert!(antrag.attachments.is_empty());
-        assert!(antrag2.attachments.is_empty());
+        assert!(antrag.anhaenge.is_empty());
+        assert!(antrag2.anhaenge.is_empty());
 
         Ok(())
     }

@@ -1,0 +1,73 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT \n                    sitzungen.id, \n                    datetime, \n                    ort, \n                    typ AS \"typ!: SitzungTyp\", \n                    antragsfrist, \n                    legislatur_perioden.id AS legislative_id,\n                    legislatur_perioden.name AS legislative_name\n                FROM sitzungen\n                JOIN legislatur_perioden \n                ON sitzungen.legislatur_periode_id = legislatur_perioden.id\n                WHERE datetime >= $1\n                ORDER BY datetime ASC\n                LIMIT $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "ort",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "typ!: SitzungTyp",
+        "type_info": {
+          "Custom": {
+            "name": "sitzungkind",
+            "kind": {
+              "Enum": [
+                "normal",
+                "vv",
+                "wahlvv",
+                "ersatz",
+                "konsti",
+                "dringlichkeit"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "antragsfrist",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "legislative_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "legislative_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b90687ec64946de14e8128c3e04acb119709af3a8a5bbe68d49e616c7bbb5417"
+}

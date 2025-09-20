@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT \n                    antraege.id,\n                    antraege.titel,\n                    antraege.antragstext,\n                    antraege.begruendung,\n                    antraege.erstellt_am\n                FROM antraege\n                WHERE id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "titel",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "antragstext",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "begruendung",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "erstellt_am",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b5a96bbadbb99c469ffb02868ab570c1a9e06f30b95dc94600364a7c805c80e3"
+}

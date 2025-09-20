@@ -53,7 +53,7 @@ pub struct PersonsByRoleParams {
 #[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct CreatePersonParams {
     #[validate(length(min = 1))]
-    full_name: String,
+    name: String,
     #[validate(length(min = 1))]
     user_name: String,
     #[validate(length(min = 1))]
@@ -63,7 +63,7 @@ pub struct CreatePersonParams {
 #[derive(Debug, Deserialize, ToSchema, IntoParams, Validate)]
 pub struct UpdatePersonParams {
     #[validate(length(min = 1))]
-    full_name: Option<String>,
+    name: Option<String>,
     #[validate(length(min = 1))]
     user_name: Option<String>,
     #[validate(length(min = 1))]
@@ -86,7 +86,7 @@ pub struct AbmeldungParams {
 #[derive(Debug, Serialize, ToSchema, IntoParams, Validate)]
 pub struct PublicPerson {
     pub id: Uuid,
-    pub full_name: String,
+    pub name: String,
     pub user_name: Option<String>,
     pub matrix_id: Option<String>,
 }
@@ -95,7 +95,7 @@ impl PublicPerson {
     pub fn public_from_person(person: Person) -> PublicPerson {
         PublicPerson {
             id: person.id,
-            full_name: person.full_name,
+            name: person.name,
             user_name: None,
             matrix_id: None,
         }
@@ -104,7 +104,7 @@ impl PublicPerson {
     pub fn private_from_person(person: Person) -> PublicPerson {
         PublicPerson {
             id: person.id,
-            full_name: person.full_name,
+            name: person.name,
             user_name: Some(person.user_name),
             matrix_id: person.matrix_id,
         }
@@ -192,7 +192,7 @@ async fn put_person(
 ) -> Result<impl Responder> {
     let result = transaction
         .create_person(
-            params.full_name.as_str(),
+            params.name.as_str(),
             params.user_name.as_str(),
             params.matrix_id.as_deref(),
         )
@@ -244,7 +244,7 @@ async fn patch_person(
     let result = transaction
         .update_person(
             *person_id,
-            params.full_name.as_deref(),
+            params.name.as_deref(),
             params.user_name.as_deref(),
             params.matrix_id.as_deref(),
         )

@@ -79,9 +79,9 @@ capability_middleware!(
 );
 
 capability_middleware!(
-    RequireManageAnträge,
-    RequireManageAnträgeMiddleware,
-    Capability::ManageAnträge
+    RequireManageAntraege,
+    RequireManageAntraegeMiddleware,
+    Capability::ManageAntraege
 );
 
 capability_middleware!(

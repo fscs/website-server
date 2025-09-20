@@ -10,7 +10,7 @@
       },
       {
         "ordinal": 1,
-        "name": "full_name",
+        "name": "name",
         "type_info": "Text"
       },
       {

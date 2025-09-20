@@ -1,0 +1,91 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                WITH updated AS (\n                    UPDATE sitzungen \n                    SET \n                        datetime = COALESCE($1, datetime),\n                        ort = COALESCE($2, ort),\n                        typ = COALESCE($3, typ),\n                        antragsfrist = COALESCE($4, antragsfrist),\n                        legislatur_periode_id = COALESCE($5, legislatur_periode_id)\n                    WHERE id = $6 \n                    RETURNING id, datetime, ort, typ, antragsfrist, legislatur_periode_id\n                ) SELECT \n                    updated.id, \n                    datetime, \n                    ort, \n                    typ AS \"typ!: SitzungTyp\", \n                    antragsfrist, \n                    legislatur_perioden.id as legislative_id, \n                    legislatur_perioden.name as legislative_name\n                FROM updated \n                JOIN legislatur_perioden\n                on updated.legislatur_periode_id = legislatur_perioden.id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "datetime",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "ort",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "typ!: SitzungTyp",
+        "type_info": {
+          "Custom": {
+            "name": "sitzungkind",
+            "kind": {
+              "Enum": [
+                "normal",
+                "vv",
+                "wahlvv",
+                "ersatz",
+                "konsti",
+                "dringlichkeit"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "antragsfrist",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "legislative_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "legislative_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Text",
+        {
+          "Custom": {
+            "name": "sitzungkind",
+            "kind": {
+              "Enum": [
+                "normal",
+                "vv",
+                "wahlvv",
+                "ersatz",
+                "konsti",
+                "dringlichkeit"
+              ]
+            }
+          }
+        },
+        "Timestamptz",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "380b1bb31b7a1661d6a9ec7fd244144f1b4e3cabe64ff5d4ad2fa19dcbb894ab"
+}

@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO antraege (titel, antragstext, begruendung, erstellt_am) \n                VALUES ($1, $2, $3, $4) \n                RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "titel",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "antragstext",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "begruendung",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "erstellt_am",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "390a8e6473ecf10d891d81e11205a929f106131c24a7f7d37334fee4a1a52a7a"
+}

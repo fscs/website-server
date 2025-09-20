@@ -3,17 +3,17 @@ use antrag_top_attachment_map::AntragTopAttachmentMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+pub mod anhang;
 pub mod antrag;
 pub mod antrag_top_attachment_map;
-pub mod attachment;
 pub mod calendar;
-pub mod legislative_periods;
+pub mod legislatur_periode;
 pub mod persons;
 pub mod sitzung;
 pub mod templates;
 
 use persons::{Abmeldung, Person, PersonRepo};
-use sitzung::{SitzungRepo, SitzungWithTops, TopWithAnträge};
+use sitzung::{SitzungRepo, SitzungWithTops, TopWithAntraege};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -23,7 +23,7 @@ pub enum Error {
     Database(#[from] sqlx::Error),
     #[error("io error")]
     Io(#[from] std::io::Error),
-    #[error("request error")]
+    #[error("request error: {0}")]
     Reqwest(#[from] reqwest::Error),
     #[error("{0}")]
     Message(String),
@@ -36,7 +36,7 @@ pub enum Error {
 pub enum Capability {
     Admin,
     ManageSitzungen,
-    ManageAnträge,
+    ManageAntraege,
     ManagePersons,
     CreateAntrag,
     ViewHidden,
@@ -56,35 +56,38 @@ pub async fn can_person_modify_antrag(
     person: &Person,
     antrag: &Antrag,
 ) -> Result<bool> {
-    let result = antrag.creators.contains(&person.id)
+    let result = antrag.ersteller.contains(&person.id)
         && repo.tops_by_antrag(antrag.data.id).await?.is_empty();
 
     Ok(result)
 }
 
-pub async fn top_with_anträge(
+pub async fn top_with_antraege(
     repo: &mut impl SitzungAntragService,
     top_id: Uuid,
-) -> Result<Option<TopWithAnträge>> {
+) -> Result<Option<TopWithAntraege>> {
     let Some(top) = repo.top_by_id(top_id).await? else {
         return Ok(None);
     };
 
-    let anträge = repo.anträge_by_top(top_id).await?;
+    let anträge = repo.antraege_by_top(top_id).await?;
 
-    Ok(Some(TopWithAnträge { top, anträge }))
+    Ok(Some(TopWithAntraege {
+        top,
+        antraege: anträge,
+    }))
 }
 
-pub async fn top_with_anträge_by_sitzung(
+pub async fn top_with_antraege_by_sitzung(
     repo: &mut impl SitzungAntragService,
     sitzung_id: Uuid,
-) -> Result<Vec<TopWithAnträge>> {
+) -> Result<Vec<TopWithAntraege>> {
     let tops = repo.tops_by_sitzung(sitzung_id).await?;
 
     let mut tops_with_anträge = vec![];
 
     for top in tops {
-        let top_and_anträge = top_with_anträge(repo, top.id).await?.unwrap();
+        let top_and_anträge = top_with_antraege(repo, top.id).await?.unwrap();
 
         tops_with_anträge.push(top_and_anträge);
     }
@@ -100,11 +103,11 @@ pub async fn sitzung_with_tops(
         return Ok(None);
     };
 
-    let tops_with_anträge = top_with_anträge_by_sitzung(repo, sitzung_id).await?;
+    let tops_with_antraege = top_with_antraege_by_sitzung(repo, sitzung_id).await?;
 
     Ok(Some(SitzungWithTops {
         sitzung,
-        tops: tops_with_anträge,
+        tops: tops_with_antraege,
     }))
 }
 
@@ -118,15 +121,15 @@ pub async fn sitzungen_after_with_tops(
 
     for sitzung in &sitzungen {
         let tops = repo.tops_by_sitzung(sitzung.id).await?;
-        let mut tops_with_anträge = vec![];
+        let mut tops_with_antraege = vec![];
         for top in tops {
-            let top_and_anträge = top_with_anträge(repo, top.id).await?.unwrap();
+            let top_and_antraege = top_with_antraege(repo, top.id).await?.unwrap();
 
-            tops_with_anträge.push(top_and_anträge);
+            tops_with_antraege.push(top_and_antraege);
         }
         sitzungen_with_tops.push(SitzungWithTops {
             sitzung: sitzung.clone(),
-            tops: tops_with_anträge,
+            tops: tops_with_antraege,
         });
     }
 

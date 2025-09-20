@@ -10,20 +10,20 @@ use crate::domain::{
 impl PersonRepo for PgConnection {
     async fn create_person(
         &mut self,
-        full_name: &str,
+        name: &str,
         user_name: &str,
         matrix_id: Option<&str>,
     ) -> Result<Person> {
         let result = sqlx::query_as!(
             Person,
             r#"
-                INSERT INTO person (full_name, user_name, matrix_id)
+                INSERT INTO person (name, user_name, matrix_id)
                 VALUES ($1, $2, $3)
                 ON CONFLICT
                 DO NOTHING
                 RETURNING *
             "#,
-            full_name,
+            name,
             user_name,
             matrix_id
         )
@@ -293,7 +293,7 @@ impl PersonRepo for PgConnection {
     async fn update_person<'a>(
         &mut self,
         id: Uuid,
-        full_name: Option<&str>,
+        name: Option<&str>,
         user_name: Option<&str>,
         matrix_id: Option<&str>,
     ) -> Result<Option<Person>> {
@@ -302,14 +302,14 @@ impl PersonRepo for PgConnection {
             r#"
                 UPDATE person 
                 SET 
-                    full_name = COALESCE($2, full_name),
+                    name = COALESCE($2, name),
                     user_name = COALESCE($3, user_name),
                     matrix_id = COALESCE($4, matrix_id)
                 WHERE id = $1 
                 RETURNING *
             "#,
             id,
-            full_name,
+            name,
             user_name,
             matrix_id,
         )
@@ -372,7 +372,7 @@ mod test {
             .create_person(full_name, user_name, matrix_id.as_deref())
             .await?;
 
-        assert_eq!(person.full_name, full_name);
+        assert_eq!(person.name, full_name);
         assert_eq!(person.user_name, user_name);
         assert_eq!(person.matrix_id, matrix_id);
 
