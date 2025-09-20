@@ -19,7 +19,7 @@ use crate::{
         self,
         antrag::{Antrag, AntragRepo},
         antrag_top_attachment_map::AntragTopAttachmentMap,
-        attachment::AttachmentRepo,
+        anhang::AnhangRepo,
         Capability, Result,
     },
     web::{
@@ -84,7 +84,7 @@ pub struct UploadAntrag {
 )]
 #[get("")]
 async fn get_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
-    let result = conn.anträge().await?;
+    let result = conn.antraege().await?;
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -98,7 +98,7 @@ async fn get_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
 )]
 #[get("/orphans")]
 async fn get_orphan_anträge(mut conn: DatabaseConnection) -> Result<impl Responder> {
-    let result = conn.orphan_anträge().await?;
+    let result = conn.orphan_antraege().await?;
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -238,7 +238,7 @@ async fn get_antrag_attachment(
 ) -> Result<impl Responder> {
     let (_antrag_id, attachment_id) = path_params.into_inner();
 
-    let Some(attachment) = conn.attachment_by_id(attachment_id).await? else {
+    let Some(attachment) = conn.anhang_by_id(attachment_id).await? else {
         return Ok(HttpResponse::NotFound().finish());
     };
 
@@ -291,7 +291,7 @@ async fn delete_antrag_attachment(
     }
 
     transaction
-        .delete_attachment_from_antrag(antrag_id, attachment_id)
+        .delete_anhang_from_antrag(antrag_id, attachment_id)
         .await?;
 
     let file_path = UPLOAD_DIR.as_path();
@@ -363,7 +363,7 @@ async fn add_antrag_attachment(
 
     let file_path = UPLOAD_DIR.as_path();
 
-    let attachment = transaction.create_attachment(file_name.to_string()).await;
+    let attachment = transaction.create_anhang(file_name.to_string()).await;
 
     let attachment = match attachment {
         Ok(attachment) => attachment,
@@ -375,7 +375,7 @@ async fn add_antrag_attachment(
     };
 
     transaction
-        .add_attachment_to_antrag(*antrag_id, attachment.id)
+        .add_anhang_to_antrag(*antrag_id, attachment.id)
         .await?;
 
     fs::copy(temp_file_path, file_path.join(attachment.id.to_string())).await?;

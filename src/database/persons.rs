@@ -372,7 +372,7 @@ mod test {
             .create_person(full_name, user_name, matrix_id.as_deref())
             .await?;
 
-        assert_eq!(person.full_name, full_name);
+        assert_eq!(person.name, full_name);
         assert_eq!(person.user_name, user_name);
         assert_eq!(person.matrix_id, matrix_id);
 

@@ -95,7 +95,7 @@ impl PublicPerson {
     pub fn public_from_person(person: Person) -> PublicPerson {
         PublicPerson {
             id: person.id,
-            full_name: person.full_name,
+            full_name: person.name,
             user_name: None,
             matrix_id: None,
         }
@@ -104,7 +104,7 @@ impl PublicPerson {
     pub fn private_from_person(person: Person) -> PublicPerson {
         PublicPerson {
             id: person.id,
-            full_name: person.full_name,
+            full_name: person.name,
             user_name: Some(person.user_name),
             matrix_id: person.matrix_id,
         }

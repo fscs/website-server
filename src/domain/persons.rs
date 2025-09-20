@@ -14,7 +14,7 @@ pub struct PersonRoleMapping {
 #[derive(Debug, Serialize, IntoParams, ToSchema)]
 pub struct Person {
     pub id: Uuid,
-    pub full_name: String,
+    pub name: String,
     pub user_name: String,
     pub matrix_id: Option<String>,
 }
@@ -35,7 +35,7 @@ pub struct Abmeldung {
 pub trait PersonRepo {
     async fn create_person(
         &mut self,
-        full_name: &str,
+        name: &str,
         user_name: &str,
         matrix_id: Option<&str>,
     ) -> Result<Person>;

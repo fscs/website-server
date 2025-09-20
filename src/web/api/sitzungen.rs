@@ -16,12 +16,12 @@ use crate::database::{DatabaseConnection, DatabaseTransaction};
 use crate::domain::antrag_top_attachment_map::AntragTopMapping;
 use crate::domain::calendar::{CalendarEvent, CalendarRepo};
 use crate::domain::persons::{Abmeldung, Person};
-use crate::domain::sitzung::{Sitzung, SitzungWithTops, Top, TopWithAnträge};
+use crate::domain::sitzung::{Sitzung, SitzungWithTops, Top, TopWithAntraege};
 use crate::domain::templates::TemplatesRepo;
 use crate::domain::{
     self,
     antrag_top_attachment_map::AntragTopAttachmentMap,
-    sitzung::{SitzungKind, SitzungRepo, TopKind},
+    sitzung::{SitzungTyp, SitzungRepo, TopArt},
     Result,
 };
 use crate::web::calendar::CalendarData;
@@ -67,7 +67,7 @@ pub struct CreateSitzungParams {
     datetime: DateTime<Utc>,
     #[validate(length(min = 1))]
     location: String,
-    kind: SitzungKind,
+    kind: SitzungTyp,
     antragsfrist: DateTime<Utc>,
     legislative_period: Uuid,
 }
@@ -76,7 +76,7 @@ pub struct CreateSitzungParams {
 pub struct CreateTopParams {
     #[validate(length(min = 1))]
     name: String,
-    kind: TopKind,
+    kind: TopArt,
     inhalt: String,
 }
 
@@ -85,7 +85,7 @@ pub struct UpdateSitzungParams {
     datetime: Option<DateTime<Utc>>,
     #[validate(length(min = 1))]
     location: Option<String>,
-    kind: Option<SitzungKind>,
+    kind: Option<SitzungTyp>,
     antragsfrist: Option<DateTime<Utc>>,
     legislative_period: Option<Uuid>,
 }
@@ -94,7 +94,7 @@ pub struct UpdateSitzungParams {
 pub struct UpdateTopParams {
     #[validate(length(min = 1))]
     name: Option<String>,
-    kind: Option<TopKind>,
+    kind: Option<TopArt>,
     inhalt: Option<String>,
     weight: Option<i64>,
 }
@@ -322,7 +322,7 @@ async fn get_abmeldungen_by_sitzung(
 #[utoipa::path(
     path = "/api/sitzungen/{sitzung_id}/tops",
     responses(
-        (status = 200, description = "Success", body = Vec<TopWithAnträge>),
+        (status = 200, description = "Success", body = Vec<TopWithAntraege>),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),

@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::domain::{
     antrag::{Antrag, AntragData},
     antrag_top_attachment_map::{AntragTopAttachmentMap, AntragTopMapping},
-    sitzung::{Top, TopKind},
+    sitzung::{Top, TopArt},
     Result,
 };
 
@@ -31,7 +31,7 @@ pub(super) async fn query_attachments(
 }
 
 impl AntragTopAttachmentMap for PgConnection {
-    async fn anträge_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>> {
+    async fn antraege_by_top(&mut self, top_id: Uuid) -> Result<Vec<Antrag>> {
         let anträge = sqlx::query_as!(
             AntragData,
             r#"
@@ -59,8 +59,8 @@ impl AntragTopAttachmentMap for PgConnection {
 
             result.push(Antrag {
                 data: data.clone(),
-                creators,
-                attachments,
+                ersteller: creators,
+                anhaenge: attachments,
             })
         }
 
@@ -93,7 +93,7 @@ impl AntragTopAttachmentMap for PgConnection {
         Ok(result)
     }
 
-    async fn orphan_anträge(&mut self) -> Result<Vec<Antrag>> {
+    async fn orphan_antraege(&mut self) -> Result<Vec<Antrag>> {
         let anträge = sqlx::query_as!(
             AntragData,
             r#"
@@ -120,8 +120,8 @@ impl AntragTopAttachmentMap for PgConnection {
 
             result.push(Antrag {
                 data: data.clone(),
-                creators,
-                attachments,
+                ersteller: creators,
+                anhaenge: attachments,
             })
         }
 
@@ -195,7 +195,7 @@ mod test {
 
         let top_id = Uuid::parse_str("fd6b67df-60f2-453a-9ffc-93514c5ccdb1").unwrap();
 
-        let anträge = conn.anträge_by_top(top_id).await?;
+        let anträge = conn.antraege_by_top(top_id).await?;
 
         let antrag_id = Uuid::parse_str("46148231-87b0-4486-8043-c55038178518").unwrap();
         let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap(); 
@@ -203,7 +203,7 @@ mod test {
         assert_eq!(anträge.len(), 1);
 
         assert_eq!(anträge[0].data.id, antrag_id);
-        assert!(anträge[0].attachments.contains(&attachment_id));
+        assert!(anträge[0].anhaenge.contains(&attachment_id));
 
         Ok(())
     }
@@ -241,7 +241,7 @@ mod test {
     async fn orphan_anträge(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let orphans = conn.orphan_anträge().await?;
+        let orphans = conn.orphan_antraege().await?;
 
         let antrag_id = Uuid::parse_str("5c51d5c0-3943-4695-844d-4c47da854fac").unwrap();
 
@@ -264,7 +264,7 @@ mod test {
 
         let top_id = Uuid::parse_str("fd6b67df-60f2-453a-9ffc-93514c5ccdb1").unwrap();
 
-        let anträge = conn.anträge_by_top(top_id).await?;
+        let anträge = conn.antraege_by_top(top_id).await?;
 
         let antrag_id = Uuid::parse_str("f70917d9-8269-4a81-bb9b-785c3910f268").unwrap();
 
@@ -290,7 +290,7 @@ mod test {
 
         conn.attach_antrag_to_top(antrag_id, top_id).await?;
 
-        let anträge = conn.anträge_by_top(top_id).await?;
+        let anträge = conn.antraege_by_top(top_id).await?;
 
         assert_eq!(anträge.len(), 2);
 
@@ -316,7 +316,7 @@ mod test {
             .await?
             .unwrap();
 
-        let anträge = conn.anträge_by_top(top_id).await?;
+        let anträge = conn.antraege_by_top(top_id).await?;
 
         assert!(anträge.is_empty());
 

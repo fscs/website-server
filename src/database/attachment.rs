@@ -1,12 +1,12 @@
 use sqlx::PgConnection;
 
 use crate::domain::Result;
-use crate::domain::attachment::{Attachment, AttachmentRepo};
+use crate::domain::anhang::{Anhang, AnhangRepo};
 
-impl AttachmentRepo for PgConnection {
-    async fn create_attachment(&mut self, filename: String) -> Result<Attachment> {
+impl AnhangRepo for PgConnection {
+    async fn create_anhang(&mut self, filename: String) -> Result<Anhang> {
         let result = sqlx::query_as!(
-            Attachment,
+            Anhang,
             r#"
                     INSERT INTO attachments (filename)
                     VALUES ($1)
@@ -20,9 +20,9 @@ impl AttachmentRepo for PgConnection {
         Ok(result)
     }
 
-    async fn delete_attachment(&mut self, id: uuid::Uuid) -> Result<Option<Attachment>> {
+    async fn delete_anhang(&mut self, id: uuid::Uuid) -> Result<Option<Anhang>> {
         let result = sqlx::query_as!(
-            Attachment,
+            Anhang,
             r#"
                 DELETE FROM attachments
                 WHERE id = $1
@@ -36,9 +36,9 @@ impl AttachmentRepo for PgConnection {
         Ok(result)
     }
 
-    async fn attachment_by_id(&mut self, id: uuid::Uuid) -> Result<Option<Attachment>> {
+    async fn anhang_by_id(&mut self, id: uuid::Uuid) -> Result<Option<Anhang>> {
         let result = sqlx::query_as!(
-            Attachment,
+            Anhang,
             r#"
                 SELECT * FROM attachments
                 WHERE id = $1
@@ -58,14 +58,14 @@ mod test {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::attachment::AttachmentRepo;
+    use crate::domain::anhang::AnhangRepo;
     #[sqlx::test()]
     async fn create_attachment(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
         let filename = "Tolles Excel Sheet";
 
-        let attachment = conn.create_attachment(filename.to_string()).await?;
+        let attachment = conn.create_anhang(filename.to_string()).await?;
 
         assert_eq!(attachment.filename, filename);
 
@@ -77,9 +77,9 @@ mod test {
         let mut conn = pool.acquire().await?;
 
         let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap();
-        conn.delete_attachment(attachment_id).await?;
+        conn.delete_anhang(attachment_id).await?;
 
-        let please_dont_be_an_attachment = conn.attachment_by_id(attachment_id).await?;
+        let please_dont_be_an_attachment = conn.anhang_by_id(attachment_id).await?;
 
         assert!(please_dont_be_an_attachment.is_none());
 

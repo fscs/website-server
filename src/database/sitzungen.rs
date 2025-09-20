@@ -3,8 +3,8 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
-    legislative_periods::LegislativePeriod,
-    sitzung::{Sitzung, SitzungKind, SitzungRepo, Top, TopKind},
+    legislatur_periode::LegislaturPeriode,
+    sitzung::{Sitzung, SitzungTyp, SitzungRepo, Top, TopArt},
     Result,
 };
 
@@ -13,7 +13,7 @@ impl SitzungRepo for PgConnection {
         &mut self,
         datetime: DateTime<Utc>,
         location: &str,
-        kind: SitzungKind,
+        kind: SitzungTyp,
         antragsfrist: DateTime<Utc>,
         legislative_period_id: Uuid,
     ) -> Result<Sitzung> {
@@ -37,7 +37,7 @@ impl SitzungRepo for PgConnection {
             "#,
             datetime,
             location,
-            kind as SitzungKind,
+            kind as SitzungTyp,
             antragsfrist,
             legislative_period_id
         )
@@ -47,10 +47,10 @@ impl SitzungRepo for PgConnection {
         let result = Sitzung {
             id: record.id,
             datetime: record.datetime,
-            location: record.location,
-            kind: record.kind,
+            ort: record.location,
+            typ: record.kind,
             antragsfrist: record.antragsfrist,
-            legislative_period: LegislativePeriod {
+            legislatur_periode: LegislaturPeriode {
                 id: record.legislative_id,
                 name: record.legislative_name,
             },
@@ -64,7 +64,7 @@ impl SitzungRepo for PgConnection {
         sitzung_id: Uuid,
         name: &str,
         inhalt: &str,
-        kind: TopKind,
+        kind: TopArt,
     ) -> Result<Top> {
         let weight = sqlx::query!(
             r#"
@@ -73,7 +73,7 @@ impl SitzungRepo for PgConnection {
                 WHERE sitzung_id = $1 and kind = $2
             "#,
             sitzung_id,
-            kind as TopKind,
+            kind as TopArt,
         )
         .fetch_one(&mut *self)
         .await?
@@ -90,7 +90,7 @@ impl SitzungRepo for PgConnection {
             sitzung_id,
             weight.unwrap_or(0) + 1,
             inhalt,
-            kind as TopKind,
+            kind as TopArt,
         )
         .fetch_one(&mut *self)
         .await?;
@@ -122,10 +122,10 @@ impl SitzungRepo for PgConnection {
             .map(|r| Sitzung {
                 id: r.id,
                 datetime: r.datetime,
-                location: r.location,
-                kind: r.kind,
+                ort: r.location,
+                typ: r.kind,
                 antragsfrist: r.antragsfrist,
-                legislative_period: LegislativePeriod {
+                legislatur_periode: LegislaturPeriode {
                     id: r.legislative_id,
                     name: r.legislative_name,
                 },
@@ -159,10 +159,10 @@ impl SitzungRepo for PgConnection {
         let result = record.map(|r| Sitzung {
             id: r.id,
             datetime: r.datetime,
-            location: r.location,
-            kind: r.kind,
+            ort: r.location,
+            typ: r.kind,
             antragsfrist: r.antragsfrist,
-            legislative_period: LegislativePeriod {
+            legislatur_periode: LegislaturPeriode {
                 id: r.legislative_id,
                 name: r.legislative_name,
             },
@@ -204,10 +204,10 @@ impl SitzungRepo for PgConnection {
             .map(|r| Sitzung {
                 id: r.id,
                 datetime: r.datetime,
-                location: r.location,
-                kind: r.kind,
+                ort: r.location,
+                typ: r.kind,
                 antragsfrist: r.antragsfrist,
-                legislative_period: LegislativePeriod {
+                legislatur_periode: LegislaturPeriode {
                     id: r.legislative_id,
                     name: r.legislative_name,
                 },
@@ -249,10 +249,10 @@ impl SitzungRepo for PgConnection {
             .map(|r| Sitzung {
                 id: r.id,
                 datetime: r.datetime,
-                location: r.location,
-                kind: r.kind,
+                ort: r.location,
+                typ: r.kind,
                 antragsfrist: r.antragsfrist,
-                legislative_period: LegislativePeriod {
+                legislatur_periode: LegislaturPeriode {
                     id: r.legislative_id,
                     name: r.legislative_name,
                 },
@@ -300,7 +300,7 @@ impl SitzungRepo for PgConnection {
         id: Uuid,
         datetime: Option<DateTime<Utc>>,
         location: Option<&'a str>,
-        kind: Option<SitzungKind>,
+        kind: Option<SitzungTyp>,
         antragsfrist: Option<DateTime<Utc>>,
         legislative_period_id: Option<Uuid>,
     ) -> Result<Option<Sitzung>> {
@@ -330,7 +330,7 @@ impl SitzungRepo for PgConnection {
             "#,
             datetime,
             location,
-            kind as Option<SitzungKind>,
+            kind as Option<SitzungTyp>,
             antragsfrist,
             legislative_period_id,
             id
@@ -341,10 +341,10 @@ impl SitzungRepo for PgConnection {
         let result = record.map(|r| Sitzung {
             id: r.id,
             datetime: r.datetime,
-            location: r.location,
-            kind: r.kind,
+            ort: r.location,
+            typ: r.kind,
             antragsfrist: r.antragsfrist,
-            legislative_period: LegislativePeriod {
+            legislatur_periode: LegislaturPeriode {
                 id: r.legislative_id,
                 name: r.legislative_name,
             },
@@ -359,7 +359,7 @@ impl SitzungRepo for PgConnection {
         sitzung_id: Option<Uuid>,
         name: Option<&'a str>,
         inhalt: Option<&'a str>,
-        kind: Option<TopKind>,
+        kind: Option<TopArt>,
         weight: Option<i64>,
     ) -> Result<Option<Top>> {
         let result = sqlx::query_as!(
@@ -378,7 +378,7 @@ impl SitzungRepo for PgConnection {
             id,
             sitzung_id,
             name,
-            kind as Option<TopKind>,
+            kind as Option<TopArt>,
             inhalt,
             weight
         )
@@ -415,10 +415,10 @@ impl SitzungRepo for PgConnection {
         let result = record.map(|r| Sitzung {
             id: r.id,
             datetime: r.datetime,
-            location: r.location,
-            kind: r.kind,
+            ort: r.location,
+            typ: r.kind,
             antragsfrist: r.antragsfrist,
-            legislative_period: LegislativePeriod {
+            legislatur_periode: LegislaturPeriode {
                 id: r.legislative_id,
                 name: r.legislative_name,
             },
@@ -451,7 +451,7 @@ mod test {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::domain::sitzung::{SitzungKind, SitzungRepo, TopKind};
+    use crate::domain::sitzung::{SitzungTyp, SitzungRepo, TopArt};
 
     #[sqlx::test(fixtures("gimme_legislative_period"))]
     async fn create_sitzung(pool: PgPool) -> Result<()> {
@@ -459,7 +459,7 @@ mod test {
 
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T10:30:00+02:00").unwrap();
         let location = "ein uni raum";
-        let sitzung_kind = SitzungKind::VV;
+        let sitzung_kind = SitzungTyp::VV;
         let antragsfrist = DateTime::parse_from_rfc3339("2024-09-07T10:30:00+02:00").unwrap();
 
         let legislative_period_id =
@@ -476,10 +476,10 @@ mod test {
             .await?;
 
         assert_eq!(sitzung.datetime, datetime);
-        assert_eq!(sitzung.location, location);
-        assert_eq!(sitzung.kind, sitzung_kind);
+        assert_eq!(sitzung.ort, location);
+        assert_eq!(sitzung.typ, sitzung_kind);
         assert_eq!(sitzung.antragsfrist, antragsfrist);
-        assert_eq!(sitzung.legislative_period.id, legislative_period_id);
+        assert_eq!(sitzung.legislatur_periode.id, legislative_period_id);
 
         Ok(())
     }
@@ -491,7 +491,7 @@ mod test {
         let sitzung_id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
 
         let first_title = "hallo";
-        let first_top_kind = TopKind::Normal;
+        let first_top_kind = TopArt::Normal;
         let first_inhalt = "wheres da content";
 
         let first_top = conn
@@ -499,7 +499,7 @@ mod test {
             .await?;
 
         let second_title = "haaaalllo";
-        let second_top_kind = TopKind::Normal;
+        let second_top_kind = TopArt::Normal;
         let second_inhalt = "zweiter inhalt";
 
         let second_top = conn
@@ -507,12 +507,12 @@ mod test {
             .await?;
 
         assert_eq!(first_top.name, first_title);
-        assert_eq!(first_top.kind, first_top_kind);
+        assert_eq!(first_top.typ, first_top_kind);
         assert_eq!(first_top.inhalt, first_inhalt);
         assert_eq!(first_top.weight, 1);
 
         assert_eq!(second_top.name, second_title);
-        assert_eq!(second_top.kind, second_top_kind);
+        assert_eq!(second_top.typ, second_top_kind);
         assert_eq!(second_top.inhalt, second_inhalt);
         assert_eq!(second_top.weight, 2);
 
@@ -526,13 +526,13 @@ mod test {
         let sitzung_id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
 
         let title = "hallo";
-        let kind = TopKind::Normal;
+        let kind = TopArt::Normal;
         let inhalt = "mein inhalt";
 
         let top = conn.create_top(sitzung_id, title, inhalt, kind).await?;
 
         assert_eq!(top.name, title);
-        assert_eq!(top.kind, kind);
+        assert_eq!(top.typ, kind);
         assert_eq!(top.inhalt, inhalt);
         assert_eq!(top.weight, 5);
 
@@ -546,13 +546,13 @@ mod test {
         let id = Uuid::parse_str("dfe75b8c-8c24-4a2b-84e5-d0573a8e6f00").unwrap();
         let datetime = DateTime::parse_from_rfc3339("2024-09-10T12:30:00+02:00").unwrap();
         let location = "ein uni raum";
-        let sitzung_kind = SitzungKind::VV;
+        let sitzung_kind = SitzungTyp::VV;
 
         let sitzung = conn.sitzung_by_id(id).await?.unwrap();
 
         assert_eq!(sitzung.datetime, datetime);
-        assert_eq!(sitzung.location, location);
-        assert_eq!(sitzung.kind, sitzung_kind);
+        assert_eq!(sitzung.ort, location);
+        assert_eq!(sitzung.typ, sitzung_kind);
 
         Ok(())
     }
@@ -608,11 +608,11 @@ mod test {
         let top = conn.top_by_id(id).await?.unwrap();
 
         let weight = 4;
-        let top_kind = TopKind::Normal;
+        let top_kind = TopArt::Normal;
 
         assert_eq!(top.id, id);
         assert_eq!(top.weight, weight);
-        assert_eq!(top.kind, top_kind);
+        assert_eq!(top.typ, top_kind);
 
         Ok(())
     }
@@ -653,7 +653,7 @@ mod test {
 
         let sitzung_id = Uuid::parse_str("76f4a8a9-8944-4d89-b6b8-8cdbc1acedb2").unwrap();
 
-        let new_sitzung_kind = SitzungKind::Konsti;
+        let new_sitzung_kind = SitzungTyp::Konsti;
 
         let sitzung = conn
             .update_sitzung(sitzung_id, None, None, Some(new_sitzung_kind), None, None)
@@ -665,8 +665,8 @@ mod test {
 
         assert_eq!(sitzung.id, sitzung_id);
         assert_eq!(sitzung.datetime, old_datetime);
-        assert_eq!(sitzung.location, old_location);
-        assert_eq!(sitzung.kind, new_sitzung_kind);
+        assert_eq!(sitzung.ort, old_location);
+        assert_eq!(sitzung.typ, new_sitzung_kind);
 
         Ok(())
     }
@@ -684,11 +684,11 @@ mod test {
             .await?
             .unwrap();
 
-        let old_top_kind = TopKind::Normal;
+        let old_top_kind = TopArt::Normal;
         let old_weight = 4;
 
         assert_eq!(top.name, new_name);
-        assert_eq!(top.kind, old_top_kind);
+        assert_eq!(top.typ, old_top_kind);
         assert_eq!(top.weight, old_weight);
 
         Ok(())

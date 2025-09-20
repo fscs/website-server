@@ -2,15 +2,15 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::domain::{
-    legislative_periods::{LegislativePeriod, LegislativePeriodRepo},
-    sitzung::{Sitzung, SitzungKind},
+    legislatur_periode::{LegislaturPeriode, LegislaturPeriodeRepo},
+    sitzung::{Sitzung, SitzungTyp},
     Result,
 };
 
-impl LegislativePeriodRepo for PgConnection {
-    async fn create_legislative_period(&mut self, name: String) -> Result<LegislativePeriod> {
+impl LegislaturPeriodeRepo for PgConnection {
+    async fn create_legislatur_periode(&mut self, name: String) -> Result<LegislaturPeriode> {
         let result = sqlx::query_as!(
-            LegislativePeriod,
+            LegislaturPeriode,
             r#"
                 INSERT INTO legislative_period (name)
                 VALUES ($1)
@@ -24,9 +24,9 @@ impl LegislativePeriodRepo for PgConnection {
         Ok(result)
     }
 
-    async fn legislativ_period_by_id(&mut self, id: Uuid) -> Result<Option<LegislativePeriod>> {
+    async fn legislatur_periode_by_id(&mut self, id: Uuid) -> Result<Option<LegislaturPeriode>> {
         let result = sqlx::query_as!(
-            LegislativePeriod,
+            LegislaturPeriode,
             r#"
                 SELECT * FROM legislative_period WHERE id = $1 
            "#,
@@ -38,9 +38,9 @@ impl LegislativePeriodRepo for PgConnection {
         Ok(result)
     }
 
-    async fn legislative_periods(&mut self) -> Result<Vec<LegislativePeriod>> {
+    async fn legislatur_perioden(&mut self) -> Result<Vec<LegislaturPeriode>> {
         let result = sqlx::query_as!(
-            LegislativePeriod,
+            LegislaturPeriode,
             r#"
                 SELECT * FROM legislative_period
             "#,
@@ -78,10 +78,10 @@ impl LegislativePeriodRepo for PgConnection {
             .map(|r| Sitzung {
                 id: r.id,
                 datetime: r.datetime,
-                location: r.location,
-                kind: r.kind,
+                ort: r.location,
+                typ: r.kind,
                 antragsfrist: r.antragsfrist,
-                legislative_period: LegislativePeriod {
+                legislatur_periode: LegislaturPeriode {
                     id: r.legislative_id,
                     name: r.legislative_name,
                 },
@@ -91,13 +91,13 @@ impl LegislativePeriodRepo for PgConnection {
         Ok(result)
     }
 
-    async fn update_legislative_period(
+    async fn update_legislatur_periode(
         &mut self,
         id: uuid::Uuid,
         name: String,
-    ) -> Result<Option<LegislativePeriod>> {
+    ) -> Result<Option<LegislaturPeriode>> {
         let result = sqlx::query_as!(
-            LegislativePeriod,
+            LegislaturPeriode,
             r#"
                 UPDATE legislative_period
                 SET name = $2
@@ -113,12 +113,12 @@ impl LegislativePeriodRepo for PgConnection {
         Ok(result)
     }
 
-    async fn delete_legislative_period(
+    async fn delete_legislatur_periode(
         &mut self,
         id: uuid::Uuid,
-    ) -> Result<Option<LegislativePeriod>> {
+    ) -> Result<Option<LegislaturPeriode>> {
         let result = sqlx::query_as!(
-            LegislativePeriod,
+            LegislaturPeriode,
             r#"
                 DELETE FROM legislative_period
                 WHERE id = $1
@@ -138,7 +138,7 @@ mod test {
     use anyhow::Result;
     use sqlx::PgPool;
 
-    use crate::domain::legislative_periods::LegislativePeriodRepo;
+    use crate::domain::legislatur_periode::LegislaturPeriodeRepo;
 
     #[sqlx::test]
     async fn create_legislative(pool: PgPool) -> Result<()> {
@@ -146,7 +146,7 @@ mod test {
 
         let name = "Test".to_string();
 
-        let legislative_period = conn.create_legislative_period(name.clone()).await?;
+        let legislative_period = conn.create_legislatur_periode(name.clone()).await?;
 
         assert_eq!(legislative_period.name, name);
 
@@ -160,7 +160,7 @@ mod test {
         let id = uuid::Uuid::parse_str("f2b2b2b2-2b2b-2b2b-2b2b-2b2b2b2b2b2b").unwrap();
         let name = "Test2";
 
-        let period = conn.legislativ_period_by_id(id).await?.unwrap();
+        let period = conn.legislatur_periode_by_id(id).await?.unwrap();
 
         assert_eq!(period.name, name);
 
@@ -173,7 +173,7 @@ mod test {
 
         let id = uuid::Uuid::parse_str("f2b2b2b2-2b2b-2b2b-2b2b-2b2b2b2b2b2b").unwrap();
 
-        let last_legislative_period = conn.delete_legislative_period(id).await?.unwrap();
+        let last_legislative_period = conn.delete_legislatur_periode(id).await?.unwrap();
 
         assert_eq!(last_legislative_period.id, id);
 
@@ -189,7 +189,7 @@ mod test {
         let name = "Test new".to_string();
 
         let legislative_period = conn
-            .update_legislative_period(id, name.clone())
+            .update_legislatur_periode(id, name.clone())
             .await?
             .unwrap();
 

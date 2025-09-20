@@ -89,14 +89,14 @@ impl AntragRepo for PgConnection {
 
         let result = Antrag {
             data: antrag,
-            creators: creators.to_vec(),
-            attachments: vec![],
+            ersteller: creators.to_vec(),
+            anhaenge: vec![],
         };
 
         Ok(result)
     }
 
-    async fn anträge(&mut self) -> Result<Vec<Antrag>> {
+    async fn antraege(&mut self) -> Result<Vec<Antrag>> {
         let anträge = sqlx::query_as!(
             AntragData,
             r#"
@@ -120,8 +120,8 @@ impl AntragRepo for PgConnection {
 
             result.push(Antrag {
                 data: data.clone(),
-                creators,
-                attachments,
+                ersteller: creators,
+                anhaenge: attachments,
             })
         }
 
@@ -154,8 +154,8 @@ impl AntragRepo for PgConnection {
 
         let result = Antrag {
             data,
-            creators,
-            attachments,
+            ersteller: creators,
+            anhaenge: attachments,
         };
 
         Ok(Some(result))
@@ -215,8 +215,8 @@ impl AntragRepo for PgConnection {
 
         let result = Antrag {
             data: antrag,
-            creators: new_creators,
-            attachments,
+            ersteller: new_creators,
+            anhaenge: attachments,
         };
 
         Ok(Some(result))
@@ -238,7 +238,7 @@ impl AntragRepo for PgConnection {
         Ok(result)
     }
 
-    async fn add_attachment_to_antrag(
+    async fn add_anhang_to_antrag(
         &mut self,
         antrags_id: Uuid,
         attachment_id: Uuid,
@@ -257,7 +257,7 @@ impl AntragRepo for PgConnection {
         Ok(())
     }
 
-    async fn delete_attachment_from_antrag(
+    async fn delete_anhang_from_antrag(
         &mut self,
         antrags_id: Uuid,
         attachment_id: Uuid,
@@ -307,7 +307,7 @@ mod test {
         assert_eq!(antrag.data.titel, title);
         assert_eq!(antrag.data.antragstext, antragstext);
         assert_eq!(antrag.data.begründung, reason);
-        assert_eq!(antrag.creators, creators);
+        assert_eq!(antrag.ersteller, creators);
 
         assert_eq!(creator_entries, creators);
 
@@ -328,7 +328,7 @@ mod test {
         assert_eq!(antrag.data.antragstext, antragstext);
         assert_eq!(antrag.data.begründung, reason);
 
-        assert!(antrag.creators.is_empty());
+        assert!(antrag.ersteller.is_empty());
 
         Ok(())
     }
@@ -350,7 +350,7 @@ mod test {
     async fn anträge_empty_creators(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let antrag = conn.anträge().await?;
+        let antrag = conn.antraege().await?;
 
         assert!(!antrag.is_empty());
 
@@ -361,7 +361,7 @@ mod test {
     async fn anträge(pool: PgPool) -> Result<()> {
         let mut conn = pool.acquire().await?;
 
-        let anträge = conn.anträge().await?;
+        let anträge = conn.antraege().await?;
 
         let creators1 = vec![
             Uuid::parse_str("5a5a134d-9345-4c36-a466-1c3bb806b240").unwrap(),
@@ -379,10 +379,10 @@ mod test {
                 id: id1,
                 antragstext: antragstext1.to_string(),
                 begründung: reason1.to_string(),
-                created_at: created_at1.parse().unwrap(),
+                erstellungs_datum: created_at1.parse().unwrap(),
             },
-            creators: creators1,
-            attachments: vec![],
+            ersteller: creators1,
+            anhaenge: vec![],
         };
 
         let creators2 = vec![Uuid::parse_str("0f3107ac-745d-4077-8bbf-f9734cd66297").unwrap()];
@@ -398,10 +398,10 @@ mod test {
                 id: id2,
                 antragstext: antragstext2.to_string(),
                 begründung: reason2.to_string(),
-                created_at: created_at2.parse().unwrap(),
+                erstellungs_datum: created_at2.parse().unwrap(),
             },
-            creators: creators2,
-            attachments: vec![],
+            ersteller: creators2,
+            anhaenge: vec![],
         };
 
         assert_eq!(anträge.len(), 2);
@@ -432,7 +432,7 @@ mod test {
         assert_eq!(antrag.data.titel, title);
         assert_eq!(antrag.data.antragstext, antragstext);
         assert_eq!(antrag.data.begründung, reason);
-        assert_eq!(antrag.creators, creators);
+        assert_eq!(antrag.ersteller, creators);
 
         Ok(())
     }
@@ -464,7 +464,7 @@ mod test {
             .await?
             .unwrap();
 
-        assert_eq!(antrag.creators, new_creators);
+        assert_eq!(antrag.ersteller, new_creators);
         assert_eq!(antrag.data.antragstext, new_antragstext);
         assert_eq!(antrag.data.titel, old_title);
         assert_eq!(antrag.data.begründung, old_reason);
@@ -494,13 +494,13 @@ mod test {
         let antrag_id = Uuid::parse_str("5c51d5c0-3943-4695-844d-4c47da854fac").unwrap();
         let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap();
 
-        conn.add_attachment_to_antrag(antrag_id, attachment_id)
+        conn.add_anhang_to_antrag(antrag_id, attachment_id)
             .await?;
 
         let antrag = conn.antrag_by_id(antrag_id).await?.unwrap();
 
-        assert_eq!(antrag.attachments.len(), 1);
-        assert_eq!(antrag.attachments[0], attachment_id);
+        assert_eq!(antrag.anhaenge.len(), 1);
+        assert_eq!(antrag.anhaenge[0], attachment_id);
 
         Ok(())
     }
@@ -514,16 +514,16 @@ mod test {
 
         let attachment_id = Uuid::parse_str("9b5104a9-6a7d-468e-bbf2-f72a9086a3dc").unwrap();
 
-        conn.delete_attachment_from_antrag(antrag_id, attachment_id)
+        conn.delete_anhang_from_antrag(antrag_id, attachment_id)
             .await?;
-        conn.delete_attachment_from_antrag(antrag2_id, attachment_id)
+        conn.delete_anhang_from_antrag(antrag2_id, attachment_id)
             .await?;
 
         let antrag = conn.antrag_by_id(antrag_id).await?.unwrap();
         let antrag2 = conn.antrag_by_id(antrag_id).await?.unwrap();
 
-        assert!(antrag.attachments.is_empty());
-        assert!(antrag2.attachments.is_empty());
+        assert!(antrag.anhaenge.is_empty());
+        assert!(antrag2.anhaenge.is_empty());
 
         Ok(())
     }

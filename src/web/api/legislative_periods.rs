@@ -11,7 +11,7 @@ use crate::{
     database::{DatabaseConnection, DatabaseTransaction},
     domain::{
         Result,
-        legislative_periods::{LegislativePeriod, LegislativePeriodRepo},
+        legislatur_periode::{LegislaturPeriode, LegislaturPeriodeRepo},
         sitzung::Sitzung,
     },
     web::{RestStatus, auth},
@@ -43,13 +43,13 @@ pub struct CreateLegislativeParams {
 #[utoipa::path(
     path = "/api/legislative-periods",
     responses(
-        (status = 200, description = "Success", body = Vec<LegislativePeriod>),
+        (status = 200, description = "Success", body = Vec<LegislaturPeriode>),
         (status = 500, description = "Internal Server Error"),
     )
 )]
 #[get("")]
 async fn get_legislatives(mut conn: DatabaseConnection) -> Result<impl Responder> {
-    let result = conn.legislative_periods().await?;
+    let result = conn.legislatur_perioden().await?;
 
     Ok(RestStatus::Success(Some(result)))
 }
@@ -57,7 +57,7 @@ async fn get_legislatives(mut conn: DatabaseConnection) -> Result<impl Responder
 #[utoipa::path(
     path = "/api/legislative-periods/{id}",
     responses(
-        (status = 200, description = "Success", body = LegislativePeriod),
+        (status = 200, description = "Success", body = LegislaturPeriode),
         (status = 400, description = "Bad Request"),
         (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
@@ -68,7 +68,7 @@ async fn get_legislative_by_id(
     id: Path<Uuid>,
     mut conn: DatabaseConnection
 ) -> Result<impl Responder> {
-    let result = conn.legislativ_period_by_id(*id).await?;
+    let result = conn.legislatur_periode_by_id(*id).await?;
 
     Ok(RestStatus::Success(result))
 }
@@ -94,7 +94,7 @@ async fn get_legislative_period_sitzungen(
     path = "/api/legislative-periods",
     params(CreateLegislativeParams),
     responses(
-        (status = 201, description = "Created", body = LegislativePeriod),
+        (status = 201, description = "Created", body = LegislaturPeriode),
         (status = 400, description = "Bad Request"),
         (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
@@ -105,7 +105,7 @@ async fn create_legislative_period(
     params: Query<CreateLegislativeParams>,
     mut conn: DatabaseConnection,
 ) -> Result<impl Responder> {
-    let result = conn.create_legislative_period(params.name.clone()).await?;
+    let result = conn.create_legislatur_periode(params.name.clone()).await?;
 
     Ok(RestStatus::Created(Some(result)))
 }
@@ -114,7 +114,7 @@ async fn create_legislative_period(
     path = "/api/legislative-periods/{id}",
     request_body = CreateLegislativeParams,
     responses(
-        (status = 200, description = "Success", body = LegislativePeriod),
+        (status = 200, description = "Success", body = LegislaturPeriode),
         (status = 400, description = "Bad Request"),
         (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal Server Error"),
@@ -127,7 +127,7 @@ async fn patch_legislative_period(
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
     let result = transaction
-        .update_legislative_period(*id, params.name.clone())
+        .update_legislatur_periode(*id, params.name.clone())
         .await?;
 
     transaction.commit().await?;
@@ -149,7 +149,7 @@ async fn delete_legislative_period(
     id: Path<Uuid>,
     mut transaction: DatabaseTransaction<'_>,
 ) -> Result<impl Responder> {
-    let result = transaction.delete_legislative_period(*id).await?;
+    let result = transaction.delete_legislatur_periode(*id).await?;
 
     transaction.commit().await?;
 

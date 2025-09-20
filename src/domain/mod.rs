@@ -5,15 +5,15 @@ use uuid::Uuid;
 
 pub mod antrag;
 pub mod antrag_top_attachment_map;
-pub mod attachment;
+pub mod anhang;
 pub mod calendar;
-pub mod legislative_periods;
+pub mod legislatur_periode;
 pub mod persons;
 pub mod sitzung;
 pub mod templates;
 
 use persons::{Abmeldung, Person, PersonRepo};
-use sitzung::{SitzungRepo, SitzungWithTops, TopWithAnträge};
+use sitzung::{SitzungRepo, SitzungWithTops, TopWithAntraege};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -56,7 +56,7 @@ pub async fn can_person_modify_antrag(
     person: &Person,
     antrag: &Antrag,
 ) -> Result<bool> {
-    let result = antrag.creators.contains(&person.id)
+    let result = antrag.ersteller.contains(&person.id)
         && repo.tops_by_antrag(antrag.data.id).await?.is_empty();
 
     Ok(result)
@@ -65,20 +65,20 @@ pub async fn can_person_modify_antrag(
 pub async fn top_with_anträge(
     repo: &mut impl SitzungAntragService,
     top_id: Uuid,
-) -> Result<Option<TopWithAnträge>> {
+) -> Result<Option<TopWithAntraege>> {
     let Some(top) = repo.top_by_id(top_id).await? else {
         return Ok(None);
     };
 
-    let anträge = repo.anträge_by_top(top_id).await?;
+    let anträge = repo.antraege_by_top(top_id).await?;
 
-    Ok(Some(TopWithAnträge { top, anträge }))
+    Ok(Some(TopWithAntraege { top, antraege: anträge }))
 }
 
 pub async fn top_with_anträge_by_sitzung(
     repo: &mut impl SitzungAntragService,
     sitzung_id: Uuid,
-) -> Result<Vec<TopWithAnträge>> {
+) -> Result<Vec<TopWithAntraege>> {
     let tops = repo.tops_by_sitzung(sitzung_id).await?;
 
     let mut tops_with_anträge = vec![];

@@ -10,16 +10,16 @@ pub struct AntragData {
     pub id: Uuid,
     pub titel: String,
     pub antragstext: String,
-    pub begründung: String,
-    pub created_at: DateTime<Utc>,
+    pub begruendung: String,
+    pub erstellt_am: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, IntoParams, ToSchema, PartialEq)]
 pub struct Antrag {
     #[serde(flatten)]
     pub data: AntragData,
-    pub creators: Vec<Uuid>,
-    pub attachments: Vec<Uuid>,
+    pub ersteller: Vec<Uuid>,
+    pub anhaenge: Vec<Uuid>,
 }
 
 pub trait AntragRepo {
@@ -31,30 +31,30 @@ pub trait AntragRepo {
         antragstext: &str,
     ) -> Result<Antrag>;
 
-    async fn anträge(&mut self) -> Result<Vec<Antrag>>;
+    async fn antraege(&mut self) -> Result<Vec<Antrag>>;
 
     async fn antrag_by_id(&mut self, id: Uuid) -> Result<Option<Antrag>>;
 
     async fn update_antrag<'a>(
         &mut self,
         id: Uuid,
-        creators: Option<&'a [Uuid]>,
-        title: Option<&'a str>,
-        reason: Option<&'a str>,
+        ersteller: Option<&'a [Uuid]>,
+        titel: Option<&'a str>,
+        begruendung: Option<&'a str>,
         antragstext: Option<&'a str>,
     ) -> Result<Option<Antrag>>;
 
     async fn delete_antrag(&mut self, id: Uuid) -> Result<Option<AntragData>>;
 
-    async fn add_attachment_to_antrag(
+    async fn add_anhang_to_antrag(
         &mut self,
         antrags_id: Uuid,
-        attachment_id: Uuid,
+        anhang_id: Uuid,
     ) -> Result<()>;
 
-    async fn delete_attachment_from_antrag(
+    async fn delete_anhang_from_antrag(
         &mut self,
         antrags_id: Uuid,
-        attachment_id: Uuid,
+        anhang_id: Uuid,
     ) -> Result<()>;
 }
