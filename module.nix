@@ -104,7 +104,7 @@
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
           EnvironmentFile = cfg.environmentFile;
-          ExecStart = "${lib.getExe cfg.package} ${lib.cli.toGNUCommandLineShell { } cfg.settings}";
+          ExecStart = "${lib.getExe cfg.package} ${lib.cli.toCommandLineShell { } cfg.settings}";
           Type = "exec";
           User = config.users.users.fscs-website-server.name;
           Restart = "always";
